@@ -1,0 +1,65 @@
+import { History, LayoutGrid, Settings, Box, Folder, Globe } from 'lucide-react';
+import { cn } from '../lib/utils';
+import React from 'react';
+
+export function Sidebar({ activeView, setActiveView }) {
+    const toggleView = (view) => {
+        if (activeView === view) {
+            // If clicking the same view, don't do anything (it's already active)
+            return;
+        } else {
+            setActiveView(view);
+        }
+    };
+
+    return (
+        <div className="w-16 flex flex-col items-center py-4 bg-neutral-50 dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 text-neutral-500 dark:text-neutral-400">
+            <div className="p-2 mb-6 text-orange-500">
+                <Box className="w-8 h-8" />
+            </div>
+            <div className="flex flex-col gap-2 w-full px-2 flex-1 overflow-y-auto no-scrollbar">
+                <SidebarItem
+                    icon={History}
+                    label="History"
+                    active={activeView === 'history'}
+                    onClick={() => toggleView('history')}
+                />
+                <SidebarItem
+                    icon={Folder}
+                    label="Collections"
+                    active={activeView === 'collections'}
+                    onClick={() => toggleView('collections')}
+                />
+                <SidebarItem
+                    icon={Globe}
+                    label="Environments"
+                    active={activeView === 'environments'}
+                    onClick={() => toggleView('environments')}
+                />
+                <div className="flex-1" />
+                <SidebarItem
+                    icon={Settings}
+                    label="Settings"
+                    active={activeView === 'settings'}
+                    onClick={() => toggleView('settings')}
+                />
+            </div>
+        </div>
+    );
+}
+
+// eslint-disable-next-line no-unused-vars
+function SidebarItem({ icon: Icon, label, active, onClick }) {
+    return (
+        <button
+            onClick={onClick}
+            className={cn(
+                "p-3 rounded-xl flex justify-center transition-all group relative",
+                active ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-white" : "hover:bg-neutral-200 dark:hover:bg-neutral-800 hover:text-neutral-900 dark:hover:text-white"
+            )}
+            title={label}
+        >
+            <Icon className="w-5 h-5" />
+        </button>
+    );
+}
