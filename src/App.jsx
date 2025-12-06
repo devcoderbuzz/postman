@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { apiService } from './services/api';
 import { Layout } from './components/Layout';
 import { RequestBar } from './components/RequestBar';
 import { Tabs } from './components/Tabs';
@@ -53,7 +54,7 @@ function App() {
   const [activeTab, setActiveTab] = useState('params'); // Internal tab (Params/Headers/etc)
   const [activeView, setActiveView] = useState('history');
   const [theme, setTheme] = useState('dark');
-  const [layout, setLayout] = useState('vertical'); // 'vertical' or 'horizontal'
+  const [layout, setLayout] = useState('horizontal'); // 'vertical' or 'horizontal'
   const [showSaveModal, setShowSaveModal] = useState(false);
 
   // Layout state
@@ -64,7 +65,7 @@ function App() {
 
   // Project state
   const placeholderProjects = [{ id: 'default', name: 'Default Project' }];
-  const [projects] = useState(placeholderProjects);
+  const [projects, setProjects] = useState(placeholderProjects);
   const [activeProject, setActiveProject] = useState('default');
 
   // Collections & Environments
@@ -140,6 +141,57 @@ function App() {
       };
     }
   }, [isResizingRequest]);
+
+
+
+  // Auto-authenticate and fetch projects on mount
+  useEffect(() => {
+    const initApp = async () => {
+      try {
+        console.log('Initializing app auth...');
+        const authData = await apiService.authenticate('admin', 'admin');
+
+        if (authData) {
+          console.log('Auth successful');
+          if (authData.token) {
+            sessionStorage.setItem('authToken', authData.token);
+          }
+
+          // Fetch projects
+          console.log('Fetching projects...');
+          const fetchedProjects = await apiService.getAllProjects();
+          console.log('Projects fetched:', fetchedProjects);
+
+          if (fetchedProjects && Array.isArray(fetchedProjects)) {
+            // Map to expected format if necessary, assuming API returns array of objects with id/name
+            // Adjust mapping based on actual API response structure if needed
+            // Map to expected format
+            const mappedProjects = fetchedProjects.map(p => {
+              // Handle if p is just a string
+              if (typeof p === 'string') return { id: p, name: p };
+
+              // Handle object
+              return {
+                id: p.appCode || p.id || p.code || 'unknown-id-' + Math.random(),
+                name: p.description || p.name || p.appCode || p.code || 'Unnamed Project'
+              };
+            });
+            console.log('Raw fetched projects:', fetchedProjects);
+            console.log('Mapped projects:', mappedProjects);
+
+            if (mappedProjects.length > 0) {
+              setProjects(mappedProjects);
+              setActiveProject(mappedProjects[0].id);
+            }
+          }
+        }
+      } catch (err) {
+        console.error('App initialization failed:', err);
+      }
+    };
+
+    initApp();
+  }, []);
 
 
   const tabs = [
@@ -331,9 +383,28 @@ function App() {
     });
   };
 
-  const refreshProject = () => {
-    console.log('Refreshing project...');
-    // In real implementation this would fetch project data
+  const refreshProject = async () => {
+    console.log('Refreshing projects...');
+    try {
+      const fetchedProjects = await apiService.getAllProjects();
+      if (fetchedProjects && Array.isArray(fetchedProjects)) {
+        const mappedProjects = fetchedProjects.map(p => ({
+          id: p.appCode || p.id,
+          name: p.description || p.name || p.appCode
+        }));
+
+        if (mappedProjects.length > 0) {
+          setProjects(mappedProjects);
+          // Optional: maintain active project if it still exists, otherwise default to first
+          if (!mappedProjects.find(p => p.id === activeProject)) {
+            setActiveProject(mappedProjects[0].id);
+          }
+          console.log('Projects refreshed', mappedProjects);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to refresh projects:', error);
+    }
   };
 
   const saveToCollection = () => {
