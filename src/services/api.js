@@ -48,5 +48,36 @@ export const apiService = {
       console.error('Fetching projects failed:', error);
       throw error;
     }
+  },
+  
+  getCollectionsByModule: async (projectName, moduleName) => {
+    try {
+      const token = sessionStorage.getItem('authToken');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      console.log(`Fetching collections for Project: ${projectName}, Module: ${moduleName}`);
+      const res = await axios.post(PROXY_URL, {
+        method: 'POST',
+        // Assuming this is the endpoint based on the requirement
+        url: 'http://localhost:8080/collections/search', 
+        headers: headers,
+        data: {
+          projectName: projectName,
+          moduleName: moduleName
+        }
+      });
+
+      console.log('Collections fetched:', res.data);
+      if (res.data && res.data.data) {
+          return res.data.data;
+      }
+      return [];
+    } catch (error) {
+      console.error('Fetching collections failed:', error);
+      throw error;
+    }
   }
 };

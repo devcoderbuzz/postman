@@ -13,7 +13,11 @@ export function CollectionsPanel({
     projects,
     activeProject,
     onProjectSelect,
-    onRefreshProject
+    onRefreshProject,
+    modules,
+    activeModule,
+    onModuleSelect,
+    onRefreshModule
 }) {
     const [expandedFolders, setExpandedFolders] = useState(new Set());
     const [editingCollection, setEditingCollection] = useState(null);
@@ -107,8 +111,9 @@ export function CollectionsPanel({
         <div className="h-full flex bg-neutral-50 dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 relative" style={{ width: `${width}px` }}>
             <div className="flex-1 flex flex-col overflow-hidden">
                 {projects && (
-                    <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900">
+                    <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 space-y-2">
                         <div className="flex items-center gap-2">
+                            <span className="text-xs font-medium text-neutral-500 w-16 text-right">App Code:</span>
                             <select
                                 value={activeProject}
                                 onChange={(e) => onProjectSelect(e.target.value)}
@@ -128,6 +133,29 @@ export function CollectionsPanel({
                                 <RefreshCw className="w-3.5 h-3.5" />
                             </button>
                         </div>
+                        {modules && (
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-medium text-neutral-500 w-16 text-right">Module:</span>
+                                <select
+                                    value={activeModule}
+                                    onChange={(e) => onModuleSelect(e.target.value)}
+                                    className="flex-1 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-blue-500"
+                                >
+                                    {modules.map((mod) => (
+                                        <option key={mod.id} value={mod.id}>
+                                            {mod.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                <button
+                                    onClick={onRefreshModule}
+                                    className="p-1.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-500 hover:text-blue-500 transition-colors"
+                                    title="Refresh Module"
+                                >
+                                    <RefreshCw className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
+                        )}
                     </div>
                 )}
                 <div className="p-3 border-b border-neutral-200 dark:border-neutral-800">

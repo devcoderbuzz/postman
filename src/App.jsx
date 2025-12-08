@@ -68,6 +68,77 @@ function App() {
   const [projects, setProjects] = useState(placeholderProjects);
   const [activeProject, setActiveProject] = useState('default');
 
+  const [rawAppCodes, setRawAppCodes] = useState([]);
+  const [activeModule, setActiveModule] = useState('default');
+  const [modules, setModules] = useState([]);
+
+  // Fetch collections when module changes
+  useEffect(() => {
+    if (activeProject && activeModule) {
+      fetchCollections(activeProject, activeModule);
+    }
+  }, [activeProject, activeModule]);
+
+  const fetchCollections = async (projectName, moduleName) => {
+    try {
+      console.log(`Fetching collections for ${projectName} - ${moduleName}`);
+      const fetchedCollections = await apiService.getCollectionsByModule(projectName, moduleName);
+
+      if (fetchedCollections && Array.isArray(fetchedCollections)) {
+        const mappedCollections = fetchedCollections.map(col => ({
+          id: col.collectionId ? col.collectionId.toString() : Date.now().toString(),
+          name: col.name,
+          requests: col.requests ? col.requests.map(req => ({
+            id: req.requestId ? req.requestId.toString() : Date.now().toString(),
+            name: req.name,
+            method: req.method,
+            url: req.url,
+            params: [], // Initialize if not provided by API
+            headers: [], // Initialize if not provided by API
+            body: req.body,
+            bodyType: req.body ? 'json' : 'none', // Simple inference
+            authType: 'none',
+            authData: {}
+          })) : []
+        }));
+
+        setCollections(mappedCollections);
+        console.log('Collections mapped and set:', mappedCollections);
+      } else {
+        setCollections([]);
+      }
+    } catch (error) {
+      console.error('Error fetching collections:', error);
+      // Optional: clear collections on error
+    }
+  };
+
+  const refreshModule = () => {
+    if (activeProject && activeModule) {
+      fetchCollections(activeProject, activeModule);
+    }
+  };
+
+  // Update modules when activeProject (projectName) changes
+  useEffect(() => {
+    if (activeProject && rawAppCodes.length > 0) {
+      const projectAppCodes = rawAppCodes.filter(app => app.projectName === activeProject);
+      const uniqueModules = [...new Set(projectAppCodes.map(app => app.moduleName))]
+        .map(name => ({ id: name, name: name }));
+
+      setModules(uniqueModules);
+      if (uniqueModules.length > 0) {
+        setActiveModule(uniqueModules[0].id);
+      } else {
+        setActiveModule('');
+        setCollections([]); // Clear collections if no module
+      }
+    } else {
+      setModules([]);
+      setCollections([]);
+    }
+  }, [activeProject, rawAppCodes]);
+
   // Collections & Environments
   const [collections, setCollections] = useState([]);
   const [environments, setEnvironments] = useState([]);
@@ -159,29 +230,21 @@ function App() {
 
           // Fetch projects
           console.log('Fetching projects...');
-          const fetchedProjects = await apiService.getAllProjects();
-          console.log('Projects fetched:', fetchedProjects);
+          const fetchedData = await apiService.getAllProjects();
+          console.log('Projects fetched:', fetchedData);
 
-          if (fetchedProjects && Array.isArray(fetchedProjects)) {
-            // Map to expected format if necessary, assuming API returns array of objects with id/name
-            // Adjust mapping based on actual API response structure if needed
-            // Map to expected format
-            const mappedProjects = fetchedProjects.map(p => {
-              // Handle if p is just a string
-              if (typeof p === 'string') return { id: p, name: p };
+          if (fetchedData && Array.isArray(fetchedData)) {
+            setRawAppCodes(fetchedData);
 
-              // Handle object
-              return {
-                id: p.appCode || p.id || p.code || 'unknown-id-' + Math.random(),
-                name: p.description || p.name || p.appCode || p.code || 'Unnamed Project'
-              };
-            });
-            console.log('Raw fetched projects:', fetchedProjects);
-            console.log('Mapped projects:', mappedProjects);
+            // Extract unique projects
+            const uniqueProjects = [...new Set(fetchedData.map(app => app.projectName))]
+              .map(name => ({ id: name, name: name }));
 
-            if (mappedProjects.length > 0) {
-              setProjects(mappedProjects);
-              setActiveProject(mappedProjects[0].id);
+            console.log('Unique projects:', uniqueProjects);
+
+            if (uniqueProjects.length > 0) {
+              setProjects(uniqueProjects);
+              setActiveProject(uniqueProjects[0].id);
             }
           }
         }
@@ -386,20 +449,20 @@ function App() {
   const refreshProject = async () => {
     console.log('Refreshing projects...');
     try {
-      const fetchedProjects = await apiService.getAllProjects();
-      if (fetchedProjects && Array.isArray(fetchedProjects)) {
-        const mappedProjects = fetchedProjects.map(p => ({
-          id: p.appCode || p.id,
-          name: p.description || p.name || p.appCode
-        }));
+      const fetchedData = await apiService.getAllProjects();
+      if (fetchedData && Array.isArray(fetchedData)) {
+        setRawAppCodes(fetchedData);
 
-        if (mappedProjects.length > 0) {
-          setProjects(mappedProjects);
+        const uniqueProjects = [...new Set(fetchedData.map(app => app.projectName))]
+          .map(name => ({ id: name, name: name }));
+
+        if (uniqueProjects.length > 0) {
+          setProjects(uniqueProjects);
           // Optional: maintain active project if it still exists, otherwise default to first
-          if (!mappedProjects.find(p => p.id === activeProject)) {
-            setActiveProject(mappedProjects[0].id);
+          if (!uniqueProjects.find(p => p.id === activeProject)) {
+            setActiveProject(uniqueProjects[0].id);
           }
-          console.log('Projects refreshed', mappedProjects);
+          console.log('Projects refreshed', uniqueProjects);
         }
       }
     } catch (error) {
@@ -638,6 +701,10 @@ function App() {
                   activeProject={activeProject}
                   onProjectSelect={setActiveProject}
                   onRefreshProject={refreshProject}
+                  modules={modules}
+                  activeModule={activeModule}
+                  onModuleSelect={setActiveModule}
+                  onRefreshModule={refreshModule}
                 />
               )}
 
