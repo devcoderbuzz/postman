@@ -31,14 +31,40 @@ export function ResponseViewer({ response, error, isLoading, activeRequest }) {
     };
 
     const handleDownload = () => {
-        const text = typeof response.data === 'string'
-            ? response.data
-            : JSON.stringify(response.data, null, 2);
-        const blob = new Blob([text], { type: 'application/json' });
+        if (!response) return;
+
+        const contentType = response.headers?.['content-type'] || 'application/json';
+        let extension = 'json';
+        let type = 'application/json';
+
+        if (contentType.includes('html')) {
+            extension = 'html';
+            type = 'text/html';
+        } else if (contentType.includes('xml')) {
+            extension = 'xml';
+            type = 'application/xml';
+        } else if (contentType.includes('text/plain')) {
+            extension = 'txt';
+            type = 'text/plain';
+        } else if (contentType.includes('png')) {
+            extension = 'png';
+            type = 'image/png';
+        } else if (contentType.includes('jpeg') || contentType.includes('jpg')) {
+            extension = 'jpg';
+            type = 'image/jpeg';
+        }
+
+        const text = typeof response.data === 'boolean' || typeof response.data === 'number'
+            ? String(response.data)
+            : typeof response.data === 'string'
+                ? response.data
+                : JSON.stringify(response.data, null, 2);
+
+        const blob = new Blob([text], { type });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `response-${Date.now()}.json`;
+        a.download = `response-${Date.now()}.${extension}`;
         a.click();
         URL.revokeObjectURL(url);
     };
@@ -82,7 +108,7 @@ export function ResponseViewer({ response, error, isLoading, activeRequest }) {
 
     return (
         <div className="h-full flex flex-col">
-            <div className="flex items-center justify-between gap-4 text-xs font-mono mb-3 pb-3 border-b border-neutral-200 dark:border-neutral-800">
+            <div className="flex items-center justify-between gap-4 text-xs font-mono mb-3 pb-3 border-b border-neutral-200 dark:border-[var(--border-color)]">
                 <div className="flex gap-4">
                     <span className={cn(
                         "font-semibold",
@@ -114,8 +140,8 @@ export function ResponseViewer({ response, error, isLoading, activeRequest }) {
             <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
             {activeTab === 'body' && (
-                <div className="flex-1 flex flex-col overflow-hidden">
-                    <div className="flex gap-2 mb-2">
+                <div className="flex-1 flex flex-col overflow-hidden bg-white dark:bg-transparent">
+                    <div className="flex gap-2 mb-2 px-2 pt-2">
                         {['pretty', 'raw'].map(mode => (
                             <button
                                 key={mode}
@@ -124,27 +150,35 @@ export function ResponseViewer({ response, error, isLoading, activeRequest }) {
                                     "px-3 py-1 text-xs font-medium rounded transition-colors capitalize",
                                     viewMode === mode
                                         ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-white"
-                                        : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                                        : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5"
                                 )}
                             >
                                 {mode}
                             </button>
                         ))}
                     </div>
-                    <div className="flex-1 overflow-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+                    <div className="flex-1 overflow-auto bg-white dark:bg-transparent relative">
                         {viewMode === 'pretty' ? (
                             <SyntaxHighlighter
                                 language="json"
-                                style={atomOneDark}
-                                customStyle={{ margin: 0, background: '#0a0a0a', fontSize: '12px', minHeight: '100%' }}
-                                showLineNumbers
+                                style={activeRequest && activeRequest.theme === 'light' ? null : undefined} // Use default for light, custom for dark
+                                customStyle={{
+                                    margin: 0,
+                                    padding: '1rem',
+                                    background: 'transparent',
+                                    fontSize: '12px',
+                                    lineHeight: '1.5',
+                                }}
+                                wrapLines={true}
                             >
                                 {typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2)}
                             </SyntaxHighlighter>
                         ) : (
-                            <pre className="p-4 text-xs font-mono text-neutral-800 dark:text-neutral-300 min-h-full bg-white dark:bg-[#0a0a0a]">
-                                {typeof response.data === 'string' ? response.data : JSON.stringify(response.data)}
-                            </pre>
+                            <textarea
+                                readOnly
+                                value={typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2)}
+                                className="w-full h-full resize-none p-4 font-mono text-xs bg-white dark:bg-transparent text-neutral-900 dark:text-neutral-300 outline-none"
+                            />
                         )}
                     </div>
                 </div>

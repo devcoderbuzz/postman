@@ -4,15 +4,15 @@ import { cn } from '../lib/utils';
 
 export function RequestTabs({ requests, activeRequestId, onActivate, onClose, onAdd }) {
     return (
-        <div className="flex items-center border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 overflow-x-auto no-scrollbar">
+        <div className="flex items-center border-b border-neutral-200 dark:border-[var(--border-color)] bg-neutral-100 dark:bg-[var(--bg-secondary)] overflow-x-auto no-scrollbar">
             {requests.map((req) => (
                 <div
                     key={req.id}
                     className={cn(
-                        "group flex items-center gap-2 px-3 py-2 min-w-[120px] max-w-[200px] text-xs cursor-pointer border-r border-neutral-200 dark:border-neutral-800 select-none",
+                        "group flex items-center gap-2 px-3 py-2 min-w-[120px] max-w-[200px] text-xs cursor-pointer border-r border-neutral-200 dark:border-[var(--border-color)] select-none",
                         req.id === activeRequestId
-                            ? "bg-white dark:bg-neutral-950 text-neutral-900 dark:text-neutral-100 border-t-2 border-t-blue-500"
-                            : "bg-neutral-100 dark:bg-neutral-900 text-neutral-500 dark:text-neutral-400 hover:bg-neutral-200 dark:hover:bg-neutral-800"
+                            ? "bg-white dark:bg-[var(--bg-primary)] text-neutral-900 dark:text-[var(--text-primary)] border-t-2 border-t-blue-500"
+                            : "bg-neutral-100 dark:bg-[var(--bg-secondary)] text-neutral-500 dark:text-[var(--text-secondary)] hover:bg-neutral-200 dark:hover:bg-white/5"
                     )}
                     onClick={() => onActivate(req.id)}
                 >

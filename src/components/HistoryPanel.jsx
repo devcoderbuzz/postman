@@ -13,8 +13,8 @@ export function HistoryPanel({ history, onLoadRequest, onClearHistory }) {
     }
 
     return (
-        <div className="h-full flex flex-col bg-neutral-50 dark:bg-neutral-900/30">
-            <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
+        <div className="h-full flex flex-col bg-neutral-50 dark:bg-[var(--bg-secondary)]">
+            <div className="p-3 border-b border-neutral-200 dark:border-[var(--border-color)] flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Request History</h2>
                 <button
                     onClick={onClearHistory}
@@ -29,7 +29,7 @@ export function HistoryPanel({ history, onLoadRequest, onClearHistory }) {
                     {history.map((item, index) => (
                         <div
                             key={index}
-                            className="flex items-center gap-2 p-3 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded group cursor-pointer border border-neutral-200 dark:border-neutral-800"
+                            className="flex items-center gap-2 p-3 hover:bg-neutral-200 dark:hover:bg-white/5 rounded group cursor-pointer border border-neutral-200 dark:border-[var(--border-color)]"
                             onClick={() => onLoadRequest(item)}
                         >
                             <span className={cn(

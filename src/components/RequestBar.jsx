@@ -13,19 +13,19 @@ export function RequestBar({ method, setMethod, url, setUrl, onSend, isLoading }
     const currentMethod = METHODS.find(m => m.value === method) || METHODS[0];
 
     return (
-        <div className="flex items-center gap-2 p-3 border-b border-neutral-200 dark:border-neutral-800 bg-white dark:bg-neutral-900/50">
-            <div className="flex flex-1 items-center gap-0 bg-neutral-50 dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded-lg overflow-hidden focus-within:border-neutral-500 transition-colors shadow-sm">
+        <div className="flex items-center gap-2 p-3 border-b border-neutral-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--bg-primary)]">
+            <div className="flex flex-1 items-center gap-0 bg-neutral-50 dark:bg-[var(--bg-surface)] border border-neutral-300 dark:border-[var(--border-color)] rounded-lg overflow-hidden focus-within:border-neutral-500 transition-colors shadow-sm">
                 <div className="relative group">
                     <select
                         value={method}
                         onChange={(e) => setMethod(e.target.value)}
                         className={cn(
-                            "bg-transparent pl-4 pr-8 py-2.5 font-bold text-xs outline-none border-r border-neutral-300 dark:border-neutral-700 hover:bg-neutral-200 dark:hover:bg-neutral-800 cursor-pointer appearance-none uppercase tracking-wide",
+                            "bg-transparent pl-4 pr-8 py-2.5 font-bold text-xs outline-none border-r border-neutral-300 dark:border-[var(--border-color)] hover:bg-neutral-200 dark:hover:bg-white/5 cursor-pointer appearance-none uppercase tracking-wide",
                             currentMethod.color
                         )}
                     >
                         {METHODS.map(m => (
-                            <option key={m.value} value={m.value} className="text-neutral-900 dark:text-neutral-300 bg-white dark:bg-neutral-900">
+                            <option key={m.value} value={m.value} className="text-neutral-900 dark:text-[var(--text-primary)] bg-white dark:bg-[var(--bg-surface)]">
                                 {m.value}
                             </option>
                         ))}

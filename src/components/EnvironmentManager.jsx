@@ -80,7 +80,7 @@ export function EnvironmentManager({ environments, setEnvironments, activeEnv, s
                             key={env.id}
                             className={cn(
                                 "border rounded-lg overflow-hidden transition-colors",
-                                activeEnv === env.id ? "border-blue-500" : "border-neutral-200 dark:border-neutral-800"
+                                activeEnv === env.id ? "border-blue-500" : "border-neutral-200 dark:border-[var(--border-color)]"
                             )}
                         >
                             <div className="flex items-center gap-2 p-3 bg-neutral-100 dark:bg-neutral-900/50">
@@ -90,12 +90,12 @@ export function EnvironmentManager({ environments, setEnvironments, activeEnv, s
                                             type="text"
                                             value={env.name}
                                             onChange={(e) => updateEnvName(env.id, e.target.value)}
-                                            className="flex-1 bg-white dark:bg-neutral-900 border border-neutral-300 dark:border-neutral-700 rounded px-2 py-1 text-sm outline-none focus:border-neutral-500"
+                                            className="flex-1 bg-white dark:bg-[var(--bg-surface)] border border-neutral-300 dark:border-[var(--border-color)] rounded px-2 py-1 text-sm outline-none focus:border-neutral-500"
                                             autoFocus
                                         />
                                         <button
                                             onClick={() => setEditingEnv(null)}
-                                            className="p-1 text-green-500 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded"
+                                            className="p-1 text-green-500 hover:bg-neutral-200 dark:hover:bg-white/10 rounded"
                                         >
                                             <Check className="w-4 h-4" />
                                         </button>
@@ -113,7 +113,7 @@ export function EnvironmentManager({ environments, setEnvironments, activeEnv, s
                                         </button>
                                         <button
                                             onClick={() => setEditingEnv(env.id)}
-                                            className="p-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded"
+                                            className="p-1 text-neutral-500 hover:text-neutral-900 dark:hover:text-white hover:bg-neutral-200 dark:hover:bg-white/10 rounded"
                                         >
                                             <Edit2 className="w-4 h-4" />
                                         </button>
@@ -137,14 +137,14 @@ export function EnvironmentManager({ environments, setEnvironments, activeEnv, s
                                                     value={variable.key}
                                                     onChange={(e) => updateVariable(env.id, index, 'key', e.target.value)}
                                                     placeholder="Variable name"
-                                                    className="flex-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-2 text-xs font-mono outline-none focus:border-neutral-600"
+                                                    className="flex-1 bg-white dark:bg-[var(--bg-surface)] border border-neutral-200 dark:border-[var(--border-color)] rounded px-3 py-2 text-xs font-mono outline-none focus:border-neutral-600"
                                                 />
                                                 <input
                                                     type="text"
                                                     value={variable.value}
                                                     onChange={(e) => updateVariable(env.id, index, 'value', e.target.value)}
                                                     placeholder="Value"
-                                                    className="flex-1 bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded px-3 py-2 text-xs font-mono outline-none focus:border-neutral-600"
+                                                    className="flex-1 bg-white dark:bg-[var(--bg-surface)] border border-neutral-200 dark:border-[var(--border-color)] rounded px-3 py-2 text-xs font-mono outline-none focus:border-neutral-600"
                                                 />
                                                 <button
                                                     onClick={() => removeVariable(env.id, index)}

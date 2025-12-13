@@ -12,6 +12,9 @@ import { CollectionsPanel } from './components/CollectionsPanel';
 import { HistoryPanel } from './components/HistoryPanel';
 import { EnvironmentManager } from './components/EnvironmentManager';
 import { RequestTabs } from './components/RequestTabs';
+import { Footer } from './components/Footer'; // Added import
+import { X } from 'lucide-react'; // Added import for console close button
+import { cn } from './lib/utils'; // Added import for cn utility
 
 import { replaceEnvVariables } from './lib/utils';
 import { SaveRequestModal } from './components/SaveRequestModal';
@@ -75,11 +78,11 @@ function App() {
   // Fetch collections when module changes
   useEffect(() => {
     if (activeProject && activeModule) {
-      fetchCollections(activeProject, activeModule);
+      fetchServerCollections(activeProject, activeModule);
     }
   }, [activeProject, activeModule]);
 
-  const fetchCollections = async (projectName, moduleName) => {
+  const fetchServerCollections = async (projectName, moduleName) => {
     try {
       console.log(`Fetching collections for ${projectName} - ${moduleName}`);
       const fetchedCollections = await apiService.getCollectionsByModule(projectName, moduleName);
@@ -102,10 +105,10 @@ function App() {
           })) : []
         }));
 
-        setCollections(mappedCollections);
-        console.log('Collections mapped and set:', mappedCollections);
+        setServerCollections(mappedCollections);
+        console.log('Server Collections mapped and set:', mappedCollections);
       } else {
-        setCollections([]);
+        setServerCollections([]);
       }
     } catch (error) {
       console.error('Error fetching collections:', error);
@@ -115,7 +118,7 @@ function App() {
 
   const refreshModule = () => {
     if (activeProject && activeModule) {
-      fetchCollections(activeProject, activeModule);
+      fetchServerCollections(activeProject, activeModule);
     }
   };
 
@@ -131,16 +134,17 @@ function App() {
         setActiveModule(uniqueModules[0].id);
       } else {
         setActiveModule('');
-        setCollections([]); // Clear collections if no module
+        setServerCollections([]); // Clear collections if no module
       }
     } else {
       setModules([]);
-      setCollections([]);
+      setServerCollections([]);
     }
   }, [activeProject, rawAppCodes]);
 
   // Collections & Environments
-  const [collections, setCollections] = useState([]);
+  const [serverCollections, setServerCollections] = useState([]);
+  const [localCollections, setLocalCollections] = useState([]);
   const [environments, setEnvironments] = useState([]);
   const [activeEnv, setActiveEnv] = useState(null);
   const [history, setHistory] = useState([]);
@@ -150,7 +154,7 @@ function App() {
     const savedCollections = localStorage.getItem('collections');
     const savedEnvironments = localStorage.getItem('environments');
     const savedLayout = localStorage.getItem('layout');
-    if (savedCollections) setCollections(JSON.parse(savedCollections));
+    if (savedCollections) setLocalCollections(JSON.parse(savedCollections));
     if (savedEnvironments) setEnvironments(JSON.parse(savedEnvironments));
     if (savedLayout) setLayout(savedLayout);
     // Load theme from localStorage
@@ -171,8 +175,12 @@ function App() {
 
   // Save to localStorage
   useEffect(() => {
-    localStorage.setItem('collections', JSON.stringify(collections));
-  }, [collections]);
+    localStorage.setItem('collections', JSON.stringify(localCollections));
+  }, [localCollections]);
+
+  // Console / Footer State
+  const [showConsole, setShowConsole] = useState(false);
+  const latestRequest = history.length > 0 ? history[history.length - 1] : null;
 
   useEffect(() => {
     localStorage.setItem('environments', JSON.stringify(environments));
@@ -390,7 +398,7 @@ function App() {
       let responseData = null;
 
       if (err.response) {
-        const endTime = Date.now();
+        const endTime = Date.Now();
         responseData = {
           status: err.response.status,
           statusText: err.response.statusText,
@@ -441,7 +449,7 @@ function App() {
       setTimeout(() => {
         console.log('Collection reloaded (mock)');
         // In a real app, this would update state from the server
-        resolve(collections);
+        resolve(localCollections);
       }, 500);
     });
   };
@@ -471,7 +479,7 @@ function App() {
   };
 
   const saveToCollection = () => {
-    if (collections.length === 0) {
+    if (localCollections.length === 0) { // Changed from 'collections' to 'localCollections'
       window.alert('Please create a collection first before saving requests.');
       return;
     }
@@ -484,7 +492,7 @@ function App() {
   };
 
   const handleSaveRequest = (requestName, collectionId, isOverwrite = false) => {
-    const updatedCollections = collections.map(col => {
+    const updatedCollections = localCollections.map(col => { // Changed from 'collections' to 'localCollections'
       if (col.id === collectionId) {
         let updatedRequests;
         if (isOverwrite && activeRequestId) {
@@ -531,7 +539,7 @@ function App() {
       }
       return col;
     });
-    setCollections(updatedCollections);
+    setLocalCollections(updatedCollections); // Changed from 'setCollections' to 'setLocalCollections'
   };
 
   const loadRequest = (request) => {
@@ -552,7 +560,7 @@ function App() {
     }
 
     // Find collection for this request
-    const col = collections.find(c => c.requests.find(r => r.id === request.id));
+    const col = localCollections.find(c => c.requests.find(r => r.id === request.id)); // Changed from 'collections' to 'localCollections'
     if (col) setActiveCollectionId(col.id);
 
     setActiveView('history'); // Switch back to main view
@@ -615,7 +623,7 @@ function App() {
   //   };
 
   return (
-    <div className="h-screen flex flex-col bg-white dark:bg-neutral-950 text-neutral-900 dark:text-white font-sans overflow-hidden">
+    <div className="h-screen flex flex-col bg-white dark:bg-[var(--bg-primary)] text-neutral-900 dark:text-[var(--text-primary)] font-sans overflow-hidden">
       <Header />
       <Layout activeView={activeView} setActiveView={setActiveView}>
         {activeView === 'environments' ? (
@@ -636,7 +644,7 @@ function App() {
           <Settings theme={theme} setTheme={setTheme} layout={layout} setLayout={setLayout} />
         ) : (
           <>
-            <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/30">
+            <div className="flex items-center justify-between px-3 py-2 border-b border-neutral-200 dark:border-[var(--border-color)] bg-neutral-50 dark:bg-[var(--bg-secondary)]">
               <div className="flex items-center gap-2">
                 {activeEnv && (
                   <span className="text-xs px-2 py-1 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-800">
@@ -678,7 +686,7 @@ function App() {
             <div className="flex-1 flex overflow-hidden">
               {/* History Panel - shown by default */}
               {activeView === 'history' && history.length > 0 && (
-                <div className="w-80 border-r border-neutral-200 dark:border-neutral-800">
+                <div className="w-80 border-r border-neutral-200 dark:border-[var(--border-color)]">
                   <HistoryPanel
                     history={history}
                     onLoadRequest={loadRequest}
@@ -690,8 +698,9 @@ function App() {
               {/* Collections Sidebar - shown when collections view is active */}
               {activeView === 'collections' && (
                 <CollectionsPanel
-                  collections={collections}
-                  setCollections={setCollections}
+                  localCollections={localCollections}
+                  setLocalCollections={setLocalCollections}
+                  serverCollections={serverCollections}
                   onLoadRequest={loadRequest}
                   width={collectionsPanelWidth}
                   onWidthChange={setCollectionsPanelWidth}
@@ -700,11 +709,12 @@ function App() {
                   projects={projects}
                   activeProject={activeProject}
                   onProjectSelect={setActiveProject}
-                  onRefreshProject={refreshProject}
+                  onRefreshProject={refreshProject} // Changed from fetchProjects
                   modules={modules}
                   activeModule={activeModule}
                   onModuleSelect={setActiveModule}
                   onRefreshModule={refreshModule}
+                  activeCollectionId={activeCollectionId}
                 />
               )}
 
@@ -716,7 +726,7 @@ function App() {
                   className={`flex flex-col min-w-0 ${layout === 'vertical' ? 'w-full' : 'h-full'}`}
                   style={layout === 'vertical' ? { height: requestPanelHeight } : { width: requestPanelWidth }}
                 >
-                  <div className="flex-1 border-r border-neutral-200 dark:border-neutral-800 p-4 flex flex-col min-h-0 overflow-auto">
+                  <div className="flex-1 border-r border-neutral-200 dark:border-[var(--border-color)] p-4 flex flex-col min-h-0 overflow-auto">
                     <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
 
                     <div className="flex-1 overflow-auto mt-2">
@@ -754,14 +764,14 @@ function App() {
 
                 {/* Splitter */}
                 <div
-                  className={`${layout === 'vertical' ? 'h-1 hover:h-1.5 cursor-row-resize w-full' : 'w-1 hover:w-1.5 cursor-col-resize h-full'} bg-neutral-200 dark:bg-neutral-800 hover:bg-blue-500 transition-all flex items-center justify-center group z-10`}
+                  className={`${layout === 'vertical' ? 'h-1 hover:h-1.5 cursor-row-resize w-full' : 'w-1 hover:w-1.5 cursor-col-resize h-full'} bg-neutral-200 dark:bg-[var(--border-color)] hover:bg-blue-500 transition-all flex items-center justify-center group z-10`}
                   onMouseDown={() => setIsResizingRequest(true)}
                 >
                   {/* Optional grip icon */}
                 </div>
 
                 {/* Response Area */}
-                <div className="flex-1 p-4 bg-neutral-50 dark:bg-neutral-900/30 flex flex-col min-w-0 min-h-0 overflow-hidden">
+                <div className="flex-1 p-4 bg-neutral-50 dark:bg-[var(--bg-primary)] flex flex-col min-w-0 min-h-0 overflow-hidden">
                   <h2 className="text-neutral-500 font-semibold mb-4 text-sm uppercase tracking-wider">Response</h2>
                   <div className="flex-1 overflow-hidden">
                     <ResponseViewer
@@ -774,19 +784,58 @@ function App() {
                 </div>
 
               </div>
-
-
-
             </div>
           </>
         ))}
-        <SaveRequestModal
-          isOpen={showSaveModal}
-          onClose={() => setShowSaveModal(false)}
-          onSave={handleSaveRequest}
-          collections={collections}
-        />
       </Layout >
+
+      {/* Console Pane (Bottom Drawer) */}
+      {showConsole && (
+        <div className="h-48 border-t border-neutral-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--bg-primary)] flex flex-col">
+          <div className="flex items-center justify-between px-3 py-1 border-b border-neutral-200 dark:border-[var(--border-color)] bg-neutral-50 dark:bg-[var(--bg-secondary)]"> {/* Changed bg-neutral-50 dark:bg-[var(--bg-surface)] to bg-neutral-50 dark:bg-[var(--bg-secondary)] */}
+            <span className="text-xs font-semibold text-neutral-600 dark:text-neutral-300">Console</span>
+            <button onClick={() => setShowConsole(false)} className="text-neutral-500 hover:text-neutral-900 dark:hover:text-white">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="flex-1 overflow-auto p-2 font-mono text-xs">
+            {history.length === 0 ? (
+              <div className="text-neutral-400 dark:text-neutral-600 italic">No console logs</div>
+            ) : (
+              [...history].reverse().map((item, i) => (
+                <div key={i} className={cn("flex gap-2 py-0.5", i === 0 ? "font-bold text-neutral-900 dark:text-white" : "text-neutral-600 dark:text-neutral-400")}>
+                  <span className="w-16">{item.timestamp.split(' ')[1]}</span>
+                  <span className={cn(
+                    "w-12 uppercase",
+                    item.method === 'GET' && "text-green-600 dark:text-green-500",
+                    item.method === 'POST' && "text-yellow-600 dark:text-yellow-500",
+                    item.method === 'PUT' && "text-blue-600 dark:text-blue-500",
+                    item.method === 'DELETE' && "text-red-600 dark:text-red-500"
+                  )}>{item.method}</span>
+                  <span className="flex-1 truncate">{item.url}</span>
+                  <span className={cn(
+                    item.status >= 200 && item.status < 300 ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"
+                  )}>{item.status}</span>
+                  <span className="text-neutral-400">{item.time}ms</span>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      <Footer
+        showConsole={showConsole}
+        onToggleConsole={() => setShowConsole(!showConsole)}
+        latestRequest={latestRequest}
+      />
+
+      <SaveRequestModal
+        isOpen={showSaveModal}
+        onClose={() => setShowSaveModal(false)}
+        onSave={handleSaveRequest}
+        collections={localCollections}
+      />
     </div>
   );
 }

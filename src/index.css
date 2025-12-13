@@ -1,6 +1,25 @@
 @import "tailwindcss";
 @custom-variant dark (&:where([data-theme=dark] *));
 
+:root {
+  /* Default/Light variables */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+}
+
+[data-theme='dark'] {
+  /* Dark Red/Gray Theme variables */
+  --bg-primary: #111111;      /* Main content bg - Darker Gray */
+  --bg-secondary: #0a0a0a;    /* Collections panel - Very Dark */
+  --bg-sidebar: #050505;      /* Leftmost sidebar - Almost Black */
+  --bg-surface: #1e1e1e;      /* Inputs, cards */
+  --border-color: #333333;    /* Gray borders */
+  --text-primary: #e5e5e5;    /* Off-white text */
+  --text-secondary: #a3a3a3;  /* Gray text */
+  --accent-primary: #ef4444;  /* Red accent */
+}
+
 @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;

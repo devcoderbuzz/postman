@@ -7,14 +7,14 @@ export function Settings({ theme, setTheme, layout, setLayout }) {
 
             <div className="bg-white dark:bg-neutral-900 rounded-lg border border-neutral-200 dark:border-neutral-800 p-6 space-y-6">
                 <div>
-                    <h3 className="text-lg font-medium text-neutral-900 dark:text-white mb-4">Appearance</h3>
-                    <div className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-neutral-800/50 rounded-lg border border-neutral-200 dark:border-neutral-800">
+                    <h3 className="text-lg font-medium text-neutral-900 dark:text-[var(--text-primary)] mb-4">Appearance</h3>
+                    <div className="flex items-center justify-between p-4 bg-neutral-50 dark:bg-[var(--bg-secondary)] rounded-lg border border-neutral-200 dark:border-[var(--border-color)]">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 bg-neutral-200 dark:bg-neutral-800 rounded-lg">
+                            <div className="p-2 bg-neutral-200 dark:bg-white/5 rounded-lg">
                                 {theme === 'dark' ? <Moon className="w-5 h-5 text-neutral-500 dark:text-neutral-400" /> : <Sun className="w-5 h-5 text-neutral-500 dark:text-neutral-400" />}
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-neutral-900 dark:text-white">Theme</p>
+                                <p className="text-sm font-medium text-neutral-900 dark:text-[var(--text-primary)]">Theme</p>
                                 <p className="text-xs text-neutral-500">Select your preferred interface theme</p>
                             </div>
                         </div>

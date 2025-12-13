@@ -12,22 +12,22 @@ export function KeyValueEditor({ pairs, setPairs }) {
     };
 
     return (
-        <div className="flex flex-col border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden bg-white dark:bg-neutral-900/20">
-            <div className="flex border-b border-neutral-200 dark:border-neutral-800 bg-neutral-50 dark:bg-neutral-900/50 text-xs font-semibold text-neutral-500 dark:text-neutral-400">
-                <div className="flex-1 p-2 border-r border-neutral-200 dark:border-neutral-800">Key</div>
-                <div className="flex-1 p-2 border-r border-neutral-200 dark:border-neutral-800">Value</div>
+        <div className="flex flex-col border border-neutral-200 dark:border-[var(--border-color)] rounded-lg overflow-hidden bg-white dark:bg-[var(--bg-surface)]">
+            <div className="flex border-b border-neutral-200 dark:border-[var(--border-color)] bg-neutral-50 dark:bg-[var(--bg-surface)] text-xs font-semibold text-neutral-500 dark:text-neutral-400">
+                <div className="flex-1 p-2 border-r border-neutral-200 dark:border-[var(--border-color)]">Key</div>
+                <div className="flex-1 p-2 border-r border-neutral-200 dark:border-[var(--border-color)]">Value</div>
                 <div className="w-10"></div>
             </div>
             {pairs.map((pair, index) => (
-                <div key={index} className="flex border-b border-neutral-200 dark:border-neutral-800 last:border-0 group">
+                <div key={index} className="flex border-b border-neutral-200 dark:border-[var(--border-color)] last:border-0 group">
                     <input
-                        className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-neutral-200 dark:border-neutral-800 placeholder:text-neutral-400 dark:placeholder:text-neutral-700 font-mono text-neutral-900 dark:text-neutral-300"
+                        className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-neutral-200 dark:border-[var(--border-color)] placeholder:text-neutral-400 dark:placeholder:text-neutral-700 font-mono text-neutral-900 dark:text-[var(--text-primary)]"
                         placeholder="Key"
                         value={pair.key}
                         onChange={(e) => updatePair(index, 'key', e.target.value)}
                     />
                     <input
-                        className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-neutral-200 dark:border-neutral-800 placeholder:text-neutral-400 dark:placeholder:text-neutral-700 font-mono text-neutral-900 dark:text-neutral-300"
+                        className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-neutral-200 dark:border-[var(--border-color)] placeholder:text-neutral-400 dark:placeholder:text-neutral-700 font-mono text-neutral-900 dark:text-[var(--text-primary)]"
                         placeholder="Value"
                         value={pair.value}
                         onChange={(e) => updatePair(index, 'value', e.target.value)}

@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { FolderPlus, FilePlus, Folder, FileText, ChevronRight, ChevronDown, Trash2, Edit2, Check, X, GripVertical, Save, RefreshCw } from 'lucide-react';
 import { cn } from '../lib/utils';
+import { CollectionItem } from './CollectionItem';
 
 export function CollectionsPanel({
-    collections,
-    setCollections,
+    localCollections,
+    setLocalCollections,
+    serverCollections,
     onLoadRequest,
     width,
     onWidthChange,
@@ -17,7 +19,8 @@ export function CollectionsPanel({
     modules,
     activeModule,
     onModuleSelect,
-    onRefreshModule
+    onRefreshModule,
+    activeCollectionId
 }) {
     const [expandedFolders, setExpandedFolders] = useState(new Set());
     const [editingCollection, setEditingCollection] = useState(null);
@@ -30,17 +33,17 @@ export function CollectionsPanel({
             name: 'New Collection',
             requests: []
         };
-        setCollections([...collections, newCollection]);
+        setLocalCollections([...localCollections, newCollection]);
     };
 
     const deleteCollection = (id) => {
         if (window.confirm('Are you sure you want to delete this collection?')) {
-            setCollections(collections.filter(col => col.id !== id));
+            setLocalCollections(localCollections.filter(col => col.id !== id));
         }
     };
 
     const deleteRequest = (collectionId, requestId) => {
-        setCollections(collections.map(col => {
+        setLocalCollections(localCollections.map(col => {
             if (col.id === collectionId) {
                 return { ...col, requests: col.requests.filter(req => req.id !== requestId) };
             }
@@ -65,7 +68,7 @@ export function CollectionsPanel({
 
     const saveRename = (collectionId) => {
         if (editName.trim()) {
-            setCollections(collections.map(col =>
+            setLocalCollections(localCollections.map(col =>
                 col.id === collectionId ? { ...col, name: editName.trim() } : col
             ));
         }
@@ -108,10 +111,10 @@ export function CollectionsPanel({
     }, [isResizing, onWidthChange]);
 
     return (
-        <div className="h-full flex bg-neutral-50 dark:bg-neutral-900 border-r border-neutral-200 dark:border-neutral-800 relative" style={{ width: `${width}px` }}>
+        <div className="h-full flex bg-neutral-50 dark:bg-[var(--bg-secondary)] border-r border-neutral-200 dark:border-[var(--border-color)] relative" style={{ width: `${width}px` }}>
             <div className="flex-1 flex flex-col overflow-hidden">
                 {projects && (
-                    <div className="p-3 border-b border-neutral-200 dark:border-neutral-800 bg-neutral-100 dark:bg-neutral-900 space-y-2">
+                    <div className="p-3 border-b border-neutral-200 dark:border-[var(--border-color)] bg-neutral-100 dark:bg-[var(--bg-secondary)] space-y-2">
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-medium text-neutral-500 w-16 text-right">App Code:</span>
                             <select
@@ -158,7 +161,7 @@ export function CollectionsPanel({
                         )}
                     </div>
                 )}
-                <div className="p-3 border-b border-neutral-200 dark:border-neutral-800">
+                <div className="p-3 border-b border-neutral-200 dark:border-[var(--border-color)]">
                     <div className="flex items-center justify-between mb-2">
                         <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Collections</h2>
                         <button
@@ -172,131 +175,62 @@ export function CollectionsPanel({
                 </div>
 
                 <div className="flex-1 overflow-auto p-2">
-                    {collections.length === 0 ? (
+                    {/* Server Collections Section */}
+                    {serverCollections && serverCollections.length > 0 && (
+                        <div className="mb-4">
+                            <div className="px-2 py-1.5 text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                                Server Collections
+                            </div>
+                            <div className="space-y-1">
+                                {serverCollections.map(collection => (
+                                    <CollectionItem
+                                        key={collection.id}
+                                        collection={collection}
+                                        activeCollectionId={activeCollectionId}
+                                        expandedFolders={expandedFolders}
+                                        toggleFolder={toggleFolder}
+                                        onLoadRequest={onLoadRequest}
+                                        readOnly={true} // Server collections usually strictly managed
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Local Collections Section */}
+                    {localCollections && localCollections.length > 0 && (
+                        <div className="mb-4">
+                            <div className="px-2 py-1.5 text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                                Local Collections
+                            </div>
+                            <div className="space-y-1">
+                                {localCollections.map(collection => (
+                                    <CollectionItem
+                                        key={collection.id}
+                                        collection={collection}
+                                        activeCollectionId={activeCollectionId}
+                                        expandedFolders={expandedFolders}
+                                        toggleFolder={toggleFolder}
+                                        onLoadRequest={onLoadRequest}
+                                        editingCollection={editingCollection}
+                                        editName={editName}
+                                        setEditName={setEditName}
+                                        saveRename={saveRename}
+                                        cancelRename={cancelRename}
+                                        startRename={startRename}
+                                        deleteCollection={deleteCollection}
+                                        deleteRequest={deleteRequest}
+                                        onSaveCollection={onSaveCollection}
+                                        onReloadCollection={onReloadCollection}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {(!serverCollections?.length && !localCollections?.length) && (
                         <div className="text-center py-8 text-neutral-400 dark:text-neutral-600 text-xs">
                             No collections yet
-                        </div>
-                    ) : (
-                        <div className="space-y-1">
-                            {collections.map(collection => (
-                                <div key={collection.id}>
-                                    <div className="flex items-center gap-1 p-2 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded group">
-                                        <button
-                                            onClick={() => toggleFolder(collection.id)}
-                                            className="p-0.5"
-                                        >
-                                            {expandedFolders.has(collection.id) ? (
-                                                <ChevronDown className="w-3 h-3 text-neutral-500 dark:text-neutral-400" />
-                                            ) : (
-                                                <ChevronRight className="w-3 h-3 text-neutral-500 dark:text-neutral-400" />
-                                            )}
-                                        </button>
-                                        <Folder className="w-4 h-4 text-yellow-600" />
-
-                                        {editingCollection === collection.id ? (
-                                            <>
-                                                <input
-                                                    type="text"
-                                                    value={editName}
-                                                    onChange={(e) => setEditName(e.target.value)}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === 'Enter') saveRename(collection.id);
-                                                        if (e.key === 'Escape') cancelRename();
-                                                    }}
-                                                    className="flex-1 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded px-2 py-0.5 text-xs text-neutral-900 dark:text-neutral-300 outline-none focus:border-blue-500"
-                                                    autoFocus
-                                                />
-                                                <button
-                                                    onClick={() => saveRename(collection.id)}
-                                                    className="p-1 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded text-green-500"
-                                                >
-                                                    <Check className="w-3 h-3" />
-                                                </button>
-                                                <button
-                                                    onClick={cancelRename}
-                                                    className="p-1 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded text-red-500"
-                                                >
-                                                    <X className="w-3 h-3" />
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <span className="flex-1 text-xs text-neutral-700 dark:text-neutral-300">{collection.name}</span>
-                                                <button
-                                                    onClick={() => startRename(collection)}
-                                                    className="p-1 opacity-0 group-hover:opacity-100 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded text-neutral-500 hover:text-blue-400"
-                                                >
-                                                    <Edit2 className="w-3 h-3" />
-                                                </button>
-                                                <button
-                                                    onClick={() => deleteCollection(collection.id)}
-                                                    className="p-1 opacity-0 group-hover:opacity-100 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded text-neutral-500 hover:text-red-500"
-                                                >
-                                                    <Trash2 className="w-3 h-3" />
-                                                </button>
-                                            </>
-                                        )}
-
-                                        <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity ml-auto">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onSaveCollection(collection);
-                                                }}
-                                                className="p-1 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded text-neutral-500 hover:text-blue-500"
-                                                title="Save to DB"
-                                            >
-                                                <Save className="w-3 h-3" />
-                                            </button>
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onReloadCollection(collection.id);
-                                                }}
-                                                className="p-1 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded text-neutral-500 hover:text-green-500"
-                                                title="Reload from DB"
-                                            >
-                                                <RefreshCw className="w-3 h-3" />
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    {
-                                        expandedFolders.has(collection.id) && (
-                                            <div className="ml-4 space-y-0.5">
-                                                {collection.requests.map(request => (
-                                                    <div
-                                                        key={request.id}
-                                                        className="flex items-center gap-2 p-2 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded group cursor-pointer"
-                                                        onClick={() => onLoadRequest(request)}
-                                                    >
-                                                        <FileText className="w-3 h-3 text-neutral-500 dark:text-neutral-400" />
-                                                        <span className={cn(
-                                                            "text-[10px] font-bold uppercase w-12",
-                                                            request.method === 'GET' && "text-green-500",
-                                                            request.method === 'POST' && "text-yellow-500",
-                                                            request.method === 'PUT' && "text-blue-500",
-                                                            request.method === 'DELETE' && "text-red-500"
-                                                        )}>
-                                                            {request.method}
-                                                        </span>
-                                                        <span className="flex-1 text-xs text-neutral-600 dark:text-neutral-400 truncate">{request.name}</span>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                deleteRequest(collection.id, request.id);
-                                                            }}
-                                                            className="p-1 opacity-0 group-hover:opacity-100 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded text-neutral-500 hover:text-red-500"
-                                                        >
-                                                            <Trash2 className="w-3 h-3" />
-                                                        </button>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )
-                                    }
-                                </div>
-                            ))}
                         </div>
                     )}
                 </div>
