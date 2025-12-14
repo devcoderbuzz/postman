@@ -2,108 +2,89 @@ import axios from 'axios';
 
 const PROXY_URL = 'http://localhost:3001/proxy';
 
+// Helper to generate mock requests
+const generateRequests = (count, prefix) => {
+    return Array.from({ length: count }, (_, i) => {
+        const id = i + 1;
+        const methods = ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'];
+        const method = methods[i % methods.length];
+        return {
+            requestId: `req-${prefix}-${id}`,
+            name: `${prefix} Request ${id}`,
+            method: method,
+            url: `https://api.mock-service.com/${prefix}/resource/${id}`,
+            body: method === 'GET' ? null : `{"id": ${id}, "name": "Item ${id}"}`,
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer mock-token" }
+        };
+    });
+};
+
+// Helper to generate mock collections
+const generateCollections = (projectId, projectName) => {
+    const count = Math.floor(Math.random() * 3) + 2; // 2 to 4 collections per project
+    return Array.from({ length: count }, (_, i) => {
+        const id = i + 1;
+        return {
+            collectionId: `col-${projectId}-${id}`,
+            name: `${projectName} Collection V${id}`,
+            requests: generateRequests(Math.floor(Math.random() * 6) + 5, `${projectName}-C${id}`) // 5 to 10 requests
+        };
+    });
+};
+
+const MOCK_PROJECTS = [
+    { projectId: '1', projectName: 'Weather App', moduleName: 'Core' },
+    { projectId: '2', projectName: 'E-commerce', moduleName: 'Payment' },
+    { projectId: '3', projectName: 'E-commerce', moduleName: 'Inventory' },
+    { projectId: '4', projectName: 'E-commerce', moduleName: 'UserMgmt' },
+    { projectId: '5', projectName: 'Logistics', moduleName: 'Tracking' },
+    { projectId: '6', projectName: 'Logistics', moduleName: 'Fleet' },
+    { projectId: '7', projectName: 'Social Media', moduleName: 'Feed' },
+    { projectId: '8', projectName: 'Social Media', moduleName: 'Messaging' },
+    { projectId: '9', projectName: 'Finance', moduleName: 'Reporting' },
+    { projectId: '10', projectName: 'Finance', moduleName: 'Audit' }
+];
+
 export const apiService = {
   authenticate: async (username, password) => {
-    try {
-      const res = await axios.post(PROXY_URL, {
-        method: 'POST',
-        url: 'http://localhost:8080/authenticate',
-        headers: { 'Content-Type': 'application/json' },
-        data: { username, password }
-      });
-      
-      if (res.data && res.data.data) {
-          // Extract token from various potential fields
-          const body = res.data.data;
-          const token = body.token || body.jwt || body.accessToken;
-          return { ...body, token };
-      }
-      return null;
-    } catch (error) {
-      console.error('Authentication failed:', error);
-      throw error;
-    }
+    console.log('Mock Authenticating...');
+    return new Promise(resolve => {
+      setTimeout(() => {
+        resolve({
+          token: 'mock-jwt-token-12345',
+          username: username || 'DevAdmin',
+          role: username === 'admin' ? 'admin' : 'user',
+          assignedAppCodes: [
+            MOCK_PROJECTS[0], // Weather Core
+            MOCK_PROJECTS[1], // E-comm Payment
+            MOCK_PROJECTS[4], // Logistics Tracking
+            MOCK_PROJECTS[6]  // Social Feed
+          ]
+        });
+      }, 800);
+    });
   },
 
   getAllProjects: async () => {
-    try {
-      const token = sessionStorage.getItem('authToken');
-      const headers = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const res = await axios.post(PROXY_URL, {
-        method: 'GET',
-        url: 'http://localhost:8080/appCodes',
-        headers: headers
-      });
-
-      console.log('Projects fetched 123:', res.data);
-      if (res.data && res.data.data) {
-          return res.data.data;
-      }
-      return [];
-    } catch (error) {
-      console.error('Fetching projects failed:', error);
-      throw error;
-    }
-  },
-  
-  getCollectionsByModule: async (projectName, moduleName) => {
-    try {
-      const token = sessionStorage.getItem('authToken');
-      const headers = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      console.log(`Fetching collections for Project: ${projectName}, Module: ${moduleName}`);
-      const res = await axios.post(PROXY_URL, {
-        method: 'POST',
-        // Assuming this is the endpoint based on the requirement
-        url: 'http://localhost:8080/collections/search', 
-        headers: headers,
-        data: {
-          projectName: projectName,
-          moduleName: moduleName
-        }
-      });
-
-      console.log('Collections fetched:', res.data);
-      if (res.data && res.data.data) {
-          return res.data.data;
-      }
-      return [];
-    } catch (error) {
-      console.error('Fetching collections failed:', error);
-      throw error;
-    }
+    console.log('Mock Fetching Projects...');
+    return new Promise(resolve => {
+      setTimeout(() => {
+        resolve(MOCK_PROJECTS);
+      }, 600);
+    });
   },
 
   getCollectionsByProjectId: async (projectId) => {
-    try {
-      const token = sessionStorage.getItem('authToken');
-      const headers = { 'Content-Type': 'application/json' };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      console.log(`Fetching collections for Project ID: ${projectId}`);
-      const res = await axios.post(PROXY_URL, {
-        method: 'GET',
-        url: `http://localhost:8080/projects/${projectId}/collections`,
-        headers: headers
-      });
-
-      console.log('Collections fetched by ID:', res.data);
-      if (res.data && res.data.data) {
-        return res.data.data;
-      }
-      return [];
-    } catch (error) {
-      console.error('Fetching collections by ID failed:', error);
-      throw error;
-    }
+    console.log(`Mock Fetching Collections for Project ${projectId}...`);
+    return new Promise(resolve => {
+      setTimeout(() => {
+        const project = MOCK_PROJECTS.find(p => p.projectId === projectId);
+        if (project) {
+            resolve(generateCollections(projectId, project.projectName));
+        } else {
+            resolve([]);
+        }
+      }, 500);
+    });
   }
 };

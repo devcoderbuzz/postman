@@ -1,4 +1,4 @@
-import { History, LayoutGrid, Settings, Box, Folder, Globe } from 'lucide-react';
+import { History, LayoutGrid, Settings, Box, Folder, Globe, Database } from 'lucide-react';
 import { cn } from '../lib/utils';
 import React from 'react';
 
@@ -29,6 +29,12 @@ export function Sidebar({ activeView, setActiveView }) {
                     label="Collections"
                     active={activeView === 'collections'}
                     onClick={() => toggleView('collections')}
+                />
+                <SidebarItem
+                    icon={Database}
+                    label="Edit Data"
+                    active={activeView === 'editData'}
+                    onClick={() => toggleView('editData')}
                 />
                 <SidebarItem
                     icon={Globe}

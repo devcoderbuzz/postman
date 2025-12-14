@@ -19,6 +19,7 @@ import { SaveRequestModal } from '../components/SaveRequestModal';
 import { Header } from '../components/Header';
 import { Settings } from '../components/Settings';
 import { ImportCurlModal } from '../components/ImportCurlModal';
+import { EditDataPanel } from '../components/EditDataModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
@@ -643,6 +644,22 @@ export function UserWorkspace() {
                                         >
                                             Dark Mode {theme === 'dark' && <span className="text-xs">✓</span>}
                                         </button>
+                                        <div className="border-t border-neutral-200 dark:border-neutral-700 my-1"></div>
+                                        {activeView === 'editData' ? (
+                                            <button
+                                                onClick={() => { setActiveView('collections'); setIsSettingsOpen(false); }}
+                                                className="w-full text-left px-4 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-sm"
+                                            >
+                                                View Collections
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => { setActiveView('editData'); setIsSettingsOpen(false); }}
+                                                className="w-full text-left px-4 py-2 hover:bg-neutral-100 dark:hover:bg-neutral-700 text-sm"
+                                            >
+                                                Edit Data
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </>
@@ -666,7 +683,9 @@ export function UserWorkspace() {
             />
 
             <Layout activeView={activeView} setActiveView={setActiveView}>
-                {activeView === 'environments' ? (
+                {activeView === 'editData' ? (
+                    <EditDataPanel />
+                ) : activeView === 'environments' ? (
                     <div className="flex-1 flex overflow-hidden">
                         <div className="w-96 border-r border-neutral-200 dark:border-neutral-800 p-6 overflow-auto">
                             <EnvironmentManager
