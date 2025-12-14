@@ -79,5 +79,31 @@ export const apiService = {
       console.error('Fetching collections failed:', error);
       throw error;
     }
+  },
+
+  getCollectionsByProjectId: async (projectId) => {
+    try {
+      const token = sessionStorage.getItem('authToken');
+      const headers = { 'Content-Type': 'application/json' };
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      console.log(`Fetching collections for Project ID: ${projectId}`);
+      const res = await axios.post(PROXY_URL, {
+        method: 'GET',
+        url: `http://localhost:8080/projects/${projectId}/collections`,
+        headers: headers
+      });
+
+      console.log('Collections fetched by ID:', res.data);
+      if (res.data && res.data.data) {
+        return res.data.data;
+      }
+      return [];
+    } catch (error) {
+      console.error('Fetching collections by ID failed:', error);
+      throw error;
+    }
   }
 };

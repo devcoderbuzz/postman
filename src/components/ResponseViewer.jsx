@@ -3,13 +3,19 @@ import { Tabs } from './Tabs';
 import { Copy, Download, Check } from 'lucide-react';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json';
+import xml from 'react-syntax-highlighter/dist/esm/languages/hljs/xml';
+import css from 'react-syntax-highlighter/dist/esm/languages/hljs/css';
+import javascript from 'react-syntax-highlighter/dist/esm/languages/hljs/javascript';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 import { cn } from '../lib/utils';
 import { buildCurl } from '../lib/curlBuilder';
 
 SyntaxHighlighter.registerLanguage('json', json);
+SyntaxHighlighter.registerLanguage('xml', xml);
+SyntaxHighlighter.registerLanguage('css', css);
+SyntaxHighlighter.registerLanguage('javascript', javascript);
 
-export function ResponseViewer({ response, error, isLoading, activeRequest }) {
+export function ResponseViewer({ response, error, isLoading, activeRequest, theme }) {
     const [activeTab, setActiveTab] = useState('body');
     const [viewMode, setViewMode] = useState('pretty');
     const [copied, setCopied] = useState(false);
@@ -20,6 +26,16 @@ export function ResponseViewer({ response, error, isLoading, activeRequest }) {
         { id: 'headers', label: 'Headers' },
         { id: 'curl', label: 'Curl' },
     ];
+
+    const getLanguage = (contentType) => {
+        if (!contentType) return 'json';
+        if (contentType.includes('html') || contentType.includes('xml')) return 'xml';
+        if (contentType.includes('css')) return 'css';
+        if (contentType.includes('javascript')) return 'javascript';
+        return 'json';
+    };
+
+    const language = response ? getLanguage(response.headers?.['content-type'] || '') : 'json';
 
     const handleCopy = () => {
         const text = typeof response.data === 'string'
@@ -160,8 +176,8 @@ export function ResponseViewer({ response, error, isLoading, activeRequest }) {
                     <div className="flex-1 overflow-auto bg-white dark:bg-transparent relative">
                         {viewMode === 'pretty' ? (
                             <SyntaxHighlighter
-                                language="json"
-                                style={activeRequest && activeRequest.theme === 'light' ? null : undefined} // Use default for light, custom for dark
+                                language={language}
+                                style={theme === 'dark' ? atomOneDark : undefined}
                                 customStyle={{
                                     margin: 0,
                                     padding: '1rem',

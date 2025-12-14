@@ -17,7 +17,7 @@
   --border-color: #333333;    /* Gray borders */
   --text-primary: #e5e5e5;    /* Off-white text */
   --text-secondary: #a3a3a3;  /* Gray text */
-  --accent-primary: #ef4444;  /* Red accent */
+  --accent-primary: #dc2626;  /* Red-600 accent */
 }
 
 @layer utilities {

@@ -22,7 +22,7 @@ export function CollectionItem({
     return (
         <div>
             <div className={cn(
-                "flex items-center gap-1 p-2 rounded group transition-colors",
+                "flex items-center gap-1 p-1 rounded group transition-colors",
                 activeCollectionId === collection.id
                     ? "bg-red-900/30 text-red-500"
                     : "hover:bg-neutral-200 dark:hover:bg-white/5"
@@ -49,7 +49,7 @@ export function CollectionItem({
                                 if (e.key === 'Enter') saveRename(collection.id);
                                 if (e.key === 'Escape') cancelRename();
                             }}
-                            className="flex-1 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded px-2 py-0.5 text-xs text-neutral-900 dark:text-neutral-300 outline-none focus:border-blue-500"
+                            className="flex-1 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded px-1 py-0.5 text-xs text-neutral-900 dark:text-neutral-300 outline-none focus:border-blue-500"
                             autoFocus
                         />
                         <button
@@ -124,7 +124,7 @@ export function CollectionItem({
                         {collection.requests.map(request => (
                             <div
                                 key={request.id}
-                                className="flex items-center gap-2 p-2 hover:bg-neutral-200 dark:hover:bg-white/5 rounded group cursor-pointer"
+                                className="flex items-center gap-2 p-1 hover:bg-neutral-200 dark:hover:bg-white/5 rounded group cursor-pointer"
                                 onClick={() => onLoadRequest(request)}
                             >
                                 <FileText className="w-3 h-3 text-neutral-500 dark:text-neutral-400" />

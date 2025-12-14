@@ -20,7 +20,9 @@ export function CollectionsPanel({
     activeModule,
     onModuleSelect,
     onRefreshModule,
-    activeCollectionId
+
+    activeCollectionId,
+    onImportCurl
 }) {
     const [expandedFolders, setExpandedFolders] = useState(new Set());
     const [editingCollection, setEditingCollection] = useState(null);
@@ -114,13 +116,13 @@ export function CollectionsPanel({
         <div className="h-full flex bg-neutral-50 dark:bg-[var(--bg-secondary)] border-r border-neutral-200 dark:border-[var(--border-color)] relative" style={{ width: `${width}px` }}>
             <div className="flex-1 flex flex-col overflow-hidden">
                 {projects && (
-                    <div className="p-3 border-b border-neutral-200 dark:border-[var(--border-color)] bg-neutral-100 dark:bg-[var(--bg-secondary)] space-y-2">
+                    <div className="p-2 border-b border-neutral-200 dark:border-[var(--border-color)] bg-neutral-100 dark:bg-[var(--bg-secondary)] space-y-1">
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-medium text-neutral-500 w-16 text-right">App Code:</span>
                             <select
                                 value={activeProject}
                                 onChange={(e) => onProjectSelect(e.target.value)}
-                                className="flex-1 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-blue-500"
+                                className="flex-1 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white rounded px-2 py-1 text-xs outline-none focus:border-blue-500"
                             >
                                 {projects.map((proj) => (
                                     <option key={proj.id} value={proj.id}>
@@ -130,7 +132,7 @@ export function CollectionsPanel({
                             </select>
                             <button
                                 onClick={onRefreshProject}
-                                className="p-1.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-500 hover:text-blue-500 transition-colors"
+                                className="p-1 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-500 hover:text-blue-500 transition-colors"
                                 title="Refresh Project"
                             >
                                 <RefreshCw className="w-3.5 h-3.5" />
@@ -142,7 +144,7 @@ export function CollectionsPanel({
                                 <select
                                     value={activeModule}
                                     onChange={(e) => onModuleSelect(e.target.value)}
-                                    className="flex-1 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white rounded px-2 py-1.5 text-xs outline-none focus:border-blue-500"
+                                    className="flex-1 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 text-neutral-900 dark:text-white rounded px-2 py-1 text-xs outline-none focus:border-blue-500"
                                 >
                                     {modules.map((mod) => (
                                         <option key={mod.id} value={mod.id}>
@@ -152,27 +154,25 @@ export function CollectionsPanel({
                                 </select>
                                 <button
                                     onClick={onRefreshModule}
-                                    className="p-1.5 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-500 hover:text-blue-500 transition-colors"
+                                    className="p-1 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded hover:bg-neutral-50 dark:hover:bg-neutral-700 text-neutral-500 hover:text-blue-500 transition-colors"
                                     title="Refresh Module"
                                 >
                                     <RefreshCw className="w-3.5 h-3.5" />
                                 </button>
                             </div>
                         )}
+                        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-neutral-200 dark:border-neutral-700">
+                            <button
+                                onClick={onImportCurl}
+                                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-medium rounded hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
+                                Import cURL
+                            </button>
+                        </div>
                     </div>
                 )}
-                <div className="p-3 border-b border-neutral-200 dark:border-[var(--border-color)]">
-                    <div className="flex items-center justify-between mb-2">
-                        <h2 className="text-sm font-semibold text-neutral-700 dark:text-neutral-300">Collections</h2>
-                        <button
-                            onClick={addCollection}
-                            className="p-1.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
-                            title="New Collection"
-                        >
-                            <FolderPlus className="w-4 h-4" />
-                        </button>
-                    </div>
-                </div>
+
 
                 <div className="flex-1 overflow-auto p-2">
                     {/* Server Collections Section */}
@@ -198,13 +198,22 @@ export function CollectionsPanel({
                     )}
 
                     {/* Local Collections Section */}
-                    {localCollections && localCollections.length > 0 && (
-                        <div className="mb-4">
-                            <div className="px-2 py-1.5 text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
+                    <div className="mb-4">
+                        <div className="flex items-center justify-between px-2 py-1.5">
+                            <div className="text-[10px] font-bold text-neutral-500 dark:text-neutral-400 uppercase tracking-wider">
                                 Local Collections
                             </div>
-                            <div className="space-y-1">
-                                {localCollections.map(collection => (
+                            <button
+                                onClick={addCollection}
+                                className="p-0.5 hover:bg-neutral-200 dark:hover:bg-neutral-800 rounded text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                                title="New Collection"
+                            >
+                                <FolderPlus className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                        <div className="space-y-1">
+                            {localCollections && localCollections.length > 0 ? (
+                                localCollections.map(collection => (
                                     <CollectionItem
                                         key={collection.id}
                                         collection={collection}
@@ -223,16 +232,14 @@ export function CollectionsPanel({
                                         onSaveCollection={onSaveCollection}
                                         onReloadCollection={onReloadCollection}
                                     />
-                                ))}
-                            </div>
+                                ))
+                            ) : (
+                                <div className="px-2 py-4 text-center text-neutral-400 dark:text-neutral-600 text-xs italic">
+                                    No local collections
+                                </div>
+                            )}
                         </div>
-                    )}
-
-                    {(!serverCollections?.length && !localCollections?.length) && (
-                        <div className="text-center py-8 text-neutral-400 dark:text-neutral-600 text-xs">
-                            No collections yet
-                        </div>
-                    )}
+                    </div>
                 </div>
             </div>
 

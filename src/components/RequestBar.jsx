@@ -13,14 +13,14 @@ export function RequestBar({ method, setMethod, url, setUrl, onSend, isLoading }
     const currentMethod = METHODS.find(m => m.value === method) || METHODS[0];
 
     return (
-        <div className="flex items-center gap-2 p-3 border-b border-neutral-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--bg-primary)]">
+        <div className="flex items-center gap-2 p-2 border-b border-neutral-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--bg-primary)]">
             <div className="flex flex-1 items-center gap-0 bg-neutral-50 dark:bg-[var(--bg-surface)] border border-neutral-300 dark:border-[var(--border-color)] rounded-lg overflow-hidden focus-within:border-neutral-500 transition-colors shadow-sm">
                 <div className="relative group">
                     <select
                         value={method}
                         onChange={(e) => setMethod(e.target.value)}
                         className={cn(
-                            "bg-transparent pl-4 pr-8 py-2.5 font-bold text-xs outline-none border-r border-neutral-300 dark:border-[var(--border-color)] hover:bg-neutral-200 dark:hover:bg-white/5 cursor-pointer appearance-none uppercase tracking-wide",
+                            "bg-transparent pl-3 pr-6 py-1.5 font-bold text-xs outline-none border-r border-neutral-300 dark:border-[var(--border-color)] hover:bg-neutral-200 dark:hover:bg-white/5 cursor-pointer appearance-none uppercase tracking-wide",
                             currentMethod.color
                         )}
                     >
@@ -38,17 +38,14 @@ export function RequestBar({ method, setMethod, url, setUrl, onSend, isLoading }
                     value={url}
                     onChange={(e) => setUrl(e.target.value)}
                     placeholder="Enter request URL"
-                    className="flex-1 bg-transparent px-4 py-2.5 outline-none text-sm font-mono placeholder:text-neutral-400 dark:placeholder:text-neutral-600 text-neutral-900 dark:text-neutral-200"
+                    className="flex-1 bg-transparent px-3 py-1.5 outline-none text-sm font-mono placeholder:text-neutral-400 dark:placeholder:text-neutral-600 text-neutral-900 dark:text-neutral-200"
                     onKeyDown={(e) => e.key === 'Enter' && onSend()}
                 />
             </div>
             <button
                 onClick={onSend}
                 disabled={isLoading}
-                className={cn(
-                    "px-6 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-semibold rounded-lg flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20",
-                    isLoading && "animate-pulse"
-                )}
+                className={`px-6 py-2 bg-red-600 text-white font-semibold rounded hover:bg-red-700 transition-colors flex items-center gap-2 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
                 {isLoading ? 'Sending...' : <><Send className="w-4 h-4" /> Send</>}
             </button>

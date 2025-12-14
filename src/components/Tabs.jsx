@@ -7,10 +7,12 @@ export function Tabs({ tabs, activeTab, onTabChange }) {
                 <button
                     key={tab.id}
                     onClick={() => onTabChange(tab.id)}
-                    className={cn(
-                        "px-4 py-2 text-sm font-medium transition-colors relative",
-                        activeTab === tab.id ? "text-neutral-900 dark:text-white" : "text-neutral-500 dark:text-neutral-400 hover:text-neutral-700 dark:hover:text-neutral-300"
-                    )}
+                    className={`
+                px-4 py-2 text-sm font-medium border-b-2 transition-colors whitespace-nowrap
+                ${activeTab === tab.id
+                            ? 'border-red-600 text-red-600 dark:text-red-500'
+                            : 'border-transparent text-neutral-500 hover:text-neutral-700 dark:text-neutral-400 dark:hover:text-neutral-200'}
+            `}
                 >
                     {tab.label}
                     {activeTab === tab.id && (
