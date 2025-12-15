@@ -1,8 +1,11 @@
 import { History, LayoutGrid, Settings, Box, Folder, Globe, Database } from 'lucide-react';
 import { cn } from '../lib/utils';
 import React from 'react';
+import { useAuth } from '../contexts/AuthContext';
 
 export function Sidebar({ activeView, setActiveView }) {
+    const { user } = useAuth();
+
     const toggleView = (view) => {
         if (activeView === view) {
             // If clicking the same view, don't do anything (it's already active)
@@ -28,12 +31,14 @@ export function Sidebar({ activeView, setActiveView }) {
                     active={activeView === 'collections'}
                     onClick={() => toggleView('collections')}
                 />
-                <SidebarItem
-                    icon={Database}
-                    label="My App Codes"
-                    active={activeView === 'editData'}
-                    onClick={() => toggleView('editData')}
-                />
+                {user?.role !== 'user' && (
+                    <SidebarItem
+                        icon={Database}
+                        label="My App Codes"
+                        active={activeView === 'editData'}
+                        onClick={() => toggleView('editData')}
+                    />
+                )}
                 <SidebarItem
                     icon={Globe}
                     label="Environments"

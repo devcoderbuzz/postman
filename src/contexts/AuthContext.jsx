@@ -32,9 +32,13 @@ export const AuthProvider = ({ children }) => {
         try {
             const data = await apiService.authenticate(username, password);
             if (data) {
-                // MOCK ROLE ASSIGNMENT if not present
-                // Admin if username implies admin, otherwise rely on data.role or default to 'user'
-                const role = username.toLowerCase().includes('admin') ? 'admin' : (data.role || 'user');
+                // MOCK ROLE ASSIGNMENT
+                let role = data.role || 'developer';
+                if (username.toLowerCase().includes('admin')) {
+                    role = 'admin';
+                } else if (username.toLowerCase().includes('user')) {
+                    role = 'user';
+                }
 
                 const userData = {
                     username: data.username || username,

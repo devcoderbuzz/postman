@@ -14,6 +14,7 @@ export function EditDataPanel() {
     const [expandedCollections, setExpandedCollections] = useState(new Set());
 
     const [isCreatingCollection, setIsCreatingCollection] = useState(false);
+    const [isImporting, setIsImporting] = useState(false);
     const [newCollectionName, setNewCollectionName] = useState('');
 
     // Sidebar Resizing
@@ -69,22 +70,25 @@ export function EditDataPanel() {
     useEffect(() => {
         const handleMouseMove = (e) => {
             if (!isResizing) return;
-            const newWidth = e.clientX; // Simplified for sidebar on left
-            if (newWidth >= 200 && newWidth <= 600) {
+            const newWidth = e.clientX - 48; // Subtract global sidebar width (48px)
+            if (newWidth >= 200 && newWidth <= 800) {
                 setSidebarWidth(newWidth);
             }
         };
 
         const handleMouseUp = () => {
             setIsResizing(false);
+            document.body.style.userSelect = '';
         };
 
         if (isResizing) {
+            document.body.style.userSelect = 'none'; // Prevent text selection
             document.addEventListener('mousemove', handleMouseMove);
             document.addEventListener('mouseup', handleMouseUp);
             return () => {
                 document.removeEventListener('mousemove', handleMouseMove);
                 document.removeEventListener('mouseup', handleMouseUp);
+                document.body.style.userSelect = '';
             };
         }
     }, [isResizing]);
@@ -216,8 +220,86 @@ export function EditDataPanel() {
                     : col
             ));
         }
-        setRenamingCollectionId(null);
         setRenameValue('');
+    };
+
+    const handleImport = (type, data) => {
+        if (!selectedAppCodeId) return;
+
+        try {
+            if (type === 'collection') {
+                const parsed = JSON.parse(data);
+                // Handle Postman Format v2.1 or generic
+                let newCol = {
+                    collectionId: `import-col-${Date.now()}`,
+                    name: parsed.info?.name || parsed.name || 'Imported Collection',
+                    requests: []
+                };
+
+                const extractRequests = (items) => {
+                    let reqs = [];
+                    items.forEach(item => {
+                        if (item.item) {
+                            // Folder
+                            reqs = [...reqs, ...extractRequests(item.item)];
+                        } else if (item.request) {
+                            // Request
+                            reqs.push({
+                                requestId: `req-${Date.now()}-${Math.random()}`,
+                                name: item.name,
+                                method: item.request.method || 'GET',
+                                url: typeof item.request.url === 'string' ? item.request.url : item.request.url?.raw || '',
+                                headers: item.request.header ? item.request.header.reduce((acc, h) => ({ ...acc, [h.key]: h.value }), {}) : {},
+                                body: item.request.body?.raw || null,
+                                collectionId: newCol.collectionId
+                            });
+                        }
+                    });
+                    return reqs;
+                };
+
+                if (parsed.item) {
+                    newCol.requests = extractRequests(parsed.item);
+                }
+
+                setCollections(prev => [...prev, newCol]);
+            } else if (type === 'curl') {
+                // Very basic curl parsing
+                const methodMatch = data.match(/-X\s+([A-Z]+)/);
+                const urlMatch = data.match(/['"](http.*?)['"]/);
+                const headerMatches = [...data.matchAll(/-H\s+['"](.*?)['"]/g)];
+                const dataMatch = data.match(/--data\s+['"](.*?)['"]/);
+
+                const newReq = {
+                    requestId: `curl-${Date.now()}`,
+                    name: 'Imported cURL',
+                    method: methodMatch ? methodMatch[1] : 'GET',
+                    url: urlMatch ? urlMatch[1] : '',
+                    headers: headerMatches.reduce((acc, match) => {
+                        const [key, val] = match[1].split(':').map(s => s.trim());
+                        if (key && val) acc[key] = val;
+                        return acc;
+                    }, {}),
+                    body: dataMatch ? dataMatch[1] : null,
+                };
+
+                // Add to a "cURL Imports" collection
+                let existingCurlCol = collections.find(c => c.name === 'cURL Imports');
+                if (existingCurlCol) {
+                    setCollections(collections.map(c => c.collectionId === existingCurlCol.collectionId ? { ...c, requests: [...c.requests, { ...newReq, collectionId: c.collectionId }] } : c));
+                } else {
+                    const newCurlCol = {
+                        collectionId: `curl-col-${Date.now()}`,
+                        name: 'cURL Imports',
+                        requests: [{ ...newReq, collectionId: `curl-col-${Date.now()}` }]
+                    };
+                    setCollections([...collections, newCurlCol]);
+                }
+            }
+        } catch (e) {
+            console.error(e);
+            alert('Failed to import: ' + e.message);
+        }
     };
 
     return (
@@ -242,14 +324,6 @@ export function EditDataPanel() {
                         ))}
                     </select>
 
-                    {selectedAppCodeId && (
-                        <button
-                            onClick={() => setIsCreatingCollection(true)}
-                            className="mt-3 w-full flex items-center justify-center gap-2 p-2 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors"
-                        >
-                            <Plus className="w-4 h-4" /> New Collection
-                        </button>
-                    )}
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
@@ -383,21 +457,49 @@ export function EditDataPanel() {
                     <GripVertical className="w-3 h-3 text-blue-500" />
                 </div>
             </div>
-            {editingRequest ? (
-                <RequestEditorPanel
-                    request={editingRequest}
-                    isCreating={isCreatingRequest}
-                    onClose={() => { setEditingRequest(null); setIsCreatingRequest(false); setCreatingForCollection(null); }}
-                    onSave={handleSaveRequest}
-                />
-            ) : (
-                <div className="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-600 bg-white dark:bg-slate-900">
-                    <div className="text-center">
-                        <p className="text-sm mb-2">Select a request to edit or click + to create a new one</p>
-                        <p className="text-xs text-slate-500">Choose an app code from the sidebar to get started</p>
+            {/* Right Pane Container */}
+            <div className="flex-1 flex flex-col min-w-0 bg-white dark:bg-slate-900 overflow-hidden relative">
+                {/* Right Pane Header */}
+                {selectedAppCodeId && (
+                    <div className="h-14 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center px-6 bg-white dark:bg-slate-900 shrink-0">
+                        <div className="font-bold text-slate-700 dark:text-slate-200">
+                            {assignedAppCodes.find(ac => (ac.projectId || ac.id) == selectedAppCodeId)?.projectName}
+                        </div>
+                        <div className="flex gap-3">
+                            <button
+                                onClick={() => setIsImporting(true)}
+                                className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+                            >
+                                Import
+                            </button>
+                            <button
+                                onClick={() => setIsCreatingCollection(true)}
+                                className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded hover:bg-red-700 transition-colors flex items-center gap-2"
+                            >
+                                <Plus className="w-3 h-3" /> New Collection
+                            </button>
+                        </div>
                     </div>
+                )}
+
+                <div className="flex-1 overflow-hidden relative">
+                    {editingRequest ? (
+                        <RequestEditorPanel
+                            request={editingRequest}
+                            isCreating={isCreatingRequest}
+                            onClose={() => { setEditingRequest(null); setIsCreatingRequest(false); setCreatingForCollection(null); }}
+                            onSave={handleSaveRequest}
+                        />
+                    ) : (
+                        <div className="flex-1 h-full flex items-center justify-center text-slate-400 dark:text-slate-600 bg-white dark:bg-slate-900">
+                            <div className="text-center">
+                                <p className="text-sm mb-2">Select a request to edit or click + to create a new one</p>
+                                <p className="text-xs text-slate-500">Choose an app code from the sidebar to get started</p>
+                            </div>
+                        </div>
+                    )}
                 </div>
-            )}
+            </div>
 
             {isCreatingCollection && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
@@ -421,6 +523,14 @@ export function EditDataPanel() {
                 </div>
             )}
 
+            {isImporting && (
+                <ImportModal
+                    isOpen={isImporting}
+                    onClose={() => setIsImporting(false)}
+                    onImport={handleImport}
+                />
+            )}
+
             <ConfirmationModal
                 isOpen={deleteConfirmInfo.isOpen}
                 onClose={() => setDeleteConfirmInfo({ ...deleteConfirmInfo, isOpen: false })}
@@ -430,6 +540,125 @@ export function EditDataPanel() {
                 confirmText="Delete"
                 isDangerous={true}
             />
+        </div>
+    );
+}
+
+function ImportModal({ isOpen, onClose, onImport }) {
+    const [importType, setImportType] = useState('collection'); // 'collection' or 'curl'
+    const [inputType, setInputType] = useState('text'); // 'text' or 'file'
+    const [textInput, setTextInput] = useState('');
+    const [fileInput, setFileInput] = useState(null);
+
+    const handleFileChange = (e) => {
+        if (e.target.files && e.target.files[0]) {
+            setFileInput(e.target.files[0]);
+        }
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        let dataToImport = null;
+
+        if (inputType === 'text') {
+            dataToImport = textInput;
+        } else if (inputType === 'file' && fileInput) {
+            dataToImport = await fileInput.text();
+        }
+
+        if (dataToImport) {
+            onImport(importType, dataToImport);
+            onClose();
+        }
+    };
+
+    if (!isOpen) return null;
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-[500px] p-6 border border-slate-200 dark:border-slate-700 flex flex-col max-h-[90vh]">
+                <div className="flex justify-between items-center mb-6">
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white">Import</h3>
+                    <button onClick={onClose} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <div className="mb-6">
+                    <label className="block text-xs font-semibold mb-2 text-slate-600 dark:text-slate-400">Import Type</label>
+                    <div className="flex gap-4">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="radio"
+                                name="importType"
+                                checked={importType === 'collection'}
+                                onChange={() => setImportType('collection')}
+                                className="accent-red-600"
+                            />
+                            <span className="text-sm">Collection (JSON)</span>
+                        </label>
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="radio"
+                                name="importType"
+                                checked={importType === 'curl'}
+                                onChange={() => setImportType('curl')}
+                                className="accent-red-600"
+                            />
+                            <span className="text-sm">cURL</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div className="mb-4">
+                    <div className="flex gap-2 mb-2 border-b border-slate-200 dark:border-slate-700">
+                        <button
+                            type="button"
+                            onClick={() => setInputType('text')}
+                            className={`pb-2 px-4 text-sm font-medium transition-colors relative ${inputType === 'text' ? 'text-red-600 border-b-2 border-red-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            Paste Text
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setInputType('file')}
+                            className={`pb-2 px-4 text-sm font-medium transition-colors relative ${inputType === 'file' ? 'text-red-600 border-b-2 border-red-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            Upload File
+                        </button>
+                    </div>
+
+                    {inputType === 'text' ? (
+                        <textarea
+                            value={textInput}
+                            onChange={(e) => setTextInput(e.target.value)}
+                            className="w-full h-40 p-3 border border-slate-300 dark:border-slate-700 rounded text-xs font-mono bg-slate-50 dark:bg-slate-900 outline-none focus:border-red-500 resize-none"
+                            placeholder={importType === 'collection' ? 'Paste Postman Collection JSON here...' : 'Paste cURL command here...'}
+                        ></textarea>
+                    ) : (
+                        <div className="h-40 border-2 border-dashed border-slate-300 dark:border-slate-700 rounded flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900">
+                            <input
+                                type="file"
+                                onChange={handleFileChange}
+                                className="hidden"
+                                id="file-upload"
+                                accept={importType === 'collection' ? '.json' : '.txt,.sh'}
+                            />
+                            <label htmlFor="file-upload" className="cursor-pointer flex flex-col items-center">
+                                <span className="text-sm text-slate-600 dark:text-slate-400 mb-2">Click to upload file</span>
+                                <span className="text-xs text-slate-400">
+                                    {fileInput ? fileInput.name : (importType === 'collection' ? 'JSON files only' : 'Text files')}
+                                </span>
+                            </label>
+                        </div>
+                    )}
+                </div>
+
+                <div className="flex justify-end gap-3 mt-auto">
+                    <button onClick={onClose} className="px-4 py-2 text-sm text-slate-500 hover:underline">Cancel</button>
+                    <button onClick={handleSubmit} className="px-6 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 font-medium">Import</button>
+                </div>
+            </div>
         </div>
     );
 }
@@ -521,7 +750,7 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave }) {
                         onClick={handleSave}
                         className="px-4 py-2 bg-red-600 text-white rounded text-sm hover:bg-red-700 font-medium flex items-center gap-2"
                     >
-                        <Plus className="w-4 h-4" /> {isCreating ? 'Create' : 'Save'}
+                        {isCreating ? 'Create' : 'Save'}
                     </button>
                     <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
                         <X className="w-5 h-5" />

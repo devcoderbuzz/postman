@@ -377,12 +377,6 @@ export function AdminDashboard() {
                             {/* Collections Table */}
                             {selectedAppCode && (
                                 <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col flex-1 min-h-0">
-                                    <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
-                                        <h2 className="text-lg font-bold">Collections & Requests</h2>
-                                        <p className="text-xs text-slate-500 mt-1">
-                                            {appCodes.find(ac => ac.id.toString() === selectedAppCode)?.projectName} - {appCodes.find(ac => ac.id.toString() === selectedAppCode)?.moduleName}
-                                        </p>
-                                    </div>
                                     <div className="overflow-auto flex-1">
                                         {isLoadingCollections ? (
                                             <div className="flex items-center justify-center p-12">
