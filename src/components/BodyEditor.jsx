@@ -25,7 +25,7 @@ export function BodyEditor({ bodyType, setBodyType, body, setBody }) {
 
     return (
         <div className="space-y-4">
-            <div className="flex gap-2 border-b border-neutral-200 dark:border-neutral-800 pb-2">
+            <div className="flex gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
                 {BODY_TYPES.map(type => (
                     <button
                         key={type}
@@ -33,8 +33,8 @@ export function BodyEditor({ bodyType, setBodyType, body, setBody }) {
                         className={cn(
                             "px-3 py-1.5 text-xs font-medium rounded transition-colors capitalize",
                             bodyType === type
-                                ? "bg-neutral-200 dark:bg-[var(--bg-surface)] text-neutral-900 dark:text-[var(--text-primary)]"
-                                : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5"
+                                ? "bg-slate-200 dark:bg-[var(--bg-surface)] text-slate-900 dark:text-[var(--text-primary)]"
+                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5"
                         )}
                     >
                         {type}
@@ -43,7 +43,7 @@ export function BodyEditor({ bodyType, setBodyType, body, setBody }) {
             </div>
 
             {bodyType === 'none' && (
-                <div className="flex items-center justify-center h-32 text-neutral-400 dark:text-neutral-500 text-sm">
+                <div className="flex items-center justify-center h-32 text-slate-400 dark:text-slate-500 text-sm">
                     No body content
                 </div>
             )}
@@ -54,7 +54,7 @@ export function BodyEditor({ bodyType, setBodyType, body, setBody }) {
                         value={body}
                         onChange={(e) => handleJsonChange(e.target.value)}
                         placeholder='{\n  "key": "value"\n}'
-                        className="w-full h-64 bg-white dark:bg-[var(--bg-surface)] border border-neutral-200 dark:border-[var(--border-color)] rounded-lg p-4 text-sm font-mono text-neutral-900 dark:text-[var(--text-primary)] outline-none focus:border-neutral-400 dark:focus:border-neutral-600 resize-none"
+                        className="w-full h-64 bg-white dark:bg-[var(--bg-surface)] border border-slate-200 dark:border-[var(--border-color)] rounded-lg p-4 text-sm font-mono text-slate-900 dark:text-[var(--text-primary)] outline-none focus:border-slate-400 dark:focus:border-slate-600 resize-none"
                     />
                     {jsonError && (
                         <div className="text-xs text-red-400 bg-red-900/20 border border-red-900/50 rounded p-2">
@@ -65,7 +65,7 @@ export function BodyEditor({ bodyType, setBodyType, body, setBody }) {
             )}
 
             {bodyType === 'form-data' && (
-                <div className="flex items-center justify-center h-32 text-neutral-400 dark:text-neutral-500 text-sm">
+                <div className="flex items-center justify-center h-32 text-slate-400 dark:text-slate-500 text-sm">
                     Form data editor - Coming soon
                 </div>
             )}
@@ -75,7 +75,7 @@ export function BodyEditor({ bodyType, setBodyType, body, setBody }) {
                     value={body}
                     onChange={(e) => setBody(e.target.value)}
                     placeholder="Enter raw body content..."
-                    className="w-full h-64 bg-white dark:bg-[var(--bg-surface)] border border-neutral-200 dark:border-[var(--border-color)] rounded-lg p-4 text-sm font-mono text-neutral-900 dark:text-[var(--text-primary)] outline-none focus:border-neutral-400 dark:focus:border-neutral-600 resize-none"
+                    className="w-full h-64 bg-white dark:bg-[var(--bg-surface)] border border-slate-200 dark:border-[var(--border-color)] rounded-lg p-4 text-sm font-mono text-slate-900 dark:text-[var(--text-primary)] outline-none focus:border-slate-400 dark:focus:border-slate-600 resize-none"
                 />
             )}
         </div>

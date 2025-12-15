@@ -3,15 +3,15 @@ import { cn } from '../lib/utils';
 
 export function Footer({ showConsole, onToggleConsole, latestRequest }) {
     return (
-        <footer className="h-8 border-t border-neutral-200 dark:border-[var(--border-color)] bg-neutral-100 dark:bg-[var(--bg-secondary)] flex items-center justify-between px-3 select-none z-40">
+        <footer className="h-8 border-t border-slate-200 dark:border-[var(--border-color)] bg-slate-100 dark:bg-[var(--bg-secondary)] flex items-center justify-between px-3 select-none z-40">
             <div className="flex items-center gap-4">
                 <button
                     onClick={onToggleConsole}
                     className={cn(
                         "flex items-center gap-1.5 text-xs transition-colors px-2 py-0.5 rounded",
                         showConsole
-                            ? "text-neutral-900 dark:text-white bg-neutral-200 dark:bg-neutral-800"
-                            : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300"
+                            ? "text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800"
+                            : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                     )}
                 >
                     <Terminal className="w-3.5 h-3.5" />
@@ -29,7 +29,7 @@ export function Footer({ showConsole, onToggleConsole, latestRequest }) {
                         )}>
                             {latestRequest.method}
                         </span>
-                        <span className="text-neutral-600 dark:text-neutral-400 max-w-[300px] truncate">
+                        <span className="text-slate-600 dark:text-slate-400 max-w-[300px] truncate">
                             {latestRequest.url}
                         </span>
                         {latestRequest.response && (
@@ -47,7 +47,7 @@ export function Footer({ showConsole, onToggleConsole, latestRequest }) {
                 )}
             </div>
 
-            <div className="flex items-center gap-4 text-xs text-neutral-400 dark:text-neutral-500">
+            <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500">
                 <div className="flex items-center gap-1">
                     <AppWindow className="w-3.5 h-3.5" />
                     <span>Postman Clone v1.0.0</span>

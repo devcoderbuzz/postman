@@ -21,7 +21,7 @@ const generateRequests = (count, prefix) => {
 
 // Helper to generate mock collections
 const generateCollections = (projectId, projectName) => {
-    const count = Math.floor(Math.random() * 3) + 2; // 2 to 4 collections per project
+    const count = 50; // Requested 50 collections
     return Array.from({ length: count }, (_, i) => {
         const id = i + 1;
         return {

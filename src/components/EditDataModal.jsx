@@ -147,15 +147,15 @@ export function EditDataPanel() {
     };
 
     return (
-        <div className="flex-1 flex overflow-hidden bg-white dark:bg-neutral-900">
-            <div className="w-80 border-r border-neutral-200 dark:border-neutral-800 flex flex-col bg-white dark:bg-neutral-900">
-                <div className="p-4 border-b border-neutral-200 dark:border-neutral-800">
-                    <h2 className="text-lg font-bold mb-4 text-neutral-900 dark:text-white">Edit Data</h2>
-                    <label className="block text-xs font-semibold mb-2 text-neutral-600 dark:text-neutral-400">App Code</label>
+        <div className="flex-1 flex overflow-hidden bg-white dark:bg-slate-900">
+            <div className="w-80 border-r border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-slate-900">
+                <div className="p-4 border-b border-slate-200 dark:border-slate-800">
+                    <h2 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">Edit Data</h2>
+                    <label className="block text-xs font-semibold mb-2 text-slate-600 dark:text-slate-400">App Code</label>
                     <select
                         value={selectedAppCodeId}
                         onChange={(e) => setSelectedAppCodeId(e.target.value)}
-                        className="w-full p-2 text-sm bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-700 rounded-md outline-none focus:border-red-500 dark:text-white"
+                        className="w-full p-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md outline-none focus:border-red-500 dark:text-white"
                     >
                         <option value="">Select App Code...</option>
                         {assignedAppCodes.map(ac => (
@@ -177,25 +177,25 @@ export function EditDataPanel() {
 
                 <div className="flex-1 overflow-y-auto">
                     {!selectedAppCodeId ? (
-                        <div className="p-4 text-center text-xs text-neutral-400">
+                        <div className="p-4 text-center text-xs text-slate-400">
                             Select an App Code to view collections
                         </div>
                     ) : isLoading ? (
-                        <div className="p-4 text-center text-xs text-neutral-400">Loading...</div>
+                        <div className="p-4 text-center text-xs text-slate-400">Loading...</div>
                     ) : collections.length === 0 ? (
-                        <div className="p-4 text-center text-xs text-neutral-400">No collections found</div>
+                        <div className="p-4 text-center text-xs text-slate-400">No collections found</div>
                     ) : (
-                        <div className="divide-y divide-neutral-200 dark:divide-neutral-800">
+                        <div className="divide-y divide-slate-200 dark:divide-slate-800">
                             {collections.map(col => (
-                                <div key={col.collectionId} className="bg-white dark:bg-neutral-900">
+                                <div key={col.collectionId} className="bg-white dark:bg-slate-900">
                                     <div
-                                        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-800 group"
+                                        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 group"
                                         onClick={() => !renamingCollectionId && toggleCollection(col.collectionId)}
                                     >
                                         <div className="flex items-center gap-2 flex-1 overflow-hidden">
                                             {expandedCollections.has(col.collectionId) ?
-                                                <ChevronDown className="w-4 h-4 text-neutral-400 shrink-0" /> :
-                                                <ChevronRight className="w-4 h-4 text-neutral-400 shrink-0" />
+                                                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" /> :
+                                                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
                                             }
                                             {renamingCollectionId === col.collectionId ? (
                                                 <RenameInput
@@ -204,21 +204,21 @@ export function EditDataPanel() {
                                                     onConfirm={handleConfirmRename}
                                                 />
                                             ) : (
-                                                <span className="text-sm font-medium truncate text-neutral-700 dark:text-neutral-300">{col.name}</span>
+                                                <span className="text-sm font-medium truncate text-slate-700 dark:text-slate-300">{col.name}</span>
                                             )}
                                         </div>
                                         <div className="flex items-center gap-2">
-                                            <span className="text-[10px] bg-neutral-100 dark:bg-neutral-800 px-2 py-0.5 rounded text-neutral-500">
+                                            <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500">
                                                 {col.requests?.length || 0}
                                             </span>
                                             {renamingCollectionId !== col.collectionId && (
                                                 <>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); handleStartRename(col.collectionId, col.name); }}
-                                                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-neutral-200 dark:hover:bg-neutral-700 rounded transition-opacity"
+                                                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-opacity"
                                                         title="Rename Collection"
                                                     >
-                                                        <Edit2 className="w-3.5 h-3.5 text-neutral-600 dark:text-neutral-400" />
+                                                        <Edit2 className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
                                                     </button>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); handleCreateNewRequest(col.collectionId); }}
@@ -233,9 +233,9 @@ export function EditDataPanel() {
                                     </div>
 
                                     {expandedCollections.has(col.collectionId) && (
-                                        <div className="bg-neutral-50 dark:bg-neutral-800 px-4 py-2 border-l-4 border-red-500">
+                                        <div className="bg-slate-50 dark:bg-slate-800 px-4 py-2 border-l-4 border-red-500">
                                             {(!col.requests || col.requests.length === 0) ? (
-                                                <div className="text-xs text-neutral-400 italic py-2">No requests</div>
+                                                <div className="text-xs text-slate-400 italic py-2">No requests</div>
                                             ) : (
                                                 <div className="space-y-1">
                                                     {col.requests.map(req => (
@@ -243,7 +243,7 @@ export function EditDataPanel() {
                                                             key={req.requestId}
                                                             className={`group flex items-center justify-between p-2 rounded border cursor-pointer ${editingRequest?.requestId === req.requestId
                                                                     ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
-                                                                    : 'hover:bg-white dark:hover:bg-neutral-900 border-transparent hover:border-neutral-200 dark:hover:border-neutral-700'
+                                                                    : 'hover:bg-white dark:hover:bg-slate-900 border-transparent hover:border-slate-200 dark:hover:border-slate-700'
                                                                 }`}
                                                             onClick={() => { setEditingRequest({ ...req, collectionId: col.collectionId }); setIsCreatingRequest(false); }}
                                                         >
@@ -253,12 +253,12 @@ export function EditDataPanel() {
                                                                             req.method === 'PUT' ? 'text-blue-500' :
                                                                                 req.method === 'DELETE' ? 'text-red-500' : 'text-purple-500'
                                                                     }`}>{req.method}</span>
-                                                                <span className="text-xs truncate text-neutral-600 dark:text-neutral-400">{req.name}</span>
+                                                                <span className="text-xs truncate text-slate-600 dark:text-slate-400">{req.name}</span>
                                                             </div>
                                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                 <button
                                                                     onClick={(e) => { e.stopPropagation(); handleDeleteRequest(col.collectionId, req.requestId); }}
-                                                                    className="p-1 text-neutral-400 hover:text-red-500 rounded"
+                                                                    className="p-1 text-slate-400 hover:text-red-500 rounded"
                                                                     title="Delete"
                                                                 >
                                                                     <Trash2 className="w-3.5 h-3.5" />
@@ -285,29 +285,29 @@ export function EditDataPanel() {
                     onSave={handleSaveRequest}
                 />
             ) : (
-                <div className="flex-1 flex items-center justify-center text-neutral-400 dark:text-neutral-600 bg-white dark:bg-neutral-900">
+                <div className="flex-1 flex items-center justify-center text-slate-400 dark:text-slate-600 bg-white dark:bg-slate-900">
                     <div className="text-center">
                         <p className="text-sm mb-2">Select a request to edit or click + to create a new one</p>
-                        <p className="text-xs text-neutral-500">Choose an app code from the sidebar to get started</p>
+                        <p className="text-xs text-slate-500">Choose an app code from the sidebar to get started</p>
                     </div>
                 </div>
             )}
 
             {isCreatingCollection && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
-                    <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-xl w-96 p-6 border border-neutral-200 dark:border-neutral-700">
-                        <h3 className="text-lg font-bold mb-4 text-neutral-900 dark:text-white">New Collection</h3>
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-96 p-6 border border-slate-200 dark:border-slate-700">
+                        <h3 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">New Collection</h3>
                         <form onSubmit={handleCreateCollection}>
                             <input
                                 type="text"
                                 value={newCollectionName}
                                 onChange={e => setNewCollectionName(e.target.value)}
                                 placeholder="Collection Name"
-                                className="w-full text-sm p-3 border rounded mb-4 dark:bg-neutral-900 dark:border-neutral-700 dark:text-white"
+                                className="w-full text-sm p-3 border rounded mb-4 dark:bg-slate-900 dark:border-slate-700 dark:text-white"
                                 autoFocus
                             />
                             <div className="flex justify-end gap-3">
-                                <button type="button" onClick={() => setIsCreatingCollection(false)} className="px-4 py-2 text-sm text-neutral-500 hover:underline">Cancel</button>
+                                <button type="button" onClick={() => setIsCreatingCollection(false)} className="px-4 py-2 text-sm text-slate-500 hover:underline">Cancel</button>
                                 <button type="submit" className="px-6 py-2 text-sm bg-red-600 text-white rounded hover:bg-red-700 font-medium">Create</button>
                             </div>
                         </form>
@@ -355,7 +355,7 @@ function RenameInput({ value, onChange, onConfirm }) {
             onChange={(e) => onChange(e.target.value)}
             onKeyDown={handleKeyDown}
             onClick={(e) => e.stopPropagation()}
-            className="flex-1 px-2 py-1 text-sm border border-red-500 rounded bg-white dark:bg-neutral-800 dark:text-white outline-none"
+            className="flex-1 px-2 py-1 text-sm border border-red-500 rounded bg-white dark:bg-slate-800 dark:text-white outline-none"
         />
     );
 }
@@ -395,9 +395,9 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave }) {
     };
 
     return (
-        <div className="flex-1 flex flex-col bg-white dark:bg-neutral-900 overflow-hidden">
-            <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-800 flex justify-between items-center bg-white dark:bg-neutral-900">
-                <h3 className="font-bold text-lg text-neutral-900 dark:text-white">
+        <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900">
+                <h3 className="font-bold text-lg text-slate-900 dark:text-white">
                     {isCreating ? 'New Request' : 'Edit Request'}
                 </h3>
                 <div className="flex items-center gap-2">
@@ -407,7 +407,7 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave }) {
                     >
                         <Plus className="w-4 h-4" /> {isCreating ? 'Create' : 'Save'}
                     </button>
-                    <button onClick={onClose} className="p-2 text-neutral-400 hover:text-neutral-600 dark:hover:text-neutral-200 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800">
+                    <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
                         <X className="w-5 h-5" />
                     </button>
                 </div>
@@ -415,23 +415,23 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave }) {
 
             <div className="p-6 overflow-y-auto space-y-4 flex-1">
                 <div>
-                    <label className="block text-xs font-semibold mb-1 text-neutral-600 dark:text-neutral-400">Request Name</label>
+                    <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-400">Request Name</label>
                     <input
                         type="text"
                         value={editedReq.name}
                         onChange={e => handleChange('name', e.target.value)}
-                        className="w-full p-2 border border-neutral-300 dark:border-neutral-700 rounded text-sm bg-white dark:bg-neutral-800 dark:text-white focus:border-red-500 outline-none"
+                        className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded text-sm bg-white dark:bg-slate-800 dark:text-white focus:border-red-500 outline-none"
                         placeholder="My Request"
                     />
                 </div>
 
                 <div className="flex gap-3">
                     <div className="w-32">
-                        <label className="block text-xs font-semibold mb-1 text-neutral-600 dark:text-neutral-400">Method</label>
+                        <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-400">Method</label>
                         <select
                             value={editedReq.method}
                             onChange={e => handleChange('method', e.target.value)}
-                            className="w-full p-2 border border-neutral-300 dark:border-neutral-700 rounded text-sm bg-white dark:bg-neutral-800 dark:text-white font-bold focus:border-red-500 outline-none"
+                            className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded text-sm bg-white dark:bg-slate-800 dark:text-white font-bold focus:border-red-500 outline-none"
                         >
                             <option value="GET">GET</option>
                             <option value="POST">POST</option>
@@ -441,12 +441,12 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave }) {
                         </select>
                     </div>
                     <div className="flex-1">
-                        <label className="block text-xs font-semibold mb-1 text-neutral-600 dark:text-neutral-400">Endpoint URL</label>
+                        <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-400">Endpoint URL</label>
                         <input
                             type="text"
                             value={editedReq.url}
                             onChange={e => handleChange('url', e.target.value)}
-                            className="w-full p-2 border border-neutral-300 dark:border-neutral-700 rounded text-sm bg-white dark:bg-neutral-800 dark:text-white font-mono focus:border-red-500 outline-none"
+                            className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded text-sm bg-white dark:bg-slate-800 dark:text-white font-mono focus:border-red-500 outline-none"
                             placeholder="https://api.example.com/endpoint"
                         />
                     </div>
@@ -454,7 +454,7 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave }) {
 
                 <div>
                     <div className="flex items-center justify-between mb-2">
-                        <label className="block text-xs font-semibold text-neutral-600 dark:text-neutral-400">Headers</label>
+                        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">Headers</label>
                         <button
                             onClick={handleAddHeader}
                             className="text-xs text-red-600 dark:text-red-400 hover:underline flex items-center gap-1"
@@ -462,9 +462,9 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave }) {
                             <Plus className="w-3 h-3" /> Add Header
                         </button>
                     </div>
-                    <div className="space-y-2 border border-neutral-300 dark:border-neutral-700 rounded p-3 bg-neutral-50 dark:bg-neutral-800/50">
+                    <div className="space-y-2 border border-slate-300 dark:border-slate-700 rounded p-3 bg-slate-50 dark:bg-slate-800/50">
                         {headers.length === 0 ? (
-                            <p className="text-xs text-neutral-400 italic text-center py-2">No headers. Click "Add Header" to add one.</p>
+                            <p className="text-xs text-slate-400 italic text-center py-2">No headers. Click "Add Header" to add one.</p>
                         ) : (
                             headers.map(header => (
                                 <div key={header.id} className="flex gap-2 items-center">
@@ -473,18 +473,18 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave }) {
                                         value={header.key}
                                         onChange={e => handleHeaderChange(header.id, 'key', e.target.value)}
                                         placeholder="Key"
-                                        className="flex-1 p-2 border border-neutral-300 dark:border-neutral-700 rounded text-xs bg-white dark:bg-neutral-800 dark:text-white focus:border-red-500 outline-none"
+                                        className="flex-1 p-2 border border-slate-300 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 dark:text-white focus:border-red-500 outline-none"
                                     />
                                     <input
                                         type="text"
                                         value={header.value}
                                         onChange={e => handleHeaderChange(header.id, 'value', e.target.value)}
                                         placeholder="Value"
-                                        className="flex-1 p-2 border border-neutral-300 dark:border-neutral-700 rounded text-xs bg-white dark:bg-neutral-800 dark:text-white focus:border-red-500 outline-none"
+                                        className="flex-1 p-2 border border-slate-300 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 dark:text-white focus:border-red-500 outline-none"
                                     />
                                     <button
                                         onClick={() => handleDeleteHeader(header.id)}
-                                        className="p-2 text-neutral-400 hover:text-red-500 rounded"
+                                        className="p-2 text-slate-400 hover:text-red-500 rounded"
                                         title="Delete Header"
                                     >
                                         <Trash2 className="w-4 h-4" />
@@ -496,11 +496,11 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave }) {
                 </div>
 
                 <div>
-                    <label className="block text-xs font-semibold mb-1 text-neutral-600 dark:text-neutral-400">Request Body</label>
+                    <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-400">Request Body</label>
                     <textarea
                         value={editedReq.body || ''}
                         onChange={e => handleChange('body', e.target.value)}
-                        className="w-full p-3 border border-neutral-300 dark:border-neutral-700 rounded text-sm font-mono h-40 bg-white dark:bg-neutral-800 dark:text-white resize-none focus:border-red-500 outline-none"
+                        className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded text-sm font-mono h-40 bg-white dark:bg-slate-800 dark:text-white resize-none focus:border-red-500 outline-none"
                         placeholder="{}"
                     />
                 </div>

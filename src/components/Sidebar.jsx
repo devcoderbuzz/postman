@@ -13,7 +13,7 @@ export function Sidebar({ activeView, setActiveView }) {
     };
 
     return (
-        <div className="w-12 flex flex-col items-center py-2 bg-neutral-50 dark:bg-[var(--bg-sidebar)] border-r border-neutral-200 dark:border-[var(--border-color)] text-neutral-500 dark:text-neutral-400">
+        <div className="w-12 flex flex-col items-center py-2 bg-slate-50 dark:bg-[var(--bg-sidebar)] border-r border-slate-200 dark:border-[var(--border-color)] text-slate-500 dark:text-slate-400">
             <div className="p-1 mb-2 text-orange-500">
                 <Box className="w-8 h-8" />
             </div>
@@ -61,7 +61,7 @@ function SidebarItem({ icon: Icon, label, active, onClick }) {
             onClick={onClick}
             className={cn(
                 "p-2 rounded-lg flex justify-center transition-all group relative",
-                active ? "bg-neutral-200 dark:bg-[var(--accent-primary)] text-neutral-900 dark:text-white" : "hover:bg-neutral-200 dark:hover:bg-white/10 hover:text-neutral-900 dark:hover:text-white"
+                active ? "bg-slate-200 dark:bg-[var(--accent-primary)] text-slate-900 dark:text-white" : "hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white"
             )}
             title={label}
         >

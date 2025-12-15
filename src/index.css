@@ -9,15 +9,52 @@
 }
 
 [data-theme='dark'] {
-  /* Dark Red/Gray Theme variables */
-  --bg-primary: #111111;      /* Main content bg - Darker Gray */
-  --bg-secondary: #0a0a0a;    /* Collections panel - Very Dark */
-  --bg-sidebar: #050505;      /* Leftmost sidebar - Almost Black */
-  --bg-surface: #1e1e1e;      /* Inputs, cards */
-  --border-color: #333333;    /* Gray borders */
-  --text-primary: #e5e5e5;    /* Off-white text */
-  --text-secondary: #a3a3a3;  /* Gray text */
-  --accent-primary: #dc2626;  /* Red-600 accent */
+  /* Slate/Dark Blue Theme variables */
+  --bg-primary: #0f172a;      /* Main content bg - Slate 900 */
+  --bg-secondary: #0f172a;    /* Collections panel - Slate 900 (Use same as primary for unified look or slightly lighter) */
+  /* Actually, let's make secondary slightly lighter or different? */
+  --bg-secondary: #1e293b;    /* Slate 800 */
+  --bg-sidebar: #020617;      /* Leftmost sidebar - Slate 950 */
+  --bg-surface: #1e293b;      /* Slate 800 */
+  --border-color: #334155;    /* Slate 700 */
+  --text-primary: #f1f5f9;    /* Slate 100 */
+  --text-secondary: #94a3b8;  /* Slate 400 */
+  --accent-primary: #ef4444;  /* Red-500 accent */
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1; /* Slate 300 for light mode */
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8; /* Slate 400 */
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+  border: 2px solid var(--bg-primary);
+  background-clip: content-box;
+}
+
+[data-theme='dark'] ::-webkit-scrollbar-thumb:hover {
+  background: var(--text-secondary);
 }
 
 @layer utilities {

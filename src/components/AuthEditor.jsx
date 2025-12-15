@@ -9,7 +9,7 @@ export function AuthEditor({ authType, setAuthType, authData, setAuthData }) {
 
     return (
         <div className="space-y-4">
-            <div className="flex gap-2 border-b border-neutral-200 dark:border-neutral-800 pb-2">
+            <div className="flex gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
                 {AUTH_TYPES.map(type => (
                     <button
                         key={type}
@@ -17,8 +17,8 @@ export function AuthEditor({ authType, setAuthType, authData, setAuthData }) {
                         className={cn(
                             "px-3 py-1.5 text-xs font-medium rounded transition-colors capitalize",
                             authType === type
-                                ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-white"
-                                : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-neutral-900"
+                                ? "bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white"
+                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900"
                         )}
                     >
                         {type === 'api-key' ? 'API Key' : type}
@@ -27,7 +27,7 @@ export function AuthEditor({ authType, setAuthType, authData, setAuthData }) {
             </div>
 
             {authType === 'none' && (
-                <div className="flex items-center justify-center h-32 text-neutral-400 dark:text-neutral-500 text-sm">
+                <div className="flex items-center justify-center h-32 text-slate-400 dark:text-slate-500 text-sm">
                     No authentication
                 </div>
             )}
@@ -35,13 +35,13 @@ export function AuthEditor({ authType, setAuthType, authData, setAuthData }) {
             {authType === 'bearer' && (
                 <div className="space-y-3">
                     <label className="block">
-                        <span className="text-xs text-neutral-500 mb-1 block">Token</span>
+                        <span className="text-xs text-slate-500 mb-1 block">Token</span>
                         <input
                             type="text"
                             value={authData.token || ''}
                             onChange={(e) => updateAuthData('token', e.target.value)}
                             placeholder="Enter bearer token"
-                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-3 text-sm font-mono text-neutral-900 dark:text-neutral-300 outline-none focus:border-neutral-400 dark:focus:border-neutral-600"
+                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 text-sm font-mono text-slate-900 dark:text-slate-300 outline-none focus:border-slate-400 dark:focus:border-slate-600"
                         />
                     </label>
                 </div>
@@ -50,23 +50,23 @@ export function AuthEditor({ authType, setAuthType, authData, setAuthData }) {
             {authType === 'basic' && (
                 <div className="space-y-3">
                     <label className="block">
-                        <span className="text-xs text-neutral-500 mb-1 block">Username</span>
+                        <span className="text-xs text-slate-500 mb-1 block">Username</span>
                         <input
                             type="text"
                             value={authData.username || ''}
                             onChange={(e) => updateAuthData('username', e.target.value)}
                             placeholder="Enter username"
-                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-3 text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-neutral-400 dark:focus:border-neutral-600"
+                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 text-sm text-slate-900 dark:text-slate-300 outline-none focus:border-slate-400 dark:focus:border-slate-600"
                         />
                     </label>
                     <label className="block">
-                        <span className="text-xs text-neutral-500 mb-1 block">Password</span>
+                        <span className="text-xs text-slate-500 mb-1 block">Password</span>
                         <input
                             type="password"
                             value={authData.password || ''}
                             onChange={(e) => updateAuthData('password', e.target.value)}
                             placeholder="Enter password"
-                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-3 text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-neutral-400 dark:focus:border-neutral-600"
+                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 text-sm text-slate-900 dark:text-slate-300 outline-none focus:border-slate-400 dark:focus:border-slate-600"
                         />
                     </label>
                 </div>
@@ -75,31 +75,31 @@ export function AuthEditor({ authType, setAuthType, authData, setAuthData }) {
             {authType === 'api-key' && (
                 <div className="space-y-3">
                     <label className="block">
-                        <span className="text-xs text-neutral-500 mb-1 block">Key</span>
+                        <span className="text-xs text-slate-500 mb-1 block">Key</span>
                         <input
                             type="text"
                             value={authData.key || ''}
                             onChange={(e) => updateAuthData('key', e.target.value)}
                             placeholder="e.g., X-API-Key"
-                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-3 text-sm font-mono text-neutral-900 dark:text-neutral-300 outline-none focus:border-neutral-400 dark:focus:border-neutral-600"
+                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 text-sm font-mono text-slate-900 dark:text-slate-300 outline-none focus:border-slate-400 dark:focus:border-slate-600"
                         />
                     </label>
                     <label className="block">
-                        <span className="text-xs text-neutral-500 mb-1 block">Value</span>
+                        <span className="text-xs text-slate-500 mb-1 block">Value</span>
                         <input
                             type="text"
                             value={authData.value || ''}
                             onChange={(e) => updateAuthData('value', e.target.value)}
                             placeholder="Enter API key value"
-                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-3 text-sm font-mono text-neutral-900 dark:text-neutral-300 outline-none focus:border-neutral-400 dark:focus:border-neutral-600"
+                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 text-sm font-mono text-slate-900 dark:text-slate-300 outline-none focus:border-slate-400 dark:focus:border-slate-600"
                         />
                     </label>
                     <label className="block">
-                        <span className="text-xs text-neutral-500 mb-1 block">Add to</span>
+                        <span className="text-xs text-slate-500 mb-1 block">Add to</span>
                         <select
                             value={authData.addTo || 'header'}
                             onChange={(e) => updateAuthData('addTo', e.target.value)}
-                            className="w-full bg-white dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-800 rounded-lg p-3 text-sm text-neutral-900 dark:text-neutral-300 outline-none focus:border-neutral-400 dark:focus:border-neutral-600"
+                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg p-3 text-sm text-slate-900 dark:text-slate-300 outline-none focus:border-slate-400 dark:focus:border-slate-600"
                         >
                             <option value="header">Header</option>
                             <option value="query">Query Params</option>

@@ -95,7 +95,7 @@ export function ResponseViewer({ response, error, isLoading, activeRequest, them
 
     if (isLoading) {
         return (
-            <div className="flex items-center justify-center h-full text-neutral-500 dark:text-neutral-500">
+            <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-500">
                 <div className="flex flex-col items-center gap-3">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
                     <p className="text-sm">Sending request...</p>
@@ -115,7 +115,7 @@ export function ResponseViewer({ response, error, isLoading, activeRequest, them
 
     if (!response) {
         return (
-            <div className="flex flex-col items-center justify-center h-full text-neutral-400 dark:text-neutral-600">
+            <div className="flex flex-col items-center justify-center h-full text-slate-400 dark:text-slate-600">
                 <div className="text-6xl mb-4 opacity-50">🚀</div>
                 <p>Send a request to see the response here</p>
             </div>
@@ -124,7 +124,7 @@ export function ResponseViewer({ response, error, isLoading, activeRequest, them
 
     return (
         <div className="h-full flex flex-col">
-            <div className="flex items-center justify-between gap-4 text-xs font-mono mb-3 pb-3 border-b border-neutral-200 dark:border-[var(--border-color)]">
+            <div className="flex items-center justify-between gap-4 text-xs font-mono mb-3 pb-3 border-b border-slate-200 dark:border-[var(--border-color)]">
                 <div className="flex gap-4">
                     <span className={cn(
                         "font-semibold",
@@ -132,20 +132,20 @@ export function ResponseViewer({ response, error, isLoading, activeRequest, them
                     )}>
                         {response.status} {response.statusText}
                     </span>
-                    <span className="text-neutral-400">⏱ {response.time}ms</span>
-                    <span className="text-neutral-400">📦 {response.size}B</span>
+                    <span className="text-slate-400">⏱ {response.time}ms</span>
+                    <span className="text-slate-400">📦 {response.size}B</span>
                 </div>
                 <div className="flex gap-2">
                     <button
                         onClick={handleCopy}
-                        className="p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                        className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                         title="Copy response"
                     >
                         {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
                     </button>
                     <button
                         onClick={handleDownload}
-                        className="p-1.5 rounded hover:bg-neutral-200 dark:hover:bg-neutral-800 text-neutral-500 dark:text-neutral-400 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                        className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
                         title="Download response"
                     >
                         <Download className="w-4 h-4" />
@@ -165,8 +165,8 @@ export function ResponseViewer({ response, error, isLoading, activeRequest, them
                                 className={cn(
                                     "px-3 py-1 text-xs font-medium rounded transition-colors capitalize",
                                     viewMode === mode
-                                        ? "bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-white"
-                                        : "text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 hover:bg-neutral-100 dark:hover:bg-white/5"
+                                        ? "bg-slate-200 dark:bg-slate-800 text-slate-900 dark:text-white"
+                                        : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5"
                                 )}
                             >
                                 {mode}
@@ -193,7 +193,7 @@ export function ResponseViewer({ response, error, isLoading, activeRequest, them
                             <textarea
                                 readOnly
                                 value={typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2)}
-                                className="w-full h-full resize-none p-4 font-mono text-xs bg-white dark:bg-transparent text-neutral-900 dark:text-neutral-300 outline-none"
+                                className="w-full h-full resize-none p-4 font-mono text-xs bg-white dark:bg-transparent text-slate-900 dark:text-slate-300 outline-none"
                             />
                         )}
                     </div>
@@ -202,13 +202,13 @@ export function ResponseViewer({ response, error, isLoading, activeRequest, them
 
             {activeTab === 'headers' && (
                 <div className="flex-1 overflow-auto">
-                    <div className="border border-neutral-200 dark:border-neutral-800 rounded-lg overflow-hidden">
+                    <div className="border border-slate-200 dark:border-slate-800 rounded-lg overflow-hidden">
                         {Object.entries(response.headers || {}).map(([key, value]) => (
-                            <div key={key} className="flex border-b border-neutral-200 dark:border-neutral-800 last:border-0 hover:bg-neutral-50 dark:hover:bg-neutral-900/50">
-                                <div className="flex-1 p-3 font-mono text-xs text-neutral-600 dark:text-neutral-400 border-r border-neutral-200 dark:border-neutral-800">
+                            <div key={key} className="flex border-b border-slate-200 dark:border-slate-800 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                                <div className="flex-1 p-3 font-mono text-xs text-slate-600 dark:text-slate-400 border-r border-slate-200 dark:border-slate-800">
                                     {key}
                                 </div>
-                                <div className="flex-1 p-3 font-mono text-xs text-neutral-800 dark:text-neutral-300">
+                                <div className="flex-1 p-3 font-mono text-xs text-slate-800 dark:text-slate-300">
                                     {value}
                                 </div>
                             </div>
@@ -222,17 +222,17 @@ export function ResponseViewer({ response, error, isLoading, activeRequest, them
                     <div className="flex justify-end mb-2">
                         <button
                             onClick={handleCurlCopy}
-                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded bg-neutral-200 dark:bg-neutral-800 hover:bg-neutral-300 dark:hover:bg-neutral-700 text-neutral-900 dark:text-white transition-colors"
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-900 dark:text-white transition-colors"
                         >
                             {curlCopied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
                             {curlCopied ? 'Copied' : 'Copy Curl'}
                         </button>
                     </div>
-                    <div className="flex-1 overflow-auto rounded-lg border border-neutral-200 dark:border-neutral-800">
+                    <div className="flex-1 overflow-auto rounded-lg border border-slate-200 dark:border-slate-800">
                         <SyntaxHighlighter
                             language="bash"
                             style={atomOneDark}
-                            customStyle={{ margin: 0, background: '#0a0a0a', fontSize: '12px', minHeight: '100%' }}
+                            customStyle={{ margin: 0, background: 'var(--bg-surface)', fontSize: '12px', minHeight: '100%' }}
                             showLineNumbers
                             wrapLongLines={true}
                         >

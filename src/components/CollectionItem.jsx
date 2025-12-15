@@ -25,16 +25,16 @@ export function CollectionItem({
                 "flex items-center gap-1 p-1 rounded group transition-colors",
                 activeCollectionId === collection.id
                     ? "bg-red-900/30 text-red-500"
-                    : "hover:bg-neutral-200 dark:hover:bg-white/5"
+                    : "hover:bg-slate-200 dark:hover:bg-white/5"
             )}>
                 <button
                     onClick={() => toggleFolder(collection.id)}
                     className="p-0.5"
                 >
                     {expandedFolders.has(collection.id) ? (
-                        <ChevronDown className="w-3 h-3 text-neutral-500 dark:text-neutral-400" />
+                        <ChevronDown className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                     ) : (
-                        <ChevronRight className="w-3 h-3 text-neutral-500 dark:text-neutral-400" />
+                        <ChevronRight className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                     )}
                 </button>
                 <Folder className="w-4 h-4 text-yellow-600" />
@@ -49,18 +49,18 @@ export function CollectionItem({
                                 if (e.key === 'Enter') saveRename(collection.id);
                                 if (e.key === 'Escape') cancelRename();
                             }}
-                            className="flex-1 bg-white dark:bg-neutral-800 border border-neutral-300 dark:border-neutral-600 rounded px-1 py-0.5 text-xs text-neutral-900 dark:text-neutral-300 outline-none focus:border-blue-500"
+                            className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-1 py-0.5 text-xs text-slate-900 dark:text-slate-300 outline-none focus:border-blue-500"
                             autoFocus
                         />
                         <button
                             onClick={() => saveRename(collection.id)}
-                            className="p-1 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded text-green-500"
+                            className="p-1 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-green-500"
                         >
                             <Check className="w-3 h-3" />
                         </button>
                         <button
                             onClick={cancelRename}
-                            className="p-1 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded text-red-500"
+                            className="p-1 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-red-500"
                         >
                             <X className="w-3 h-3" />
                         </button>
@@ -71,19 +71,19 @@ export function CollectionItem({
                             "flex-1 text-xs",
                             activeCollectionId === collection.id
                                 ? "text-red-400 font-semibold"
-                                : "text-neutral-700 dark:text-neutral-300"
+                                : "text-slate-700 dark:text-slate-300"
                         )}>{collection.name}</span>
                         {!readOnly && (
                             <>
                                 <button
                                     onClick={() => startRename(collection)}
-                                    className="p-1 opacity-0 group-hover:opacity-100 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded text-neutral-500 hover:text-blue-400"
+                                    className="p-1 opacity-0 group-hover:opacity-100 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-500 hover:text-blue-400"
                                 >
                                     <Edit2 className="w-3 h-3" />
                                 </button>
                                 <button
                                     onClick={() => deleteCollection(collection.id)}
-                                    className="p-1 opacity-0 group-hover:opacity-100 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded text-neutral-500 hover:text-red-500"
+                                    className="p-1 opacity-0 group-hover:opacity-100 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-500 hover:text-red-500"
                                 >
                                     <Trash2 className="w-3 h-3" />
                                 </button>
@@ -99,7 +99,7 @@ export function CollectionItem({
                                 e.stopPropagation();
                                 onSaveCollection(collection);
                             }}
-                            className="p-1 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded text-neutral-500 hover:text-blue-500"
+                            className="p-1 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-500 hover:text-blue-500"
                             title="Save to DB"
                         >
                             <Save className="w-3 h-3" />
@@ -109,7 +109,7 @@ export function CollectionItem({
                                 e.stopPropagation();
                                 onReloadCollection(collection.id);
                             }}
-                            className="p-1 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded text-neutral-500 hover:text-green-500"
+                            className="p-1 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-500 hover:text-green-500"
                             title="Reload from DB"
                         >
                             <RefreshCw className="w-3 h-3" />
@@ -124,10 +124,10 @@ export function CollectionItem({
                         {collection.requests.map(request => (
                             <div
                                 key={request.id}
-                                className="flex items-center gap-2 p-1 hover:bg-neutral-200 dark:hover:bg-white/5 rounded group cursor-pointer"
+                                className="flex items-center gap-2 p-1 hover:bg-slate-200 dark:hover:bg-white/5 rounded group cursor-pointer"
                                 onClick={() => onLoadRequest(request)}
                             >
-                                <FileText className="w-3 h-3 text-neutral-500 dark:text-neutral-400" />
+                                <FileText className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                                 <span className={cn(
                                     "text-[10px] font-bold uppercase w-12",
                                     request.method === 'GET' && "text-green-500",
@@ -137,14 +137,14 @@ export function CollectionItem({
                                 )}>
                                     {request.method}
                                 </span>
-                                <span className="flex-1 text-xs text-neutral-600 dark:text-neutral-400 truncate">{request.name}</span>
+                                <span className="flex-1 text-xs text-slate-600 dark:text-slate-400 truncate">{request.name}</span>
                                 {!readOnly && (
                                     <button
                                         onClick={(e) => {
                                             e.stopPropagation();
                                             deleteRequest(collection.id, request.id);
                                         }}
-                                        className="p-1 opacity-0 group-hover:opacity-100 hover:bg-neutral-300 dark:hover:bg-neutral-700 rounded text-neutral-500 hover:text-red-500"
+                                        className="p-1 opacity-0 group-hover:opacity-100 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-500 hover:text-red-500"
                                     >
                                         <Trash2 className="w-3 h-3" />
                                     </button>

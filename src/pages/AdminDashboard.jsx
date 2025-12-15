@@ -3,26 +3,50 @@ import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 
-// Mock Data until API is ready
-const MOCK_USERS = [
-    { id: 1, username: 'dev1', assignedAppCodes: [], status: 'active' },
-    { id: 2, username: 'dev2', assignedAppCodes: [], status: 'inactive' }
-];
+// Helper to generate mock data
+const generateMockAppCodes = (count) => {
+    const projects = ['PaymentService', 'E-commerce', 'Logistics', 'Social Media', 'Finance', 'Weather App', 'CRM', 'HR System', 'Analytics', 'Gateway'];
+    const modules = ['Core', 'Auth', 'Payment', 'Inventory', 'UserMgmt', 'Tracking', 'Fleet', 'Feed', 'Messaging', 'Reporting', 'Audit', 'Dashboard', 'API'];
 
-const MOCK_APP_CODES = [
-    { id: 101, projectName: 'PaymentService', moduleName: 'Core', projectId: '1' },
-    { id: 102, projectName: 'PaymentService', moduleName: 'Auth', projectId: '2' },
-    { id: 103, projectName: 'E-commerce', moduleName: 'Payment', projectId: '2' },
-    { id: 104, projectName: 'E-commerce', moduleName: 'Inventory', projectId: '3' },
-    { id: 105, projectName: 'E-commerce', moduleName: 'UserMgmt', projectId: '4' },
-    { id: 106, projectName: 'Logistics', moduleName: 'Tracking', projectId: '5' },
-    { id: 107, projectName: 'Logistics', moduleName: 'Fleet', projectId: '6' },
-    { id: 108, projectName: 'Social Media', moduleName: 'Feed', projectId: '7' },
-    { id: 109, projectName: 'Social Media', moduleName: 'Messaging', projectId: '8' },
-    { id: 110, projectName: 'Finance', moduleName: 'Reporting', projectId: '9' },
-    { id: 111, projectName: 'Finance', moduleName: 'Audit', projectId: '10' },
-    { id: 112, projectName: 'Weather App', moduleName: 'Core', projectId: '1' },
-];
+    return Array.from({ length: count }, (_, i) => {
+        const project = projects[i % projects.length];
+        const module = modules[i % modules.length];
+        // Add a suffix to ensure uniqueness if we loop
+        const uniqueSuffix = Math.floor(i / projects.length) > 0 ? ` ${Math.floor(i / projects.length) + 1}` : '';
+
+        return {
+            id: 100 + i,
+            projectName: project,
+            moduleName: `${module}${uniqueSuffix}`,
+            projectId: `${(i % 20) + 1}` // Reusing project IDs to simulate shared projects
+        };
+    });
+};
+
+const MOCK_APP_CODES = generateMockAppCodes(3);
+
+const generateMockUsers = (count) => {
+    return Array.from({ length: count }, (_, i) => {
+        // Randomly assign 0 to 3 app codes to each user
+        const assignedCodes = [];
+        const numAssigned = Math.floor(Math.random() * 4);
+        for (let j = 0; j < numAssigned; j++) {
+            const randomCode = MOCK_APP_CODES[Math.floor(Math.random() * MOCK_APP_CODES.length)];
+            if (!assignedCodes.find(c => c.id === randomCode.id)) {
+                assignedCodes.push(randomCode);
+            }
+        }
+
+        return {
+            id: i + 1,
+            username: `user_${i + 1}`,
+            assignedAppCodes: assignedCodes,
+            status: Math.random() > 0.2 ? 'active' : 'inactive' // 80% active
+        };
+    });
+};
+
+const MOCK_USERS = generateMockUsers(50);
 
 export function AdminDashboard() {
     const { user, logout } = useAuth();
@@ -181,15 +205,15 @@ export function AdminDashboard() {
 
 
     return (
-        <div className="h-screen flex flex-col bg-neutral-50 dark:bg-neutral-900 text-neutral-900 dark:text-white font-sans overflow-hidden">
+        <div className="h-screen flex flex-col bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white font-sans overflow-hidden">
             {/* Header */}
-            <div className="bg-white dark:bg-neutral-800 border-b border-neutral-200 dark:border-neutral-700 px-6 py-4 flex justify-between items-center shadow-sm">
+            <div className="bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex justify-between items-center shadow-sm">
                 <h1 className="text-xl font-bold">Admin Dashboard</h1>
                 <div className="flex items-center gap-4">
                     <div className="relative">
                         <button
                             onClick={() => setIsSettingsOpen(!isSettingsOpen)}
-                            className="text-sm font-medium text-neutral-700 dark:text-neutral-300 hover:text-red-600 dark:hover:text-red-400 flex items-center gap-1 focus:outline-none"
+                            className="text-sm font-medium text-slate-700 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 flex items-center gap-1 focus:outline-none"
                         >
                             Welcome, {user?.username}
                         </button>
@@ -197,18 +221,18 @@ export function AdminDashboard() {
                         {isSettingsOpen && (
                             <>
                                 <div className="fixed inset-0 z-40" onClick={() => setIsSettingsOpen(false)}></div>
-                                <div className="absolute top-full right-0 mt-2 w-40 bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded-lg shadow-xl shadow-black/10 z-50 overflow-hidden">
+                                <div className="absolute top-full right-0 mt-2 w-40 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg shadow-xl shadow-black/10 z-50 overflow-hidden">
                                     <div className="py-2">
-                                        <p className="px-4 py-1 text-[10px] text-neutral-400 uppercase tracking-wider font-semibold">Appearance</p>
+                                        <p className="px-4 py-1 text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Appearance</p>
                                         <button
                                             onClick={() => { setTheme('light'); setIsSettingsOpen(false); }}
-                                            className={`w-full text-left px-4 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-sm flex items-center justify-between ${theme === 'light' ? 'text-red-600 font-medium' : 'text-neutral-600 dark:text-neutral-300'}`}
+                                            className={`w-full text-left px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm flex items-center justify-between ${theme === 'light' ? 'text-red-600 font-medium' : 'text-slate-600 dark:text-slate-300'}`}
                                         >
                                             Light Mode {theme === 'light' && <span>✓</span>}
                                         </button>
                                         <button
                                             onClick={() => { setTheme('dark'); setIsSettingsOpen(false); }}
-                                            className={`w-full text-left px-4 py-2 hover:bg-neutral-50 dark:hover:bg-neutral-700 text-sm flex items-center justify-between ${theme === 'dark' ? 'text-red-600 font-medium' : 'text-neutral-600 dark:text-neutral-300'}`}
+                                            className={`w-full text-left px-4 py-2 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm flex items-center justify-between ${theme === 'dark' ? 'text-red-600 font-medium' : 'text-slate-600 dark:text-slate-300'}`}
                                         >
                                             Dark Mode {theme === 'dark' && <span>✓</span>}
                                         </button>
@@ -217,23 +241,23 @@ export function AdminDashboard() {
                             </>
                         )}
                     </div>
-                    <button onClick={() => { logout(); navigate('/login'); }} className="text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300 text-sm font-medium">Logout</button>
+                    <button onClick={() => { logout(); navigate('/login'); }} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 text-sm font-medium">Logout</button>
                 </div>
             </div>
 
             <div className="flex-1 flex flex-col overflow-hidden">
 
                 {/* Tabs */}
-                <div className="flex gap-4 px-6 pt-6 pb-4 border-b border-neutral-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-900">
+                <div className="flex gap-4 px-6 pt-6 pb-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
                     <button
                         onClick={() => setActiveTab('users')}
-                        className={`pb-2 px-1 ${activeTab === 'users' ? 'border-b-2 border-red-500 font-bold text-red-600 dark:text-red-400' : 'text-neutral-500 hover:text-neutral-700'}`}
+                        className={`pb-2 px-1 ${activeTab === 'users' ? 'border-b-2 border-red-500 font-bold text-red-600 dark:text-red-400' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                         User Management
                     </button>
                     <button
                         onClick={() => setActiveTab('appcodes')}
-                        className={`pb-2 px-1 ${activeTab === 'appcodes' ? 'border-b-2 border-red-500 font-bold text-red-600 dark:text-red-400' : 'text-neutral-500 hover:text-neutral-700'}`}
+                        className={`pb-2 px-1 ${activeTab === 'appcodes' ? 'border-b-2 border-red-500 font-bold text-red-600 dark:text-red-400' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                         App Codes
                     </button>
@@ -245,8 +269,8 @@ export function AdminDashboard() {
                     {activeTab === 'users' && (
                         <div className="flex flex-col gap-8 h-full">
                             {/* User List Table */}
-                            <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden flex flex-col flex-1 min-h-0">
-                                <div className="p-6 border-b border-neutral-200 dark:border-neutral-700 flex justify-between items-center">
+                            <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col flex-1 min-h-0">
+                                <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
                                     <h2 className="text-lg font-bold">Users</h2>
                                     <button
                                         onClick={() => setIsCreatingUser(true)}
@@ -257,19 +281,24 @@ export function AdminDashboard() {
                                 </div>
                                 <div className="overflow-auto flex-1">
                                     <table className="w-full text-left text-sm">
-                                        <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
+                                        <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                                             <tr>
-                                                <th className="px-6 py-3 font-semibold text-neutral-600 dark:text-neutral-300">Username</th>
-                                                <th className="px-6 py-3 font-semibold text-neutral-600 dark:text-neutral-300">Status</th>
-                                                <th className="px-6 py-3 font-semibold text-neutral-600 dark:text-neutral-300">App Codes Access</th>
-                                                <th className="px-6 py-3 font-semibold text-neutral-600 dark:text-neutral-300 text-right">Actions</th>
+                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-1/4">Username</th>
+                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-1/4 text-center">App Codes Access</th>
+                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-1/4 text-center">Status</th>
+                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-1/4 text-right">Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
+                                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                                             {users.map(u => (
-                                                <tr key={u.id} className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors">
+                                                <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                                     <td className="px-6 py-4 font-medium">{u.username}</td>
-                                                    <td className="px-6 py-4">
+                                                    <td className="px-6 py-4 text-center">
+                                                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
+                                                            {u.assignedAppCodes.length}
+                                                        </span>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-center">
                                                         <button
                                                             onClick={() => handleToggleUserStatus(u.id)}
                                                             className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold transition-colors ${u.status === 'active'
@@ -280,21 +309,16 @@ export function AdminDashboard() {
                                                             {u.status === 'active' ? '✓ Active' : '✕ Inactive'}
                                                         </button>
                                                     </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-neutral-100 text-neutral-800 dark:bg-neutral-700 dark:text-neutral-300">
-                                                            {u.assignedAppCodes.length}
-                                                        </span>
-                                                    </td>
                                                     <td className="px-6 py-4 text-right space-x-2">
                                                         <button
                                                             onClick={() => setEditingUser(u)}
-                                                            className="text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white font-medium text-xs px-2 py-1 border border-neutral-200 dark:border-neutral-700 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                                                            className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium text-xs px-2 py-1 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-800"
                                                         >
                                                             Edit
                                                         </button>
                                                         <button
                                                             onClick={() => { setAssigningUser(u); setSelectedAppCodeId(''); }}
-                                                            className="text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white font-medium text-xs px-2 py-1 border border-neutral-200 dark:border-neutral-700 rounded hover:bg-neutral-50 dark:hover:bg-neutral-800"
+                                                            className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium text-xs px-2 py-1 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-800"
                                                         >
                                                             Add
                                                         </button>
@@ -318,36 +342,38 @@ export function AdminDashboard() {
                     {activeTab === 'appcodes' && (
                         <div className="flex flex-col gap-4 h-full">
                             {/* App Code Selector */}
-                            <div className="bg-white dark:bg-neutral-800 p-6 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-700 flex-shrink-0">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h2 className="text-lg font-bold">Select App Code</h2>
+                            <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex-shrink-0">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-4">
+                                        <h2 className="text-lg font-bold whitespace-nowrap">Select App Code</h2>
+                                        <select
+                                            value={selectedAppCode}
+                                            onChange={(e) => setSelectedAppCode(e.target.value)}
+                                            className="w-64 md:w-80 border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700 focus:border-red-500 outline-none"
+                                        >
+                                            <option value="">-- Select an App Code --</option>
+                                            {appCodes.map(ac => (
+                                                <option key={ac.id} value={ac.id}>
+                                                    {ac.projectName} - {ac.moduleName} (ID: {ac.projectId})
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
                                     <button
                                         onClick={() => setIsCreatingAppCode(true)}
-                                        className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 font-medium shadow-sm"
+                                        className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 font-medium shadow-sm shrink-0"
                                     >
                                         Create App Code
                                     </button>
                                 </div>
-                                <select
-                                    value={selectedAppCode}
-                                    onChange={(e) => setSelectedAppCode(e.target.value)}
-                                    className="w-full md:w-96 border rounded p-3 text-sm dark:bg-neutral-900 dark:border-neutral-700"
-                                >
-                                    <option value="">-- Select an App Code --</option>
-                                    {appCodes.map(ac => (
-                                        <option key={ac.id} value={ac.id}>
-                                            {ac.projectName} - {ac.moduleName} (ID: {ac.projectId})
-                                        </option>
-                                    ))}
-                                </select>
                             </div>
 
                             {/* Collections Table */}
                             {selectedAppCode && (
-                                <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-sm border border-neutral-200 dark:border-neutral-700 overflow-hidden flex flex-col flex-1 min-h-0">
-                                    <div className="p-6 border-b border-neutral-200 dark:border-neutral-700 flex-shrink-0">
+                                <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col flex-1 min-h-0">
+                                    <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex-shrink-0">
                                         <h2 className="text-lg font-bold">Collections & Requests</h2>
-                                        <p className="text-xs text-neutral-500 mt-1">
+                                        <p className="text-xs text-slate-500 mt-1">
                                             {appCodes.find(ac => ac.id.toString() === selectedAppCode)?.projectName} - {appCodes.find(ac => ac.id.toString() === selectedAppCode)?.moduleName}
                                         </p>
                                     </div>
@@ -356,33 +382,33 @@ export function AdminDashboard() {
                                             <div className="flex items-center justify-center p-12">
                                                 <div className="flex flex-col items-center gap-3">
                                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
-                                                    <p className="text-sm text-neutral-500">Loading collections...</p>
+                                                    <p className="text-sm text-slate-500">Loading collections...</p>
                                                 </div>
                                             </div>
                                         ) : appCodeCollections.length === 0 ? (
-                                            <div className="p-12 text-center text-neutral-500">
+                                            <div className="p-12 text-center text-slate-500">
                                                 <p>No collections found for this app code.</p>
                                             </div>
                                         ) : (
                                             <table className="w-full text-left text-sm">
-                                                <thead className="bg-neutral-50 dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-700">
+                                                <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                                                     <tr>
-                                                        <th className="px-6 py-3 font-semibold text-neutral-600 dark:text-neutral-300 w-12"></th>
-                                                        <th className="px-6 py-3 font-semibold text-neutral-600 dark:text-neutral-300">Collection / Request</th>
-                                                        <th className="px-6 py-3 font-semibold text-neutral-600 dark:text-neutral-300">Method</th>
-                                                        <th className="px-6 py-3 font-semibold text-neutral-600 dark:text-neutral-300">URL</th>
-                                                        <th className="px-6 py-3 font-semibold text-neutral-600 dark:text-neutral-300 text-right">Actions</th>
+                                                        <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-12"></th>
+                                                        <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300">Collection / Request</th>
+                                                        <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300">Method</th>
+                                                        <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300">URL</th>
+                                                        <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 text-right">Actions</th>
                                                     </tr>
                                                 </thead>
-                                                <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
+                                                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                                                     {appCodeCollections.map(collection => (
                                                         <>
                                                             {/* Collection Row */}
-                                                            <tr key={collection.collectionId} className="bg-neutral-50 dark:bg-neutral-900/50 hover:bg-neutral-100 dark:hover:bg-neutral-800/70 transition-colors">
+                                                            <tr key={collection.collectionId} className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors">
                                                                 <td className="px-6 py-3">
                                                                     <button
                                                                         onClick={() => toggleCollection(collection.collectionId)}
-                                                                        className="text-neutral-500 hover:text-neutral-900 dark:hover:text-white transition-colors"
+                                                                        className="text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
                                                                     >
                                                                         {expandedCollections.has(collection.collectionId) ? (
                                                                             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
@@ -391,11 +417,11 @@ export function AdminDashboard() {
                                                                         )}
                                                                     </button>
                                                                 </td>
-                                                                <td className="px-6 py-3 font-bold text-neutral-900 dark:text-white" colSpan="3">
+                                                                <td className="px-6 py-3 font-bold text-slate-900 dark:text-white" colSpan="3">
                                                                     <div className="flex items-center gap-2">
                                                                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg>
                                                                         {collection.name}
-                                                                        <span className="ml-2 text-xs px-2 py-0.5 bg-neutral-200 dark:bg-neutral-700 rounded-full text-neutral-600 dark:text-neutral-400">
+                                                                        <span className="ml-2 text-xs px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-400">
                                                                             {collection.requests?.length || 0} requests
                                                                         </span>
                                                                     </div>
@@ -407,13 +433,13 @@ export function AdminDashboard() {
                                                             {expandedCollections.has(collection.collectionId) && collection.requests?.map(request => (
                                                                 <tr
                                                                     key={request.requestId}
-                                                                    className="hover:bg-neutral-50 dark:hover:bg-neutral-800/50 transition-colors cursor-pointer"
+                                                                    className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
                                                                     onClick={() => handleRequestClick(request)}
                                                                 >
                                                                     <td className="px-6 py-3"></td>
                                                                     <td className="px-6 py-4 pl-12">
                                                                         <div className="flex items-center gap-2">
-                                                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-neutral-400"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></svg>
+                                                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></svg>
                                                                             {request.name}
                                                                         </div>
                                                                     </td>
@@ -423,12 +449,12 @@ export function AdminDashboard() {
                                                                                 request.method === 'PUT' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
                                                                                     request.method === 'DELETE' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
                                                                                         request.method === 'PATCH' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                                                                                            'bg-neutral-100 text-neutral-700 dark:bg-neutral-900/30 dark:text-neutral-400'
+                                                                                            'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400'
                                                                             }`}>
                                                                             {request.method}
                                                                         </span>
                                                                     </td>
-                                                                    <td className="px-6 py-4 font-mono text-xs text-neutral-600 dark:text-neutral-400 truncate max-w-md">
+                                                                    <td className="px-6 py-4 font-mono text-xs text-slate-600 dark:text-slate-400 truncate max-w-md">
                                                                         {request.url}
                                                                     </td>
                                                                     <td className="px-6 py-4 text-right">
@@ -462,22 +488,22 @@ export function AdminDashboard() {
             {
                 editingUser && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                        <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden">
-                            <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-700 flex justify-between items-center">
+                        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+                            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
                                 <h3 className="font-bold text-lg">Edit Access: {editingUser.username}</h3>
-                                <button onClick={() => setEditingUser(null)} className="text-neutral-500 hover:text-neutral-700">✕</button>
+                                <button onClick={() => setEditingUser(null)} className="text-slate-500 hover:text-slate-700">✕</button>
                             </div>
                             <div className="p-6">
-                                <h4 className="text-sm font-semibold mb-3 text-neutral-600 dark:text-neutral-400">Assigned App Codes</h4>
+                                <h4 className="text-sm font-semibold mb-3 text-slate-600 dark:text-slate-400">Assigned App Codes</h4>
                                 {users.find(u => u.id === editingUser.id)?.assignedAppCodes.length === 0 ? (
-                                    <p className="text-sm text-neutral-500 italic">No app codes assigned.</p>
+                                    <p className="text-sm text-slate-500 italic">No app codes assigned.</p>
                                 ) : (
                                     <ul className="space-y-2 max-h-60 overflow-y-auto">
                                         {users.find(u => u.id === editingUser.id)?.assignedAppCodes.map(ac => (
-                                            <li key={ac.id} className="flex justify-between items-center p-2 bg-neutral-50 dark:bg-neutral-900 rounded border border-neutral-100 dark:border-neutral-700 text-sm">
+                                            <li key={ac.id} className="flex justify-between items-center p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-700 text-sm">
                                                 <div>
                                                     <div className="font-medium">{ac.projectName}</div>
-                                                    <div className="text-xs text-neutral-500">{ac.moduleName}</div>
+                                                    <div className="text-xs text-slate-500">{ac.moduleName}</div>
                                                 </div>
                                                 <button
                                                     onClick={() => handleUnassignAppCode(editingUser.id, ac.id)}
@@ -490,8 +516,8 @@ export function AdminDashboard() {
                                     </ul>
                                 )}
                             </div>
-                            <div className="px-6 py-4 bg-neutral-50 dark:bg-neutral-900 text-right">
-                                <button onClick={() => setEditingUser(null)} className="px-4 py-2 bg-neutral-200 dark:bg-neutral-700 rounded text-sm font-medium hover:bg-neutral-300 dark:hover:bg-neutral-600 transition-colors">Close</button>
+                            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900 text-right">
+                                <button onClick={() => setEditingUser(null)} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Close</button>
                             </div>
                         </div>
                     </div>
@@ -502,17 +528,17 @@ export function AdminDashboard() {
             {
                 assigningUser && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                        <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-xl w-full max-w-sm">
-                            <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-700">
+                        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-sm">
+                            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
                                 <h3 className="font-bold text-lg">Assign App Code</h3>
-                                <p className="text-xs text-neutral-500 mt-1">To user: {assigningUser.username}</p>
+                                <p className="text-xs text-slate-500 mt-1">To user: {assigningUser.username}</p>
                             </div>
                             <div className="p-6">
                                 <label className="block text-xs font-medium mb-2">Select Unassigned App Code</label>
                                 <select
                                     value={selectedAppCodeId}
                                     onChange={e => setSelectedAppCodeId(e.target.value)}
-                                    className="w-full border rounded p-2 text-sm dark:bg-neutral-900 dark:border-neutral-700 mb-4"
+                                    className="w-full border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700 mb-4"
                                 >
                                     <option value="">-- Select --</option>
                                     {getUnassignedCodes(users.find(u => u.id === assigningUser.id)).map(ac => (
@@ -520,7 +546,7 @@ export function AdminDashboard() {
                                     ))}
                                 </select>
                                 <div className="flex justify-end gap-2">
-                                    <button onClick={() => setAssigningUser(null)} className="px-3 py-2 text-neutral-600 dark:text-neutral-400 text-sm hover:underline">Cancel</button>
+                                    <button onClick={() => setAssigningUser(null)} className="px-3 py-2 text-slate-600 dark:text-slate-400 text-sm hover:underline">Cancel</button>
                                     <button
                                         onClick={handleAssignAppCode}
                                         disabled={!selectedAppCodeId}
@@ -539,10 +565,10 @@ export function AdminDashboard() {
             {
                 isCreatingUser && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                        <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-xl w-full max-w-sm">
-                            <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-700 flex justify-between items-center">
+                        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-sm">
+                            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
                                 <h3 className="font-bold text-lg">Create New User</h3>
-                                <button onClick={() => setIsCreatingUser(false)} className="text-neutral-500 hover:text-neutral-700">✕</button>
+                                <button onClick={() => setIsCreatingUser(false)} className="text-slate-500 hover:text-slate-700">✕</button>
                             </div>
                             <form onSubmit={handleCreateUser} className="p-6">
                                 <div className="space-y-4 mb-6">
@@ -552,7 +578,7 @@ export function AdminDashboard() {
                                             type="text"
                                             value={newUsername}
                                             onChange={e => setNewUsername(e.target.value)}
-                                            className="w-full border rounded p-2 text-sm dark:bg-neutral-900 dark:border-neutral-700"
+                                            className="w-full border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700"
                                             required
                                             autoFocus
                                         />
@@ -563,7 +589,7 @@ export function AdminDashboard() {
                                             type="password"
                                             value={newPassword}
                                             onChange={e => setNewPassword(e.target.value)}
-                                            className="w-full border rounded p-2 text-sm dark:bg-neutral-900 dark:border-neutral-700"
+                                            className="w-full border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700"
                                             required
                                         />
                                     </div>
@@ -572,7 +598,7 @@ export function AdminDashboard() {
                                         <select
                                             value={newUserStatus}
                                             onChange={e => setNewUserStatus(e.target.value)}
-                                            className="w-full border rounded p-2 text-sm dark:bg-neutral-900 dark:border-neutral-700"
+                                            className="w-full border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700"
                                         >
                                             <option value="active">Active</option>
                                             <option value="inactive">Inactive</option>
@@ -580,7 +606,7 @@ export function AdminDashboard() {
                                     </div>
                                 </div>
                                 <div className="flex justify-end gap-2">
-                                    <button type="button" onClick={() => setIsCreatingUser(false)} className="px-3 py-2 text-neutral-600 dark:text-neutral-400 text-sm hover:underline">Cancel</button>
+                                    <button type="button" onClick={() => setIsCreatingUser(false)} className="px-3 py-2 text-slate-600 dark:text-slate-400 text-sm hover:underline">Cancel</button>
                                     <button type="submit" className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 font-medium">Create User</button>
                                 </div>
                             </form>
@@ -593,43 +619,43 @@ export function AdminDashboard() {
             {
                 isCreatingAppCode && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                        <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-xl w-full max-w-md">
-                            <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-700 flex justify-between items-center">
+                        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
+                            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
                                 <h3 className="font-bold text-lg">Create New App Code</h3>
-                                <button onClick={() => setIsCreatingAppCode(false)} className="text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300">✕</button>
+                                <button onClick={() => setIsCreatingAppCode(false)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">✕</button>
                             </div>
                             <form onSubmit={handleCreateAppCode} className="p-6">
                                 <div className="space-y-4 mb-6">
                                     <div>
-                                        <label className="block text-xs font-medium mb-1 text-neutral-700 dark:text-neutral-300">Project Name</label>
+                                        <label className="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Project Name</label>
                                         <input
                                             type="text"
                                             value={newProjectName}
                                             onChange={e => setNewProjectName(e.target.value)}
-                                            className="w-full border rounded p-2.5 text-sm dark:bg-neutral-900 dark:border-neutral-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                                            className="w-full border rounded p-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                                             required
                                             placeholder="e.g. PaymentService"
                                             autoFocus
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium mb-1 text-neutral-700 dark:text-neutral-300">Module Name</label>
+                                        <label className="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Module Name</label>
                                         <input
                                             type="text"
                                             value={newModuleName}
                                             onChange={e => setNewModuleName(e.target.value)}
-                                            className="w-full border rounded p-2.5 text-sm dark:bg-neutral-900 dark:border-neutral-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                                            className="w-full border rounded p-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                                             required
                                             placeholder="e.g. Auth"
                                         />
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-medium mb-1 text-neutral-700 dark:text-neutral-300">Project ID</label>
+                                        <label className="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Project ID</label>
                                         <input
                                             type="text"
                                             value={newProjectId}
                                             onChange={e => setNewProjectId(e.target.value)}
-                                            className="w-full border rounded p-2.5 text-sm dark:bg-neutral-900 dark:border-neutral-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
+                                            className="w-full border rounded p-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                                             required
                                             placeholder="e.g. proj_123"
                                         />
@@ -639,7 +665,7 @@ export function AdminDashboard() {
                                     <button
                                         type="button"
                                         onClick={() => setIsCreatingAppCode(false)}
-                                        className="px-4 py-2 text-neutral-600 dark:text-neutral-400 text-sm hover:underline"
+                                        className="px-4 py-2 text-slate-600 dark:text-slate-400 text-sm hover:underline"
                                     >
                                         Cancel
                                     </button>
@@ -660,42 +686,42 @@ export function AdminDashboard() {
             {
                 selectedRequest && (
                     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                        <div className="bg-white dark:bg-neutral-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-                            <div className="px-6 py-4 border-b border-neutral-200 dark:border-neutral-700 flex justify-between items-center">
+                        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+                            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
                                 <h3 className="font-bold text-lg">Request Details</h3>
-                                <button onClick={() => setSelectedRequest(null)} className="text-neutral-500 hover:text-neutral-700 dark:hover:text-neutral-300">✕</button>
+                                <button onClick={() => setSelectedRequest(null)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">✕</button>
                             </div>
                             <div className="p-6 overflow-y-auto flex-1">
                                 <div className="space-y-6">
                                     {/* Name & Method */}
                                     <div>
-                                        <label className="block text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Request Name</label>
+                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Request Name</label>
                                         <p className="text-base font-medium">{selectedRequest.name}</p>
                                     </div>
 
                                     <div className="grid grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Method</label>
+                                            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Method</label>
                                             <span className={`inline-block px-3 py-1 text-xs font-bold rounded ${selectedRequest.method === 'GET' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                                                 selectedRequest.method === 'POST' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
                                                     selectedRequest.method === 'PUT' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
                                                         selectedRequest.method === 'DELETE' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
                                                             selectedRequest.method === 'PATCH' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                                                                'bg-neutral-100 text-neutral-700'
+                                                                'bg-slate-100 text-slate-700'
                                                 }`}>
                                                 {selectedRequest.method}
                                             </span>
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Request ID</label>
-                                            <p className="text-sm font-mono text-neutral-600 dark:text-neutral-400">{selectedRequest.requestId}</p>
+                                            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Request ID</label>
+                                            <p className="text-sm font-mono text-slate-600 dark:text-slate-400">{selectedRequest.requestId}</p>
                                         </div>
                                     </div>
 
                                     {/* URL */}
                                     <div>
-                                        <label className="block text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-2">URL</label>
-                                        <p className="text-sm font-mono bg-neutral-50 dark:bg-neutral-900 p-3 rounded border border-neutral-200 dark:border-neutral-700 break-all">
+                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">URL</label>
+                                        <p className="text-sm font-mono bg-slate-50 dark:bg-slate-900 p-3 rounded border border-slate-200 dark:border-slate-700 break-all">
                                             {selectedRequest.url}
                                         </p>
                                     </div>
@@ -703,20 +729,20 @@ export function AdminDashboard() {
                                     {/* Headers */}
                                     {selectedRequest.headers && Object.keys(selectedRequest.headers).length > 0 && (
                                         <div>
-                                            <label className="block text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Headers</label>
-                                            <div className="bg-neutral-50 dark:bg-neutral-900 border border-neutral-200 dark:border-neutral-700 rounded overflow-hidden">
+                                            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Headers</label>
+                                            <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded overflow-hidden">
                                                 <table className="w-full text-sm">
-                                                    <thead className="bg-neutral-100 dark:bg-neutral-800">
+                                                    <thead className="bg-slate-100 dark:bg-slate-800">
                                                         <tr>
-                                                            <th className="px-3 py-2 text-left font-semibold text-neutral-600 dark:text-neutral-400">Key</th>
-                                                            <th className="px-3 py-2 text-left font-semibold text-neutral-600 dark:text-neutral-400">Value</th>
+                                                            <th className="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Key</th>
+                                                            <th className="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Value</th>
                                                         </tr>
                                                     </thead>
-                                                    <tbody className="divide-y divide-neutral-200 dark:divide-neutral-700">
+                                                    <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                                                         {Object.entries(selectedRequest.headers).map(([key, value]) => (
                                                             <tr key={key}>
-                                                                <td className="px-3 py-2 font-mono text-xs text-neutral-700 dark:text-neutral-300">{key}</td>
-                                                                <td className="px-3 py-2 font-mono text-xs text-neutral-600 dark:text-neutral-400">{value}</td>
+                                                                <td className="px-3 py-2 font-mono text-xs text-slate-700 dark:text-slate-300">{key}</td>
+                                                                <td className="px-3 py-2 font-mono text-xs text-slate-600 dark:text-slate-400">{value}</td>
                                                             </tr>
                                                         ))}
                                                     </tbody>
@@ -728,16 +754,16 @@ export function AdminDashboard() {
                                     {/* Body */}
                                     {selectedRequest.body && (
                                         <div>
-                                            <label className="block text-xs font-semibold text-neutral-500 dark:text-neutral-400 mb-2">Body</label>
-                                            <pre className="text-xs font-mono bg-neutral-50 dark:bg-neutral-900 p-4 rounded border border-neutral-200 dark:border-neutral-700 overflow-x-auto whitespace-pre-wrap break-words">
+                                            <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Body</label>
+                                            <pre className="text-xs font-mono bg-slate-50 dark:bg-slate-900 p-4 rounded border border-slate-200 dark:border-slate-700 overflow-x-auto whitespace-pre-wrap break-words">
                                                 {typeof selectedRequest.body === 'string' ? selectedRequest.body : JSON.stringify(selectedRequest.body, null, 2)}
                                             </pre>
                                         </div>
                                     )}
                                 </div>
                             </div>
-                            <div className="px-6 py-4 bg-neutral-50 dark:bg-neutral-900 border-t border-neutral-200 dark:border-neutral-700 text-right">
-                                <button onClick={() => setSelectedRequest(null)} className="px-4 py-2 bg-neutral-200 dark:bg-neutral-700 rounded text-sm font-medium hover:bg-neutral-300 dark:hover:bg-neutral-600 transition-colors">Close</button>
+                            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 text-right">
+                                <button onClick={() => setSelectedRequest(null)} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Close</button>
                             </div>
                         </div>
                     </div>
