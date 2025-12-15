@@ -18,7 +18,7 @@ import { cn, replaceEnvVariables } from '../lib/utils';
 import { SaveRequestModal } from '../components/SaveRequestModal';
 import { Header } from '../components/Header';
 import { Settings } from '../components/Settings';
-import { ImportCurlModal } from '../components/ImportCurlModal';
+import { ImportModal } from '../components/ImportModal';
 import { EditDataPanel } from '../components/EditDataModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -586,25 +586,93 @@ export function UserWorkspace() {
 
     const currentEnv = environments.find(env => env.id === activeEnv);
 
-    const handleImportCurl = (parsedCurl) => {
-        const newId = Date.now().toString();
-        const newRequest = {
-            id: newId,
-            name: 'Imported Request',
-            method: parsedCurl.method,
-            url: parsedCurl.url,
-            params: [{ key: '', value: '', active: true }],
-            headers: [...parsedCurl.headers, { key: '', value: '', active: true }],
-            bodyType: parsedCurl.bodyType || 'none',
-            body: parsedCurl.body,
-            authType: 'none',
-            authData: {},
-            response: null,
-            error: null,
-            isLoading: false
-        };
-        setRequests(prev => [...prev, newRequest]);
-        setActiveRequestId(newId);
+    const handleGlobalImport = (type, data) => {
+        try {
+            if (type === 'collection') {
+                const parsed = JSON.parse(data);
+                let newCol = {
+                    id: Date.now().toString(),
+                    name: parsed.info?.name || parsed.name || 'Imported Collection',
+                    requests: []
+                };
+
+                const extractRequests = (items) => {
+                    let reqs = [];
+                    items.forEach(item => {
+                        if (item.item) {
+                            reqs = [...reqs, ...extractRequests(item.item)];
+                        } else if (item.request) {
+                            reqs.push({
+                                id: Date.now().toString() + Math.random(),
+                                name: item.name,
+                                method: item.request.method || 'GET',
+                                url: typeof item.request.url === 'string' ? item.request.url : item.request.url?.raw || '',
+                                params: [],
+                                headers: item.request.header ? item.request.header.reduce((acc, h) => {
+                                    acc.push({ key: h.key, value: h.value, active: true });
+                                    return acc;
+                                }, []) : [],
+                                body: item.request.body?.raw || null,
+                                bodyType: item.request.body?.raw ? 'json' : 'none',
+                                authType: 'none',
+                                authData: {}
+                            });
+                        }
+                    });
+                    return reqs;
+                };
+
+                if (parsed.item) {
+                    newCol.requests = extractRequests(parsed.item);
+                }
+
+                setLocalCollections(prev => [...prev, newCol]);
+                window.alert('Collection imported successfully into Local Collections.');
+
+            } else if (type === 'curl') {
+                // Keep the previous simple curl logic but improved if needed, or stick to provided parsing?
+                // The previous component parsed it passed as an object. The new ImportModal passes raw string.
+                // We need to parse the raw string here if the ImportModal passes raw string.
+                // Wait, ImportModal passes the raw text. So we need parsing logic here.
+
+                // Simplified cURL parsing (similar to EditDataModal)
+                const methodMatch = data.match(/-X\s+([A-Z]+)/);
+                const urlMatch = data.match(/['"](http.*?)['"]/);
+                const headerMatches = [...data.matchAll(/-H\s+['"](.*?)['"]/g)];
+                const dataMatch = data.match(/--data\s+['"](.*?)['"]/);
+
+                const newId = Date.now().toString();
+                const newRequest = {
+                    id: newId,
+                    name: 'Imported cURL',
+                    method: methodMatch ? methodMatch[1] : 'GET',
+                    url: urlMatch ? urlMatch[1] : '',
+                    params: [{ key: '', value: '', active: true }],
+                    headers: headerMatches.reduce((acc, match) => {
+                        const [key, val] = match[1].split(':').map(s => s.trim());
+                        if (key && val) acc.push({ key, value: val, active: true });
+                        return acc;
+                    }, []),
+                    bodyType: dataMatch ? 'json' : 'none',
+                    body: dataMatch ? dataMatch[1] : '',
+                    authType: 'none',
+                    authData: {},
+                    response: null,
+                    error: null,
+                    isLoading: false
+                };
+
+                // Add to session requests
+                setRequests(prev => [...prev, newRequest]);
+                setActiveRequestId(newId);
+
+                // Option: Add to a local 'Imports' collection?
+                // For now, loading into workspace active tabs is standard for cURL.
+            }
+        } catch (e) {
+            console.error(e);
+            window.alert('Import failed: ' + e.message);
+        }
     };
 
     return (
@@ -629,10 +697,10 @@ export function UserWorkspace() {
                 collections={localCollections}
             />
 
-            <ImportCurlModal
-                isOpen={showImportCurlModal}
+            <ImportModal
+                isOpen={showImportCurlModal} // Reusing the state name to minimize changes, or I should rename state too? Let's just use it.
                 onClose={() => setShowImportCurlModal(false)}
-                onImport={handleImportCurl}
+                onImport={handleGlobalImport}
             />
 
             <Layout activeView={activeView} setActiveView={setActiveView}>

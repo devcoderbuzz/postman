@@ -122,6 +122,14 @@ export function CollectionsPanel({
     return (
         <div className="h-full flex bg-slate-50 dark:bg-[var(--bg-secondary)] border-r border-slate-200 dark:border-[var(--border-color)] relative" style={{ width: `${width}px` }}>
             <div className="flex-1 flex flex-col overflow-hidden">
+                <div className="p-2 border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-50 dark:bg-[var(--bg-secondary)]">
+                    <button
+                        onClick={onImportCurl}
+                        className="w-full flex items-center justify-center gap-2 px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded hover:bg-white dark:hover:bg-slate-700 transition-colors"
+                    >
+                        Import
+                    </button>
+                </div>
                 {projects && projects.length > 0 && projects[0].id !== 'default' && (
                     <div className="p-2 border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-100 dark:bg-[var(--bg-secondary)] space-y-1">
                         <div className="flex items-center gap-2">
@@ -168,15 +176,6 @@ export function CollectionsPanel({
                                 </button>
                             </div>
                         )}
-                        <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-200 dark:border-slate-700">
-                            <button
-                                onClick={onImportCurl}
-                                className="flex-1 flex items-center justify-center gap-1.5 px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs font-medium rounded hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" x2="12" y1="15" y2="3" /></svg>
-                                Import cURL
-                            </button>
-                        </div>
                     </div>
                 )}
 
