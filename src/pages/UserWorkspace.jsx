@@ -652,7 +652,7 @@ export function UserWorkspace() {
                             <p className="text-sm">Select an environment to configure variables</p>
                         </div>
                     </div>
-                ) : (activeView === 'settings' ? (
+                ) : activeView === 'settings' ? (
                     <Settings theme={theme} setTheme={setTheme} layout={layout} setLayout={setLayout} />
                 ) : (
                     <>
@@ -785,7 +785,7 @@ export function UserWorkspace() {
                             </div>
                         </div>
                     </>
-                ))}
+                )}
             </Layout>
 
             {

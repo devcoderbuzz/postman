@@ -122,7 +122,7 @@ export function CollectionsPanel({
     return (
         <div className="h-full flex bg-slate-50 dark:bg-[var(--bg-secondary)] border-r border-slate-200 dark:border-[var(--border-color)] relative" style={{ width: `${width}px` }}>
             <div className="flex-1 flex flex-col overflow-hidden">
-                {projects && (
+                {projects && projects.length > 0 && projects[0].id !== 'default' && (
                     <div className="p-2 border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-100 dark:bg-[var(--bg-secondary)] space-y-1">
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-medium text-slate-500 w-16 text-right">App Code:</span>

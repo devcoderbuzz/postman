@@ -40,16 +40,9 @@ function App() {
               }
             />
 
-            <Route
-              path="/workspace"
-              element={
-                <ProtectedRoute roles={['user', 'admin']}>
-                  <UserWorkspace />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/workspace" element={<UserWorkspace />} />
 
-            <Route path="/" element={<Navigate to="/login" />} />
+            <Route path="/" element={<Navigate to="/workspace" />} />
           </Routes>
         </Router>
       </ThemeProvider>

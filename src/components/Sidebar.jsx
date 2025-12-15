@@ -31,7 +31,7 @@ export function Sidebar({ activeView, setActiveView }) {
                     active={activeView === 'collections'}
                     onClick={() => toggleView('collections')}
                 />
-                {user?.role !== 'user' && (
+                {user && user.role !== 'user' && (
                     <SidebarItem
                         icon={Database}
                         label="My App Codes"

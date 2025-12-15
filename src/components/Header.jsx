@@ -72,6 +72,48 @@ export function Header({ user, onLogout, isSettingsOpen, setIsSettingsOpen, them
                     )}
                 </div>
             )}
+            {!user && (
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={onLogout}
+                        className="text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors"
+                    >
+                        Sign In
+                    </button>
+                    {/* Settings Dropdown Trigger for Guest */}
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsSettingsOpen(!isSettingsOpen)}
+                            className="text-sm font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 transition-colors focus:outline-none"
+                        >
+                            Settings
+                        </button>
+                    </div>
+                    {/* Settings Dropdown Content for Guest */}
+                    {isSettingsOpen && (
+                        <>
+                            <div className="fixed inset-0 z-40" onClick={() => setIsSettingsOpen(false)}></div>
+                            <div className="absolute top-10 right-4 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded shadow-lg z-50">
+                                <div className="py-1">
+                                    <p className="px-4 py-2 text-[10px] text-slate-400 uppercase tracking-wider font-semibold border-b border-slate-100 dark:border-slate-700 mb-1">Theme</p>
+                                    <button
+                                        onClick={() => { setTheme('light'); setIsSettingsOpen(false); }}
+                                        className={`w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-between text-sm ${theme === 'light' ? 'text-red-600 font-medium' : 'text-slate-700 dark:text-slate-300'}`}
+                                    >
+                                        Light Mode {theme === 'light' && <span>✓</span>}
+                                    </button>
+                                    <button
+                                        onClick={() => { setTheme('dark'); setIsSettingsOpen(false); }}
+                                        className={`w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-slate-700 flex items-center justify-between text-sm ${theme === 'dark' ? 'text-red-600 font-medium' : 'text-slate-700 dark:text-slate-300'}`}
+                                    >
+                                        Dark Mode {theme === 'dark' && <span>✓</span>}
+                                    </button>
+                                </div>
+                            </div>
+                        </>
+                    )}
+                </div>
+            )}
         </header>
     );
 }

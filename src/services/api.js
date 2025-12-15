@@ -53,7 +53,7 @@ export const apiService = {
         resolve({
           token: 'mock-jwt-token-12345',
           username: username || 'DevAdmin',
-          role: username === 'admin' ? 'admin' : 'user',
+          role: 'developer', // Default to developer for mock purposes, specific overrides handled in AuthContext
           assignedAppCodes: [
             MOCK_PROJECTS[0], // Weather Core
             MOCK_PROJECTS[1], // E-comm Payment
