@@ -81,7 +81,7 @@ export function Settings({ theme, setTheme, layout, setLayout }) {
                 <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
                     <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-4">About</h3>
                     <p className="text-sm text-slate-400">
-                        Postman Clone v1.0.0
+                        Postman Studio v1.0.0
                     </p>
                 </div>
             </div>

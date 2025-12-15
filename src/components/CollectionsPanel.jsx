@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { FolderPlus, FilePlus, Folder, FileText, ChevronRight, ChevronDown, Trash2, Edit2, Check, X, GripVertical, Save, RefreshCw } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { CollectionItem } from './CollectionItem';
+import { ConfirmationModal } from './ConfirmationModal';
 
 export function CollectionsPanel({
     localCollections,
@@ -28,6 +29,7 @@ export function CollectionsPanel({
     const [editingCollection, setEditingCollection] = useState(null);
     const [editName, setEditName] = useState('');
     const [isResizing, setIsResizing] = useState(false);
+    const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, collectionId: null });
 
     const addCollection = () => {
         const newCollection = {
@@ -39,8 +41,13 @@ export function CollectionsPanel({
     };
 
     const deleteCollection = (id) => {
-        if (window.confirm('Are you sure you want to delete this collection?')) {
-            setLocalCollections(localCollections.filter(col => col.id !== id));
+        setDeleteConfirmation({ isOpen: true, collectionId: id });
+    };
+
+    const handleConfirmDelete = () => {
+        if (deleteConfirmation.collectionId) {
+            setLocalCollections(localCollections.filter(col => col.id !== deleteConfirmation.collectionId));
+            setDeleteConfirmation({ isOpen: false, collectionId: null });
         }
     };
 
@@ -252,6 +259,16 @@ export function CollectionsPanel({
                     <GripVertical className="w-3 h-3 text-blue-500" />
                 </div>
             </div>
+
+            <ConfirmationModal
+                isOpen={deleteConfirmation.isOpen}
+                onClose={() => setDeleteConfirmation({ isOpen: false, collectionId: null })}
+                onConfirm={handleConfirmDelete}
+                title="Delete Collection"
+                message="Are you sure you want to delete this collection? This action cannot be undone."
+                confirmText="Delete"
+                isDangerous={true}
+            />
         </div >
     );
 }

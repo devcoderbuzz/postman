@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2 } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical } from 'lucide-react';
+
+import { ConfirmationModal } from './ConfirmationModal';
 
 export function EditDataPanel() {
     const { user } = useAuth();
@@ -14,12 +16,27 @@ export function EditDataPanel() {
     const [isCreatingCollection, setIsCreatingCollection] = useState(false);
     const [newCollectionName, setNewCollectionName] = useState('');
 
+    // Sidebar Resizing
+    const [sidebarWidth, setSidebarWidth] = useState(320);
+    const [isResizing, setIsResizing] = useState(false);
+
+    // Menu State
+    const [activeMenuCollectionId, setActiveMenuCollectionId] = useState(null);
+
     const [editingRequest, setEditingRequest] = useState(null);
     const [isCreatingRequest, setIsCreatingRequest] = useState(false);
     const [creatingForCollection, setCreatingForCollection] = useState(null);
 
     const [renamingCollectionId, setRenamingCollectionId] = useState(null);
     const [renameValue, setRenameValue] = useState('');
+
+    // Delete Confirmation State
+    const [deleteConfirmInfo, setDeleteConfirmInfo] = useState({
+        isOpen: false,
+        type: null, // 'collection' or 'request'
+        collectionId: null,
+        requestId: null
+    });
 
     useEffect(() => {
         if (user && user.assignedAppCodes) {
@@ -48,6 +65,37 @@ export function EditDataPanel() {
         }
     }, [selectedAppCodeId, assignedAppCodes]);
 
+    // Resizing logic
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            if (!isResizing) return;
+            const newWidth = e.clientX; // Simplified for sidebar on left
+            if (newWidth >= 200 && newWidth <= 600) {
+                setSidebarWidth(newWidth);
+            }
+        };
+
+        const handleMouseUp = () => {
+            setIsResizing(false);
+        };
+
+        if (isResizing) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            return () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+        }
+    }, [isResizing]);
+
+    // Close menu when clicking outside
+    useEffect(() => {
+        const handleClickOutside = () => setActiveMenuCollectionId(null);
+        document.addEventListener('click', handleClickOutside);
+        return () => document.removeEventListener('click', handleClickOutside);
+    }, []);
+
     const toggleCollection = (colId) => {
         const next = new Set(expandedCollections);
         if (next.has(colId)) next.delete(colId);
@@ -68,10 +116,33 @@ export function EditDataPanel() {
         setCollections([...collections, newCol]);
         setNewCollectionName('');
         setIsCreatingCollection(false);
+        setNewCollectionName('');
+        setIsCreatingCollection(false);
     };
 
-    const handleDeleteRequest = (collectionId, requestId) => {
-        if (window.confirm("Are you sure you want to delete this request?")) {
+    const confirmDeleteCollection = (collectionId) => {
+        setDeleteConfirmInfo({
+            isOpen: true,
+            type: 'collection',
+            collectionId
+        });
+    };
+
+    const confirmDeleteRequest = (collectionId, requestId) => {
+        setDeleteConfirmInfo({
+            isOpen: true,
+            type: 'request',
+            collectionId,
+            requestId
+        });
+    };
+
+    const handleConfirmDelete = () => {
+        const { type, collectionId, requestId } = deleteConfirmInfo;
+
+        if (type === 'collection') {
+            setCollections(collections.filter(col => col.collectionId !== collectionId));
+        } else if (type === 'request') {
             setCollections(collections.map(col => {
                 if (col.collectionId === collectionId) {
                     return {
@@ -85,7 +156,10 @@ export function EditDataPanel() {
                 setEditingRequest(null);
             }
         }
+        setDeleteConfirmInfo({ isOpen: false, type: null, collectionId: null, requestId: null });
     };
+
+
 
     const handleSaveRequest = (updatedRequest) => {
         if (isCreatingRequest) {
@@ -147,10 +221,13 @@ export function EditDataPanel() {
     };
 
     return (
-        <div className="flex-1 flex overflow-hidden bg-white dark:bg-slate-900">
-            <div className="w-80 border-r border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-slate-900">
+        <div className="flex-1 flex overflow-hidden bg-white dark:bg-slate-900 relative">
+            <div
+                className="border-r border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-slate-900 relative"
+                style={{ width: `${sidebarWidth}px`, flexShrink: 0 }}
+            >
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-                    <h2 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">Edit Data</h2>
+                    <h2 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">My App Codes</h2>
                     <label className="block text-xs font-semibold mb-2 text-slate-600 dark:text-slate-400">App Code</label>
                     <select
                         value={selectedAppCodeId}
@@ -212,22 +289,42 @@ export function EditDataPanel() {
                                                 {col.requests?.length || 0}
                                             </span>
                                             {renamingCollectionId !== col.collectionId && (
-                                                <>
+                                                <div className="relative">
                                                     <button
-                                                        onClick={(e) => { e.stopPropagation(); handleStartRename(col.collectionId, col.name); }}
-                                                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-opacity"
-                                                        title="Rename Collection"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            setActiveMenuCollectionId(activeMenuCollectionId === col.collectionId ? null : col.collectionId);
+                                                        }}
+                                                        className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
                                                     >
-                                                        <Edit2 className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
+                                                        <MoreVertical className="w-4 h-4" />
                                                     </button>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleCreateNewRequest(col.collectionId); }}
-                                                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded transition-opacity"
-                                                        title="Add Request"
-                                                    >
-                                                        <Plus className="w-3.5 h-3.5 text-red-600 dark:text-red-400" />
-                                                    </button>
-                                                </>
+
+                                                    {activeMenuCollectionId === col.collectionId && (
+                                                        <div className="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded shadow-lg z-50">
+                                                            <div className="py-1">
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleStartRename(col.collectionId, col.name); setActiveMenuCollectionId(null); }}
+                                                                    className="w-full text-left px-4 py-2 text-xs flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
+                                                                >
+                                                                    <Edit2 className="w-3 h-3" /> Rename
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); handleCreateNewRequest(col.collectionId); setActiveMenuCollectionId(null); }}
+                                                                    className="w-full text-left px-4 py-2 text-xs flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300"
+                                                                >
+                                                                    <Plus className="w-3 h-3" /> Add Request
+                                                                </button>
+                                                                <button
+                                                                    onClick={(e) => { e.stopPropagation(); confirmDeleteCollection(col.collectionId); setActiveMenuCollectionId(null); }}
+                                                                    className="w-full text-left px-4 py-2 text-xs flex items-center gap-2 hover:bg-slate-100 dark:hover:bg-slate-700 text-red-600 hover:text-red-700"
+                                                                >
+                                                                    <Trash2 className="w-3 h-3" /> Delete
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -242,22 +339,22 @@ export function EditDataPanel() {
                                                         <div
                                                             key={req.requestId}
                                                             className={`group flex items-center justify-between p-2 rounded border cursor-pointer ${editingRequest?.requestId === req.requestId
-                                                                    ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
-                                                                    : 'hover:bg-white dark:hover:bg-slate-900 border-transparent hover:border-slate-200 dark:hover:border-slate-700'
+                                                                ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
+                                                                : 'hover:bg-white dark:hover:bg-slate-900 border-transparent hover:border-slate-200 dark:hover:border-slate-700'
                                                                 }`}
                                                             onClick={() => { setEditingRequest({ ...req, collectionId: col.collectionId }); setIsCreatingRequest(false); }}
                                                         >
                                                             <div className="flex items-center gap-2 flex-1 overflow-hidden">
                                                                 <span className={`text-[10px] font-bold w-12 shrink-0 ${req.method === 'GET' ? 'text-green-500' :
-                                                                        req.method === 'POST' ? 'text-yellow-500' :
-                                                                            req.method === 'PUT' ? 'text-blue-500' :
-                                                                                req.method === 'DELETE' ? 'text-red-500' : 'text-purple-500'
+                                                                    req.method === 'POST' ? 'text-yellow-500' :
+                                                                        req.method === 'PUT' ? 'text-blue-500' :
+                                                                            req.method === 'DELETE' ? 'text-red-500' : 'text-purple-500'
                                                                     }`}>{req.method}</span>
                                                                 <span className="text-xs truncate text-slate-600 dark:text-slate-400">{req.name}</span>
                                                             </div>
                                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                 <button
-                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteRequest(col.collectionId, req.requestId); }}
+                                                                    onClick={(e) => { e.stopPropagation(); confirmDeleteRequest(col.collectionId, req.requestId); }}
                                                                     className="p-1 text-slate-400 hover:text-red-500 rounded"
                                                                     title="Delete"
                                                                 >
@@ -277,6 +374,15 @@ export function EditDataPanel() {
                 </div>
             </div>
 
+            {/* Resize Handle */}
+            <div
+                className="absolute right-0 top-0 bottom-0 w-1 hover:w-1.5 bg-transparent hover:bg-blue-500 cursor-col-resize transition-all flex items-center justify-center group z-10"
+                onMouseDown={(e) => { setIsResizing(true); e.preventDefault(); }}
+            >
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                    <GripVertical className="w-3 h-3 text-blue-500" />
+                </div>
+            </div>
             {editingRequest ? (
                 <RequestEditorPanel
                     request={editingRequest}
@@ -314,6 +420,16 @@ export function EditDataPanel() {
                     </div>
                 </div>
             )}
+
+            <ConfirmationModal
+                isOpen={deleteConfirmInfo.isOpen}
+                onClose={() => setDeleteConfirmInfo({ ...deleteConfirmInfo, isOpen: false })}
+                onConfirm={handleConfirmDelete}
+                title={deleteConfirmInfo.type === 'collection' ? "Delete Collection" : "Delete Request"}
+                message={`Are you sure you want to delete this ${deleteConfirmInfo.type}? This action cannot be undone.`}
+                confirmText="Delete"
+                isDangerous={true}
+            />
         </div>
     );
 }

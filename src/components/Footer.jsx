@@ -50,7 +50,7 @@ export function Footer({ showConsole, onToggleConsole, latestRequest }) {
             <div className="flex items-center gap-4 text-xs text-slate-400 dark:text-slate-500">
                 <div className="flex items-center gap-1">
                     <AppWindow className="w-3.5 h-3.5" />
-                    <span>Postman Clone v1.0.0</span>
+                    <span>Postman Studio v1.0.0</span>
                 </div>
             </div>
         </footer>

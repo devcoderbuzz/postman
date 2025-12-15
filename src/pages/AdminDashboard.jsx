@@ -41,6 +41,7 @@ const generateMockUsers = (count) => {
             id: i + 1,
             username: `user_${i + 1}`,
             assignedAppCodes: assignedCodes,
+            role: Math.random() > 0.8 ? 'admin' : 'user', // 20% admins
             status: Math.random() > 0.2 ? 'active' : 'inactive' // 80% active
         };
     });
@@ -61,6 +62,7 @@ export function AdminDashboard() {
     // Form states
     const [newUsername, setNewUsername] = useState('');
     const [newPassword, setNewPassword] = useState('');
+    const [newUserRole, setNewUserRole] = useState('user');
     const [newUserStatus, setNewUserStatus] = useState('active');
 
     const [newProjectName, setNewProjectName] = useState('');
@@ -87,12 +89,14 @@ export function AdminDashboard() {
         const newUser = {
             id: Date.now(),
             username: newUsername,
+            role: newUserRole,
             assignedAppCodes: [],
             status: newUserStatus
         };
         setUsers([...users, newUser]);
         setNewUsername('');
         setNewPassword('');
+        setNewUserRole('user');
         setNewUserStatus('active');
         setIsCreatingUser(false);
         alert(`User ${newUser.username} created!`);
@@ -283,16 +287,18 @@ export function AdminDashboard() {
                                     <table className="w-full text-left text-sm">
                                         <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                                             <tr>
-                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-1/4">Username</th>
-                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-1/4 text-center">App Codes Access</th>
-                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-1/4 text-center">Status</th>
-                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-1/4 text-right">Actions</th>
+                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-1/5">Username</th>
+                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-1/5">Role</th>
+                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-1/5 text-center">App Codes</th>
+                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-1/5 text-center">Status</th>
+                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-1/5 text-right">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                                             {users.map(u => (
                                                 <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                                     <td className="px-6 py-4 font-medium">{u.username}</td>
+                                                    <td className="px-6 py-4 capitalize text-slate-600 dark:text-slate-400">{u.role}</td>
                                                     <td className="px-6 py-4 text-center">
                                                         <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
                                                             {u.assignedAppCodes.length}
@@ -592,6 +598,17 @@ export function AdminDashboard() {
                                             className="w-full border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700"
                                             required
                                         />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs font-medium mb-1">Role</label>
+                                        <select
+                                            value={newUserRole}
+                                            onChange={e => setNewUserRole(e.target.value)}
+                                            className="w-full border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700"
+                                        >
+                                            <option value="user">User</option>
+                                            <option value="admin">Admin</option>
+                                        </select>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-medium mb-1">Status</label>

@@ -1,4 +1,4 @@
-import { ChevronDown, ChevronRight, Folder, FileText, Check, X, Edit2, Trash2, Save, RefreshCw } from 'lucide-react';
+import { ChevronDown, ChevronRight, Folder, FileText, Check, X, Edit2, Trash2 } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 export function CollectionItem({
@@ -15,8 +15,6 @@ export function CollectionItem({
     startRename,
     deleteCollection,
     deleteRequest,
-    onSaveCollection,
-    onReloadCollection,
     readOnly = false
 }) {
     return (
@@ -92,30 +90,7 @@ export function CollectionItem({
                     </>
                 )}
 
-                {!readOnly && (
-                    <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity ml-auto">
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onSaveCollection(collection);
-                            }}
-                            className="p-1 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-500 hover:text-blue-500"
-                            title="Save to DB"
-                        >
-                            <Save className="w-3 h-3" />
-                        </button>
-                        <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                onReloadCollection(collection.id);
-                            }}
-                            className="p-1 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-500 hover:text-green-500"
-                            title="Reload from DB"
-                        >
-                            <RefreshCw className="w-3 h-3" />
-                        </button>
-                    </div>
-                )}
+
             </div>
 
             {

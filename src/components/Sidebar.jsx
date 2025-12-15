@@ -14,9 +14,7 @@ export function Sidebar({ activeView, setActiveView }) {
 
     return (
         <div className="w-12 flex flex-col items-center py-2 bg-slate-50 dark:bg-[var(--bg-sidebar)] border-r border-slate-200 dark:border-[var(--border-color)] text-slate-500 dark:text-slate-400">
-            <div className="p-1 mb-2 text-orange-500">
-                <Box className="w-8 h-8" />
-            </div>
+
             <div className="flex flex-col gap-2 w-full px-2 flex-1 overflow-y-auto no-scrollbar">
                 <SidebarItem
                     icon={History}
@@ -32,7 +30,7 @@ export function Sidebar({ activeView, setActiveView }) {
                 />
                 <SidebarItem
                     icon={Database}
-                    label="Edit Data"
+                    label="My App Codes"
                     active={activeView === 'editData'}
                     onClick={() => toggleView('editData')}
                 />
