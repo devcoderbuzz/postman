@@ -27,7 +27,7 @@ function App() {
   return (
     <AuthProvider>
       <ThemeProvider>
-        <Router basename="/customPostman">
+        <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
 
