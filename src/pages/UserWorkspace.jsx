@@ -66,6 +66,7 @@ export function UserWorkspace() {
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [showImportCurlModal, setShowImportCurlModal] = useState(false);
     const [isSettingsOpen, setIsSettingsOpen] = useState(false); // Settings popup
+    const [errorMessage, setErrorMessage] = useState('');
 
     // Layout state
     const [collectionsPanelWidth, setCollectionsPanelWidth] = useState(280);
@@ -474,7 +475,7 @@ export function UserWorkspace() {
 
     const saveToCollection = () => {
         if (localCollections.length === 0) {
-            window.alert('Please create a collection first before saving requests.');
+            setErrorMessage('Please create a collection first before saving requests.');
             return;
         }
         if (activeRequest.id && activeCollectionId) {
@@ -688,6 +689,28 @@ export function UserWorkspace() {
                 setActiveView={setActiveView}
             />
 
+            {errorMessage && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]" onClick={() => setErrorMessage('')}>
+                    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl p-8 w-[400px] shadow-2xl animate-in fade-in zoom-in duration-200" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex flex-col items-center text-center">
+                            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4 text-red-600 dark:text-red-400">
+                                <X className="w-8 h-8" />
+                            </div>
+                            <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Action Required</h3>
+                            <p className="text-slate-600 dark:text-slate-400 mb-8 leading-relaxed">
+                                {errorMessage}
+                            </p>
+                            <button
+                                onClick={() => setErrorMessage('')}
+                                className="w-full py-3 bg-red-600 hover:bg-red-500 text-white font-semibold rounded-lg transition-all shadow-lg shadow-red-600/20 active:scale-95"
+                            >
+                                Got it
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
 
 
             <SaveRequestModal
@@ -724,20 +747,20 @@ export function UserWorkspace() {
                     <Settings theme={theme} setTheme={setTheme} layout={layout} setLayout={setLayout} />
                 ) : (
                     <>
-                        <div className="flex items-center justify-between px-3 py-2 border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-50 dark:bg-[var(--bg-secondary)]">
+                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-50/50 dark:bg-[var(--bg-secondary)]/50 backdrop-blur-sm">
                             <div className="flex items-center gap-2">
                                 {activeEnv && (
-                                    <span className="text-xs px-2 py-1 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded border border-slate-200 dark:border-slate-700">
+                                    <span className="text-xs px-2.5 py-1 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg border border-slate-300 dark:border-slate-700 font-medium italic">
                                         {environments.find(e => e.id === activeEnv)?.name}
                                     </span>
                                 )}
                             </div>
                             <button
                                 onClick={saveToCollection}
-                                className="flex items-center gap-1 px-3 py-1.5 text-xs bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded transition-colors"
+                                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-slate-700 transition-all shadow-sm active:scale-95"
                                 title="Save to collection"
                             >
-                                <Save className="w-3 h-3" /> Save
+                                <Save className="w-3.5 h-3.5" /> Save
                             </button>
                         </div>
 
