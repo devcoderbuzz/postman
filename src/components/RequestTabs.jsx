@@ -9,9 +9,9 @@ export function RequestTabs({ requests, activeRequestId, onActivate, onClose, on
                 <div
                     key={req.id}
                     className={cn(
-                        "group flex items-center gap-2 px-4 py-2.5 min-w-[120px] max-w-[220px] text-xs cursor-pointer border-r border-slate-200 dark:border-[var(--border-color)] select-none rounded-t-xl transition-all duration-200",
+                        "group flex items-center gap-2 px-4 py-2.5 min-w-[120px] max-w-[220px] text-xs cursor-pointer border-r border-slate-200 dark:border-[var(--border-color)] select-none rounded-t-xl transition-colors duration-200",
                         req.id === activeRequestId
-                            ? "bg-white dark:bg-[var(--bg-primary)] text-slate-900 dark:text-[var(--text-primary)] border-t-2 border-t-red-500 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]"
+                            ? "bg-white dark:bg-[var(--bg-primary)] text-slate-900 dark:text-[var(--text-primary)] border-t-2 border-t-red-500"
                             : "bg-slate-100 dark:bg-[var(--bg-secondary)] text-slate-500 dark:text-[var(--text-secondary)] hover:bg-slate-200 dark:hover:bg-white/5"
                     )}
                     onClick={() => onActivate(req.id)}

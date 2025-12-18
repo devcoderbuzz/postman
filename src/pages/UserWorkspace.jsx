@@ -747,7 +747,7 @@ export function UserWorkspace() {
                     <Settings theme={theme} setTheme={setTheme} layout={layout} setLayout={setLayout} />
                 ) : (
                     <>
-                        <div className="flex items-center justify-between px-4 py-2.5 border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-50/50 dark:bg-[var(--bg-secondary)]/50 backdrop-blur-sm">
+                        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50/50 dark:bg-[var(--bg-secondary)]/50 backdrop-blur-sm">
                             <div className="flex items-center gap-2">
                                 {activeEnv && (
                                     <span className="text-xs px-2.5 py-1 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg border border-slate-300 dark:border-slate-700 font-medium italic">
