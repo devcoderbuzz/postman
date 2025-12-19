@@ -11,20 +11,28 @@ export function Login() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        setError(''); // Clear previous errors
         try {
             const user = await login(username, password);
             if (user) {
+                // Role-based navigation
                 if (user.role === 'admin') {
                     navigate('/admin');
+                } else if (user.role === 'developer' || user.role === 'dev') {
+                    navigate('/dev');
+                } else if (user.role === 'user') {
+                    navigate('/user');
                 } else {
                     navigate('/workspace');
                 }
             } else {
-                setError('Invalid credentials');
+                // Inactive user or invalid login handled partially by context (alert)
+                // If context returns null without alert, show generic error
+                setError('Invalid credentials or account inactive');
             }
         } catch (err) {
-            setError('Login failed');
-            console.error(err);
+            setError('Login service failed. Please check your connection or try again later.');
+            console.error('Submit Error:', err);
         }
     };
 

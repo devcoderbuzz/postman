@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { apiService } from '../services/api';
+import { login as loginService } from '../services/apiservice';
 
 const AuthContext = createContext(null);
 
@@ -12,10 +13,12 @@ export const AuthProvider = ({ children }) => {
         const storedUser = sessionStorage.getItem('user');
         const storedToken = sessionStorage.getItem('authToken');
 
-        if (storedUser && storedToken) {
+        if (storedUser && storedToken && storedUser !== 'undefined') {
             try {
                 const parsedUser = JSON.parse(storedUser);
-                setUser({ ...parsedUser, token: storedToken });
+                if (parsedUser && typeof parsedUser === 'object') {
+                    setUser({ ...parsedUser, token: storedToken });
+                }
             } catch (e) {
                 console.error('Failed to parse stored user', e);
                 sessionStorage.clear();
@@ -25,27 +28,33 @@ export const AuthProvider = ({ children }) => {
     }, []);
 
     const login = async (username, password) => {
-        // For now, we are relying on apiService.authenticate logic
-        // But we also need to determine ROLE.
-        // Since the backend might not return 'role' yet, we can mock it based on username for testing
-        // or assume the backend returns it in the future.
         try {
-            const data = await apiService.authenticate(username, password);
+            // Call the apiservice login function
+            const data = await loginService(username, password);
+
             if (data) {
-                // MOCK ROLE ASSIGNMENT
-                let role = data.role || 'developer';
+                // Check status - if not active, give alert
+                if (data.status && data.status.toLowerCase() !== 'active') {
+                    alert('User account is not active. Please contact support.');
+                    return null;
+                }
+
+                // Determine role. Backend might return it, or we use defaults for now.
+                // Assuming backend returns 'role', otherwise fallback to mock logic.
+                let role = data.role || 'user';
                 if (username.toLowerCase().includes('admin')) {
                     role = 'admin';
-                } else if (username.toLowerCase().includes('user')) {
-                    role = 'user';
+                } else if (username.toLowerCase().includes('dev')) {
+                    role = 'developer';
                 }
 
                 const userData = {
                     username: data.username || username,
                     role: role,
-                    token: data.token,
-                    assignedAppCodes: data.assignedAppCodes || [] // Assuming backend returns this for users
+                    token: data.token || 'mock-token', // Backend should return token
+                    assignedAppCodes: data.assignedAppCodes || []
                 };
+
                 console.log('Login successful. UserData:', userData);
                 setUser(userData);
                 sessionStorage.setItem('user', JSON.stringify(userData));
@@ -54,6 +63,8 @@ export const AuthProvider = ({ children }) => {
             }
             return null;
         } catch (err) {
+            console.error('Login error:', err);
+            // Re-throw to allow component to handle error message
             throw err;
         }
     };

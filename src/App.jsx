@@ -40,7 +40,32 @@ function App() {
               }
             />
 
-            <Route path="/workspace" element={<UserWorkspace />} />
+            <Route
+              path="/dev"
+              element={
+                <ProtectedRoute roles={['developer', 'dev']}>
+                  <UserWorkspace />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/user"
+              element={
+                <ProtectedRoute roles={['user']}>
+                  <UserWorkspace />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/workspace"
+              element={
+                <ProtectedRoute>
+                  <UserWorkspace />
+                </ProtectedRoute>
+              }
+            />
 
             <Route path="/" element={<Navigate to="/workspace" />} />
           </Routes>
