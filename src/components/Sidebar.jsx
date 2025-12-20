@@ -29,18 +29,22 @@ export function Sidebar({ activeView, setActiveView }) {
                     />
                 )}
 
-                <SidebarItem
-                    icon={History}
-                    label="History"
-                    active={activeView === 'history'}
-                    onClick={() => toggleView('history')}
-                />
-                <SidebarItem
-                    icon={Folder}
-                    label="Collections"
-                    active={activeView === 'collections'}
-                    onClick={() => toggleView('collections')}
-                />
+                {(!user || user.role !== 'admin') && (
+                    <>
+                        <SidebarItem
+                            icon={History}
+                            label="History"
+                            active={activeView === 'history'}
+                            onClick={() => toggleView('history')}
+                        />
+                        <SidebarItem
+                            icon={Folder}
+                            label="Collections"
+                            active={activeView === 'collections'}
+                            onClick={() => toggleView('collections')}
+                        />
+                    </>
+                )}
                 {user && user.role !== 'user' && (
                     <SidebarItem
                         icon={Database}
@@ -49,12 +53,14 @@ export function Sidebar({ activeView, setActiveView }) {
                         onClick={() => toggleView(user.role === 'admin' ? 'appcodes' : 'editData')}
                     />
                 )}
-                <SidebarItem
-                    icon={Globe}
-                    label="Environments"
-                    active={activeView === 'environments'}
-                    onClick={() => toggleView('environments')}
-                />
+                {(!user || user.role !== 'admin') && (
+                    <SidebarItem
+                        icon={Globe}
+                        label="Environments"
+                        active={activeView === 'environments'}
+                        onClick={() => toggleView('environments')}
+                    />
+                )}
                 <div className="flex-1" />
                 <SidebarItem
                     icon={Settings}
