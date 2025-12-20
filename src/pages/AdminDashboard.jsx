@@ -7,51 +7,7 @@ import { Header } from '../components/Header';
 import { Settings as SettingsIcon, LogOut, Layout as LayoutIcon, User as UserIcon, Shield } from 'lucide-react';
 import { Layout } from '../components/Layout';
 
-// Helper to generate mock data
-const generateMockAppCodes = (count) => {
-    const projects = ['PaymentService', 'E-commerce', 'Logistics', 'Social Media', 'Finance', 'Weather App', 'CRM', 'HR System', 'Analytics', 'Gateway'];
-    const modules = ['Core', 'Auth', 'Payment', 'Inventory', 'UserMgmt', 'Tracking', 'Fleet', 'Feed', 'Messaging', 'Reporting', 'Audit', 'Dashboard', 'API'];
 
-    return Array.from({ length: count }, (_, i) => {
-        const project = projects[i % projects.length];
-        const module = modules[i % modules.length];
-        // Add a suffix to ensure uniqueness if we loop
-        const uniqueSuffix = Math.floor(i / projects.length) > 0 ? ` ${Math.floor(i / projects.length) + 1}` : '';
-
-        return {
-            id: 100 + i,
-            projectName: project,
-            moduleName: `${module}${uniqueSuffix}`,
-            projectId: `${(i % 20) + 1}` // Reusing project IDs to simulate shared projects
-        };
-    });
-};
-
-const MOCK_APP_CODES = generateMockAppCodes(3);
-
-const generateMockUsers = (count) => {
-    return Array.from({ length: count }, (_, i) => {
-        // Randomly assign 0 to 3 app codes to each user
-        const assignedCodes = [];
-        const numAssigned = Math.floor(Math.random() * 4);
-        for (let j = 0; j < numAssigned; j++) {
-            const randomCode = MOCK_APP_CODES[Math.floor(Math.random() * MOCK_APP_CODES.length)];
-            if (!assignedCodes.find(c => c.id === randomCode.id)) {
-                assignedCodes.push(randomCode);
-            }
-        }
-
-        return {
-            id: i + 1,
-            username: `user_${i + 1}`,
-            assignedAppCodes: assignedCodes,
-            role: Math.random() > 0.8 ? 'admin' : 'user', // 20% admins
-            status: Math.random() > 0.2 ? 'active' : 'inactive' // 80% active
-        };
-    });
-};
-
-const MOCK_USERS = generateMockUsers(50);
 
 export function AdminDashboard() {
     const { user, logout } = useAuth();
@@ -60,8 +16,8 @@ export function AdminDashboard() {
 
 
     // Local state for management
-    const [users, setUsers] = useState(MOCK_USERS);
-    const [appCodes, setAppCodes] = useState(MOCK_APP_CODES);
+    const [users, setUsers] = useState([]);
+    const [appCodes, setAppCodes] = useState([]);
 
     // Form states
     const [newUsername, setNewUsername] = useState('');
@@ -594,8 +550,10 @@ export function AdminDashboard() {
                                         onChange={e => setNewUserRole(e.target.value)}
                                         className="w-full border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700"
                                     >
+                                        <option value="developer">Developer</option>
                                         <option value="user">User</option>
                                         <option value="admin">Admin</option>
+
                                     </select>
                                 </div>
                                 <div>
@@ -607,6 +565,7 @@ export function AdminDashboard() {
                                     >
                                         <option value="active">Active</option>
                                         <option value="inactive">Inactive</option>
+                                        <option value="resetpassword">ResetPassword</option>
                                     </select>
                                 </div>
                             </div>

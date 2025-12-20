@@ -59,7 +59,9 @@ export const AuthProvider = ({ children }) => {
                 setUser(userData);
                 sessionStorage.setItem('user', JSON.stringify(userData));
                 sessionStorage.setItem('authToken', userData.token);
-                sessionStorage.setItem('profilePic', userData.profileImage);
+                if (data.profileImage) {
+                    localStorage.setItem('profilePic', data.profileImage);
+                }
                 return userData;
             }
             return null;

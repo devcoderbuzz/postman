@@ -1,3 +1,4 @@
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -23,55 +24,88 @@ const ProtectedRoute = ({ children, roles }) => {
   return children;
 };
 
+// Simple Error Boundary Component
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error("Uncaught error:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-8 text-red-600">
+          <h1 className="text-2xl font-bold mb-4">Something went wrong.</h1>
+          <pre className="bg-red-50 p-4 rounded border border-red-200 overflow-auto">
+            {this.state.error && this.state.error.toString()}
+          </pre>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 function App() {
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <Router>
-          <Routes>
-            <Route path="/login" element={<Login />} />
+    <ErrorBoundary>
+      <AuthProvider>
+        <ThemeProvider>
+          <Router>
+            <Routes>
+              <Route path="/login" element={<Login />} />
 
-            <Route
-              path="/admin"
-              element={
-                <ProtectedRoute roles={['admin']}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute roles={['admin']}>
+                    <AdminDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/dev"
-              element={
-                <ProtectedRoute roles={['developer', 'dev']}>
-                  <UserWorkspace />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/dev"
+                element={
+                  <ProtectedRoute roles={['developer', 'dev']}>
+                    <UserWorkspace />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/user"
-              element={
-                <ProtectedRoute roles={['user']}>
-                  <UserWorkspace />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/user"
+                element={
+                  <ProtectedRoute roles={['user']}>
+                    <UserWorkspace />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route
-              path="/workspace"
-              element={
-                <ProtectedRoute>
-                  <UserWorkspace />
-                </ProtectedRoute>
-              }
-            />
+              <Route
+                path="/workspace"
+                element={
+                  <ProtectedRoute>
+                    <UserWorkspace />
+                  </ProtectedRoute>
+                }
+              />
 
-            <Route path="/" element={<Navigate to="/workspace" />} />
-          </Routes>
-        </Router>
-      </ThemeProvider>
-    </AuthProvider>
+              <Route path="/" element={<Navigate to="/workspace" />} />
+            </Routes>
+          </Router>
+        </ThemeProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
