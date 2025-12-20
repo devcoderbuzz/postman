@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { ResetPasswordModal } from '../components/ResetPasswordModal';
+import { activateUser } from '../services/apiservice';
 
 export function Login() {
     const [username, setUsername] = useState('');
@@ -8,12 +10,36 @@ export function Login() {
     const [error, setError] = useState('');
     const { login } = useAuth();
     const navigate = useNavigate();
+    const [isResetOpen, setIsResetOpen] = useState(false);
+    const [tempUser, setTempUser] = useState(null);
+
+    const handleResetPassword = async (passwords) => {
+        try {
+            setError(''); // Clear previous errors
+            await activateUser(
+                tempUser.userId,
+                passwords.newPassword,
+                tempUser.token
+            );
+            window.alert('Password reset successful! Please login with your new password.');
+            setIsResetOpen(false);
+            setTempUser(null);
+            setPassword(''); // Clear password field
+        } catch (err) {
+            setError(err.message || 'Failed to reset password');
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError(''); // Clear previous errors
         try {
             const user = await login(username, password);
+            if (user && user.status === 'RESETPASSWORD') {
+                setTempUser({ ...user, originalPassword: password });
+                setIsResetOpen(true);
+                return;
+            }
             if (user) {
                 // Role-based navigation
                 if (user.role === 'admin') {
@@ -69,10 +95,15 @@ export function Login() {
                         Sign In
                     </button>
                     <div className="mt-4 text-xs text-center text-slate-500">
-                        Default Admin: admin / admin
+
                     </div>
                 </form>
             </div>
+            <ResetPasswordModal
+                isOpen={isResetOpen}
+                onClose={() => setIsResetOpen(false)}
+                onSave={handleResetPassword}
+            />
         </div>
     );
 }

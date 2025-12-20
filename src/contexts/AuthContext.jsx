@@ -34,6 +34,11 @@ export const AuthProvider = ({ children }) => {
 
             if (data) {
                 // Check status - if not active, give alert
+                if (data.status && data.status.toLowerCase() === 'resetpassword') {
+                    console.log('User needs password reset:', data);
+                    return { ...data, needsReset: true };
+                }
+
                 if (data.status && data.status.toLowerCase() !== 'active') {
                     alert('User account is not active. Please contact support.');
                     return null;
@@ -51,6 +56,7 @@ export const AuthProvider = ({ children }) => {
                 const userData = {
                     username: data.username || username,
                     role: role,
+                    status: data.status,
                     token: data.token || 'mock-token', // Backend should return token
                     assignedAppCodes: data.assignedAppCodes || []
                 };
@@ -75,6 +81,7 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         setUser(null);
         sessionStorage.clear();
+        localStorage.clear();
     };
 
     return (

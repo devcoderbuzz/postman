@@ -18,6 +18,7 @@ export function AdminDashboard() {
     // Local state for management
     const [users, setUsers] = useState([]);
     const [appCodes, setAppCodes] = useState([]);
+    const [allHierarchyData, setAllHierarchyData] = useState([]);
 
     // Form states
     const [newUsername, setNewUsername] = useState('');
@@ -42,6 +43,11 @@ export function AdminDashboard() {
     const [isCreatingUser, setIsCreatingUser] = useState(false); // For "Create User" modal
     const [isCreatingAppCode, setIsCreatingAppCode] = useState(false); // For "Create App Code" modal
 
+    const [selectedProjectCode, setSelectedProjectCode] = useState('');
+    const [selectedModuleName, setSelectedModuleName] = useState('');
+    // State for Assignment Modal
+    const [assignProjectCode, setAssignProjectCode] = useState('');
+    const [assignModuleName, setAssignModuleName] = useState('');
     const [selectedAppCodeId, setSelectedAppCodeId] = useState(''); // For the dropdown in "Add" modal
     const [activeView, setActiveView] = useState('users'); // 'users', 'appcodes', or 'settings'
     const [profilePic, setProfilePic] = useState(localStorage.getItem('profilePic') || '');
@@ -64,22 +70,123 @@ export function AdminDashboard() {
         localStorage.setItem('layout', layout);
     }, [layout]);
 
-    const handleCreateUser = (e) => {
+    const fetchUsers = async () => {
+        if (user) {
+            try {
+                const { getAllUsers } = await import('../services/apiservice');
+                const fetchedUsers = await getAllUsers(user);
+                if (fetchedUsers) {
+                    const filteredUsers = fetchedUsers.filter(u => u.userName !== user.username);
+                    setUsers(filteredUsers.map(u => ({
+                        ...u,
+                        assignedAppCodes: u.assignedAppCodes || Array(u.projectCount || 0).fill(null)
+                    })));
+                }
+            } catch (error) {
+                console.error('Failed to fetch users:', error);
+            }
+        }
+    };
+
+    const fetchAppCodes = async () => {
+        if (user) {
+            try {
+                const { getAllAppCodesForAdmin } = await import('../services/apiservice');
+                const data = await getAllAppCodesForAdmin(user);
+                setAllHierarchyData(data);
+                const mappedCodes = data.map((item) => ({
+                    id: `${item.projectCode}-${item.moduleName}`,
+                    projectName: item.projectCode,
+                    moduleName: item.moduleName,
+                    projectId: item.projectCode,
+                    collections: item.collections || []
+                }));
+                setAppCodes(mappedCodes);
+            } catch (error) {
+                console.error('Failed to fetch app codes:', error);
+            }
+        }
+    };
+
+    // Initial fetch
+    useEffect(() => {
+        fetchUsers();
+        fetchAppCodes();
+    }, [user]);
+
+    // Refresh on view switch
+    useEffect(() => {
+        if (activeView === 'users') {
+            fetchUsers();
+        } else if (activeView === 'appcodes') {
+            fetchAppCodes();
+        }
+    }, [activeView]);
+
+    // Helper to generate profile image
+    const generateProfileImage = (username) => {
+        const canvas = document.createElement('canvas');
+        canvas.width = 100;
+        canvas.height = 100;
+        const ctx = canvas.getContext('2d');
+
+        // Random pastel background
+        const hue = Math.floor(Math.random() * 360);
+        ctx.fillStyle = `hsl(${hue}, 70%, 80%)`;
+        ctx.fillRect(0, 0, 100, 100);
+
+        // Text (First letter)
+        ctx.fillStyle = '#333';
+        ctx.font = 'bold 48px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const letter = username ? username.charAt(0).toUpperCase() : '?';
+        ctx.fillText(letter, 50, 50);
+
+        return canvas.toDataURL('image/png'); // Base64 string
+    };
+
+    const handleCreateUser = async (e) => {
         e.preventDefault();
-        const newUser = {
-            id: Date.now(),
-            username: newUsername,
-            role: newUserRole,
-            assignedAppCodes: [],
-            status: newUserStatus
-        };
-        setUsers([...users, newUser]);
-        setNewUsername('');
-        setNewPassword('');
-        setNewUserRole('user');
-        setNewUserStatus('active');
-        setIsCreatingUser(false);
-        alert(`User ${newUser.username} created!`);
+
+        try {
+            const profileImageData = generateProfileImage(newUsername);
+
+            const userData = {
+                username: newUsername,
+                password: newPassword,
+                role: newUserRole,
+                status: newUserStatus,
+                profileImage: profileImageData
+            };
+
+            // Dynamically import register to avoid top-level dependency issues if any
+            const { register } = await import('../services/apiservice');
+            const createdUser = await register(userData);
+
+            // Update local state for immediate feedback
+            // Assuming backend returns the created user object or we construct a display version
+            const userForDisplay = {
+                ...userData,
+                id: createdUser?.id || Date.now(),
+                assignedAppCodes: []
+            };
+
+            setUsers([...users, userForDisplay]);
+            setNewUsername('');
+            setNewPassword('');
+            setNewUserRole('user');
+            setNewUserStatus('active');
+            setIsCreatingUser(false);
+
+            // Refresh user list from server
+            await fetchUsers();
+
+            alert(`User ${userData.username} created successfully!`);
+        } catch (error) {
+            console.error('Failed to create user:', error);
+            alert(`Error creating user: ${error.message}`);
+        }
     };
 
     const handleCreateAppCode = (e) => {
@@ -147,30 +254,21 @@ export function AdminDashboard() {
         }));
     };
 
-    // Fetch collections when app code is selected
+    // Update collections when app code is selected
     useEffect(() => {
-        const fetchCollections = async () => {
-            if (!selectedAppCode) {
-                setAppCodeCollections([]);
-                return;
-            }
-            setIsLoadingCollections(true);
-            try {
-                const appCode = appCodes.find(ac => ac.id.toString() === selectedAppCode);
-                if (appCode && appCode.projectId) {
-                    // Import apiService to fetch collections
-                    const { apiService } = await import('../services/api');
-                    const collections = await apiService.getCollectionsByProjectId(appCode.projectId);
-                    setAppCodeCollections(collections || []);
-                }
-            } catch (error) {
-                console.error('Error fetching collections:', error);
-                setAppCodeCollections([]);
-            } finally {
-                setIsLoadingCollections(false);
-            }
-        };
-        fetchCollections();
+        if (!selectedAppCode) {
+            setAppCodeCollections([]);
+            return;
+        }
+
+        // Find the selected item in our local full hierarchy data
+        const selectedItem = appCodes.find(ac => ac.id === selectedAppCode);
+
+        if (selectedItem) {
+            setAppCodeCollections(selectedItem.collections || []);
+        } else {
+            setAppCodeCollections([]);
+        }
     }, [selectedAppCode, appCodes]);
 
     const toggleCollection = (collectionId) => {
@@ -250,23 +348,17 @@ export function AdminDashboard() {
                                                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                                                     {users.map(u => (
                                                         <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                            <td className="px-6 py-4 font-medium">{u.username}</td>
-                                                            <td className="px-6 py-4 capitalize text-slate-600 dark:text-slate-400">{u.role}</td>
+                                                            <td className="px-6 py-4 font-medium">{u.userName}</td>
+                                                            <td className="px-6 py-4 capitalize text-slate-600 dark:text-slate-400">{u.userRole}</td>
                                                             <td className="px-6 py-4 text-center">
                                                                 <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
-                                                                    {u.assignedAppCodes.length}
+                                                                    {u.projectCount}
                                                                 </span>
                                                             </td>
                                                             <td className="px-6 py-4 text-center">
-                                                                <button
-                                                                    onClick={() => handleToggleUserStatus(u.id)}
-                                                                    className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold transition-colors ${u.status === 'active'
-                                                                        ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
-                                                                        : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50'
-                                                                        }`}
-                                                                >
-                                                                    {u.status === 'active' ? '✓ Active' : '✕ Inactive'}
-                                                                </button>
+                                                                <div className="px-6 py-4 capitalize text-slate-600 dark:text-slate-400">
+                                                                    {u.userStatus}
+                                                                </div>
                                                             </td>
                                                             <td className="px-6 py-4 text-right space-x-2">
                                                                 <button
@@ -276,7 +368,12 @@ export function AdminDashboard() {
                                                                     Edit
                                                                 </button>
                                                                 <button
-                                                                    onClick={() => { setAssigningUser(u); setSelectedAppCodeId(''); }}
+                                                                    onClick={() => {
+                                                                        setAssigningUser(u);
+                                                                        setSelectedAppCodeId('');
+                                                                        setAssignProjectCode('');
+                                                                        setAssignModuleName('');
+                                                                    }}
                                                                     className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium text-xs px-2 py-1 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-800"
                                                                 >
                                                                     Add
@@ -303,18 +400,54 @@ export function AdminDashboard() {
                                     <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex-shrink-0">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-4">
-                                                <h2 className="text-lg font-bold whitespace-nowrap">Select App Code</h2>
+                                                <h2 className="text-lg font-bold whitespace-nowrap">App Code</h2>
+
+                                                {/* Project Dropdown */}
                                                 <select
-                                                    value={selectedAppCode}
-                                                    onChange={(e) => setSelectedAppCode(e.target.value)}
-                                                    className="w-64 md:w-80 border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700 focus:border-red-500 outline-none"
+                                                    value={selectedProjectCode}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        setSelectedProjectCode(val);
+                                                        setSelectedModuleName(''); // Reset module
+                                                        setSelectedAppCode(''); // Reset final selection
+                                                    }}
+                                                    className="w-48 border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700 focus:border-red-500 outline-none"
                                                 >
-                                                    <option value="">-- Select an App Code --</option>
-                                                    {appCodes.map(ac => (
-                                                        <option key={ac.id} value={ac.id}>
-                                                            {ac.projectName} - {ac.moduleName} (ID: {ac.projectId})
+                                                    <option value="">-- Project --</option>
+                                                    {[...new Set(appCodes.map(ac => ac.projectName))].map(projName => (
+                                                        <option key={projName} value={projName}>
+                                                            {projName}
                                                         </option>
                                                     ))}
+                                                </select>
+
+                                                {/* Module Dropdown */}
+                                                <select
+                                                    value={selectedModuleName}
+                                                    onChange={(e) => {
+                                                        const val = e.target.value;
+                                                        setSelectedModuleName(val);
+                                                        if (selectedProjectCode && val) {
+                                                            const found = appCodes.find(ac => ac.projectName === selectedProjectCode && ac.moduleName === val);
+                                                            if (found) {
+                                                                setSelectedAppCode(found.id);
+                                                            }
+                                                        } else {
+                                                            setSelectedAppCode('');
+                                                        }
+                                                    }}
+                                                    className="w-48 border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700 focus:border-red-500 outline-none"
+                                                    disabled={!selectedProjectCode}
+                                                >
+                                                    <option value="">-- Module --</option>
+                                                    {appCodes
+                                                        .filter(ac => ac.projectName === selectedProjectCode)
+                                                        .map(ac => (
+                                                            <option key={ac.moduleName} value={ac.moduleName}>
+                                                                {ac.moduleName}
+                                                            </option>
+                                                        ))
+                                                    }
                                                 </select>
                                             </div>
                                             <button
@@ -486,16 +619,42 @@ export function AdminDashboard() {
                             <p className="text-xs text-slate-500 mt-1">To user: {assigningUser.username}</p>
                         </div>
                         <div className="p-6">
-                            <label className="block text-xs font-medium mb-2">Select Unassigned App Code</label>
+                            <label className="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Project</label>
                             <select
-                                value={selectedAppCodeId}
-                                onChange={e => setSelectedAppCodeId(e.target.value)}
-                                className="w-full border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700 mb-4"
+                                value={assignProjectCode}
+                                onChange={e => {
+                                    setAssignProjectCode(e.target.value);
+                                    setAssignModuleName('');
+                                    setSelectedAppCodeId('');
+                                }}
+                                className="w-full border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700 mb-4 outline-none focus:border-red-500"
                             >
-                                <option value="">-- Select --</option>
-                                {getUnassignedCodes(users.find(u => u.id === assigningUser.id)).map(ac => (
-                                    <option key={ac.id} value={ac.id}>{ac.projectName} - {ac.moduleName}</option>
+                                <option value="">-- Select Project --</option>
+                                {[...new Set(getUnassignedCodes(users.find(u => u.id === assigningUser.id)).map(ac => ac.projectName))].map(proj => (
+                                    <option key={proj} value={proj}>{proj}</option>
                                 ))}
+                            </select>
+
+                            <label className="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Module</label>
+                            <select
+                                value={assignModuleName}
+                                onChange={e => {
+                                    const val = e.target.value;
+                                    setAssignModuleName(val);
+                                    const unassigned = getUnassignedCodes(users.find(u => u.id === assigningUser.id));
+                                    const match = unassigned.find(ac => ac.projectName === assignProjectCode && ac.moduleName === val);
+                                    setSelectedAppCodeId(match ? match.id : '');
+                                }}
+                                className="w-full border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700 mb-4 outline-none focus:border-red-500"
+                                disabled={!assignProjectCode}
+                            >
+                                <option value="">-- Select Module --</option>
+                                {getUnassignedCodes(users.find(u => u.id === assigningUser.id))
+                                    .filter(ac => ac.projectName === assignProjectCode)
+                                    .map(ac => (
+                                        <option key={ac.moduleName} value={ac.moduleName}>{ac.moduleName}</option>
+                                    ))
+                                }
                             </select>
                             <div className="flex justify-end gap-2">
                                 <button onClick={() => setAssigningUser(null)} className="px-3 py-2 text-slate-600 dark:text-slate-400 text-sm hover:underline">Cancel</button>
@@ -687,29 +846,43 @@ export function AdminDashboard() {
                                 </div>
 
                                 {/* Headers */}
-                                {selectedRequest.headers && Object.keys(selectedRequest.headers).length > 0 && (
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Headers</label>
-                                        <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded overflow-hidden">
-                                            <table className="w-full text-sm">
-                                                <thead className="bg-slate-100 dark:bg-slate-800">
-                                                    <tr>
-                                                        <th className="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Key</th>
-                                                        <th className="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Value</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                                    {Object.entries(selectedRequest.headers).map(([key, value]) => (
-                                                        <tr key={key}>
-                                                            <td className="px-3 py-2 font-mono text-xs text-slate-700 dark:text-slate-300">{key}</td>
-                                                            <td className="px-3 py-2 font-mono text-xs text-slate-600 dark:text-slate-400">{value}</td>
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                    </div>
-                                )}
+                                {(() => {
+                                    let headers = selectedRequest.headers;
+                                    if (typeof headers === 'string') {
+                                        try {
+                                            headers = JSON.parse(headers);
+                                        } catch (e) {
+                                            headers = {}; // Fallback if parsing fails
+                                        }
+                                    }
+
+                                    if (headers && Object.keys(headers).length > 0) {
+                                        return (
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Headers</label>
+                                                <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded overflow-hidden">
+                                                    <table className="w-full text-sm">
+                                                        <thead className="bg-slate-100 dark:bg-slate-800">
+                                                            <tr>
+                                                                <th className="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Key</th>
+                                                                <th className="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Value</th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                                                            {Object.entries(headers).map(([key, value]) => (
+                                                                <tr key={key}>
+                                                                    <td className="px-3 py-2 font-mono text-xs text-slate-700 dark:text-slate-300">{key}</td>
+                                                                    <td className="px-3 py-2 font-mono text-xs text-slate-600 dark:text-slate-400">{String(value)}</td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                    return null;
+                                })()}
 
                                 {/* Body */}
                                 {selectedRequest.body && (
