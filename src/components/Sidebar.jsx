@@ -1,4 +1,4 @@
-import { History, LayoutGrid, Settings, Box, Folder, Globe, Database } from 'lucide-react';
+import { History, LayoutGrid, Settings, Box, Folder, Globe, Database, Users } from 'lucide-react';
 import { cn } from '../lib/utils';
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
@@ -19,6 +19,16 @@ export function Sidebar({ activeView, setActiveView }) {
         <div className="w-12 flex flex-col items-center py-2 bg-slate-50 dark:bg-[var(--bg-sidebar)] border-r border-slate-200 dark:border-[var(--border-color)] text-slate-500 dark:text-slate-400">
 
             <div className="flex flex-col gap-2 w-full px-2 flex-1 overflow-y-auto no-scrollbar">
+                {/* Admin specific items */}
+                {user && user.role === 'admin' && (
+                    <SidebarItem
+                        icon={Users}
+                        label="Users"
+                        active={activeView === 'users'}
+                        onClick={() => toggleView('users')}
+                    />
+                )}
+
                 <SidebarItem
                     icon={History}
                     label="History"
@@ -35,8 +45,8 @@ export function Sidebar({ activeView, setActiveView }) {
                     <SidebarItem
                         icon={Database}
                         label="My App Codes"
-                        active={activeView === 'editData'}
-                        onClick={() => toggleView('editData')}
+                        active={activeView === 'appcodes' || activeView === 'editData'}
+                        onClick={() => toggleView(user.role === 'admin' ? 'appcodes' : 'editData')}
                     />
                 )}
                 <SidebarItem

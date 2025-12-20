@@ -1,10 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { Settings } from '../components/Settings';
 import { Header } from '../components/Header';
 import { Settings as SettingsIcon, LogOut, Layout as LayoutIcon, User as UserIcon, Shield } from 'lucide-react';
+import { Layout } from '../components/Layout';
 
 // Helper to generate mock data
 const generateMockAppCodes = (count) => {
@@ -56,7 +57,7 @@ export function AdminDashboard() {
     const { user, logout } = useAuth();
     const { theme, setTheme } = useTheme();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('users'); // 'users' or 'appcodes'
+
 
     // Local state for management
     const [users, setUsers] = useState(MOCK_USERS);
@@ -84,9 +85,9 @@ export function AdminDashboard() {
     const [assigningUser, setAssigningUser] = useState(null); // For "Add" (Assign Code)
     const [isCreatingUser, setIsCreatingUser] = useState(false); // For "Create User" modal
     const [isCreatingAppCode, setIsCreatingAppCode] = useState(false); // For "Create App Code" modal
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false); // For Settings Dropdown
+
     const [selectedAppCodeId, setSelectedAppCodeId] = useState(''); // For the dropdown in "Add" modal
-    const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' or 'settings'
+    const [activeView, setActiveView] = useState('users'); // 'users', 'appcodes', or 'settings'
     const [profilePic, setProfilePic] = useState(localStorage.getItem('profilePic') || '');
     const [localCollectionsPath, setLocalCollectionsPath] = useState(localStorage.getItem('localCollectionsPath') || '');
     const [layout, setLayout] = useState(localStorage.getItem('layout') || 'horizontal');
@@ -231,6 +232,8 @@ export function AdminDashboard() {
     };
 
 
+
+
     return (
         <div className="h-screen flex flex-col bg-slate-50 dark:bg-slate-900 text-slate-900 dark:text-white font-sans overflow-hidden">
             {/* Header */}
@@ -244,7 +247,7 @@ export function AdminDashboard() {
                 profilePic={profilePic}
             />
 
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <Layout activeView={activeView} setActiveView={setActiveView}>
                 {activeView === 'settings' ? (
                     <Settings
                         user={user}
@@ -259,29 +262,14 @@ export function AdminDashboard() {
                         setLocalCollectionsPath={setLocalCollectionsPath}
                     />
                 ) : (
-                    <>
-                        {/* Tabs */}
-                        <div className="flex gap-4 px-6 pt-6 pb-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
-                            <button
-                                onClick={() => setActiveTab('users')}
-                                className={`pb-2 px-1 ${activeTab === 'users' ? 'border-b-2 border-red-500 font-bold text-red-600 dark:text-red-400' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                User Management
-                            </button>
-                            <button
-                                onClick={() => setActiveTab('appcodes')}
-                                className={`pb-2 px-1 ${activeTab === 'appcodes' ? 'border-b-2 border-red-500 font-bold text-red-600 dark:text-red-400' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                App Codes
-                            </button>
-                        </div>
-
+                    <div className="flex-1 flex flex-col h-full overflow-hidden">
                         {/* Scrollable Content Area */}
-                        <div className="flex-1 overflow-y-auto px-6 py-6">
+                        <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar">
 
-                            {activeTab === 'users' && (
+                            {activeView === 'users' && (
                                 <div className="flex flex-col gap-8 h-full">
                                     {/* User List Table */}
+                                    {/* ... User List Table Content ... */}
                                     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col flex-1 min-h-0">
                                         <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
                                             <h2 className="text-lg font-bold">Users</h2>
@@ -350,11 +338,10 @@ export function AdminDashboard() {
                                             </table>
                                         </div>
                                     </div>
-
                                 </div>
                             )}
 
-                            {activeTab === 'appcodes' && (
+                            {activeView === 'appcodes' && (
                                 <div className="flex flex-col gap-4 h-full">
                                     {/* App Code Selector */}
                                     <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex-shrink-0">
@@ -387,6 +374,7 @@ export function AdminDashboard() {
                                     {selectedAppCode && (
                                         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col flex-1 min-h-0">
                                             <div className="overflow-auto flex-1">
+                                                {/* ... Collections Table Content (same as before) ... */}
                                                 {isLoadingCollections ? (
                                                     <div className="flex items-center justify-center p-12">
                                                         <div className="flex flex-col items-center gap-3">
@@ -399,19 +387,19 @@ export function AdminDashboard() {
                                                         <p>No collections found for this app code.</p>
                                                     </div>
                                                 ) : (
-                                                    <table className="w-full text-left text-sm">
+                                                    <table className="w-full text-left text-sm table-fixed">
                                                         <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                                                             <tr>
                                                                 <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-12"></th>
-                                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300">Collection / Request</th>
-                                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300">Method</th>
-                                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300">URL</th>
-                                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 text-right">Actions</th>
+                                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-4/12">Collection / Request</th>
+                                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-2/12">Method</th>
+                                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-4/12">URL</th>
+                                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-2/12 text-right">Actions</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                                                             {appCodeCollections.map(collection => (
-                                                                <div key={collection.collectionId}>
+                                                                <Fragment key={collection.collectionId}>
                                                                     {/* Collection Row */}
                                                                     <tr className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors">
                                                                         <td className="px-6 py-3">
@@ -463,7 +451,7 @@ export function AdminDashboard() {
                                                                                     {request.method}
                                                                                 </span>
                                                                             </td>
-                                                                            <td className="px-6 py-4 font-mono text-xs text-slate-600 dark:text-slate-400 truncate max-w-md">
+                                                                            <td className="px-6 py-4 font-mono text-xs text-slate-600 dark:text-slate-400 truncate">
                                                                                 {request.url}
                                                                             </td>
                                                                             <td className="px-6 py-4 text-right">
@@ -479,7 +467,7 @@ export function AdminDashboard() {
                                                                             </td>
                                                                         </tr>
                                                                     ))}
-                                                                </div>
+                                                                </Fragment>
                                                             ))}
                                                         </tbody>
                                                     </table>
@@ -491,9 +479,9 @@ export function AdminDashboard() {
                                 </div>
                             )}
                         </div>
-                    </>
+                    </div>
                 )}
-            </div>
+            </Layout>
 
             {/* Edit User Modal (Manage Codes) */}
             {editingUser && (
