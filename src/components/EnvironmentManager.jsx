@@ -63,7 +63,7 @@ export function EnvironmentManager({ environments, setEnvironments, activeEnv, s
                 <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-300">Environments</h3>
                 <button
                     onClick={addEnvironment}
-                    className="flex items-center gap-1 px-3 py-1.5 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors"
+                    className="flex items-center gap-1 px-3 py-1.5 text-xs bg-red-600 hover:bg-red-500 text-white rounded transition-colors"
                 >
                     <Plus className="w-3 h-3" /> Add
                 </button>
