@@ -65,8 +65,26 @@ export function UserWorkspace() {
     const [layout, setLayout] = useState('horizontal'); // 'vertical' or 'horizontal'
     const [showSaveModal, setShowSaveModal] = useState(false);
     const [showImportCurlModal, setShowImportCurlModal] = useState(false);
-    const [isSettingsOpen, setIsSettingsOpen] = useState(false); // Settings popup
     const [errorMessage, setErrorMessage] = useState('');
+    const [profilePic, setProfilePic] = useState(localStorage.getItem('profilePic') || '');
+    const [localCollectionsPath, setLocalCollectionsPath] = useState(localStorage.getItem('localCollectionsPath') || '');
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
+
+    useEffect(() => {
+        if (profilePic) {
+            localStorage.setItem('profilePic', profilePic);
+        }
+    }, [profilePic]);
+
+    useEffect(() => {
+        if (localCollectionsPath) {
+            localStorage.setItem('localCollectionsPath', localCollectionsPath);
+        }
+    }, [localCollectionsPath]);
 
     // Layout state
     const [collectionsPanelWidth, setCollectionsPanelWidth] = useState(280);
@@ -680,13 +698,12 @@ export function UserWorkspace() {
         <div className="h-screen flex flex-col bg-white dark:bg-[var(--bg-primary)] text-slate-900 dark:text-[var(--text-primary)] font-sans overflow-hidden">
             <Header
                 user={user}
-                onLogout={() => { logout(); navigate('/login'); }}
-                isSettingsOpen={isSettingsOpen}
-                setIsSettingsOpen={setIsSettingsOpen}
+                onLogout={handleLogout}
                 theme={theme}
                 setTheme={setTheme}
                 activeView={activeView}
                 setActiveView={setActiveView}
+                profilePic={profilePic}
             />
 
             {errorMessage && (
@@ -744,7 +761,18 @@ export function UserWorkspace() {
                         </div>
                     </div>
                 ) : activeView === 'settings' ? (
-                    <Settings theme={theme} setTheme={setTheme} layout={layout} setLayout={setLayout} />
+                    <Settings
+                        user={user}
+                        theme={theme}
+                        setTheme={setTheme}
+                        layout={layout}
+                        setLayout={setLayout}
+                        profilePic={profilePic}
+                        setProfilePic={setProfilePic}
+                        onLogout={handleLogout}
+                        localCollectionsPath={localCollectionsPath}
+                        setLocalCollectionsPath={setLocalCollectionsPath}
+                    />
                 ) : (
                     <>
                         <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50/50 dark:bg-[var(--bg-secondary)]/50 backdrop-blur-sm">

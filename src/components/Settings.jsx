@@ -1,28 +1,120 @@
-import { Moon, Sun } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Moon, Sun, Upload, FolderOpen } from 'lucide-react';
+import { ImageCropper } from './ImageCropper';
+import { ResetPasswordModal } from './ResetPasswordModal';
 
-export function Settings({ theme, setTheme, layout, setLayout }) {
+export function Settings({
+    user,
+    theme,
+    setTheme,
+    layout,
+    setLayout,
+    profilePic,
+    setProfilePic,
+    onLogout,
+    localCollectionsPath,
+    setLocalCollectionsPath
+}) {
+    const [tempImage, setTempImage] = useState(null);
+    const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
+    const fileInputRef = useRef(null);
+
+    const handleResetPassword = (passwords) => {
+        // Here we would typically call an API to reset the password
+        console.log("Password reset requested for user:", user?.username);
+        console.log("Details:", passwords);
+        window.alert(`Password for ${user?.username} has been successfully reset!`);
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => {
+                setTempImage(reader.result);
+            };
+        }
+    };
+
+    const handleCropComplete = (croppedImage) => {
+        setProfilePic(croppedImage);
+        setTempImage(null);
+    };
+
     return (
-        <div className="flex-1 flex flex-col p-8 max-w-2xl mx-auto w-full">
+        <div className="flex-1 flex flex-col p-8 max-w-2xl mx-auto w-full overflow-y-auto no-scrollbar">
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-6">Settings</h2>
 
-            <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-6 space-y-6">
+            <div className="bg-white dark:bg-slate-900 rounded-lg border border-slate-200 dark:border-slate-800 p-6 space-y-8">
+                {/* User Profile Section */}
                 <div>
-                    <h3 className="text-lg font-medium text-slate-900 dark:text-[var(--text-primary)] mb-4">Appearance</h3>
-                    <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-[var(--bg-secondary)] rounded-lg border border-slate-200 dark:border-[var(--border-color)]">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-slate-200 dark:bg-white/5 rounded-lg">
-                                {theme === 'dark' ? <Moon className="w-5 h-5 text-slate-500 dark:text-slate-400" /> : <Sun className="w-5 h-5 text-slate-500 dark:text-slate-400" />}
+                    <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-4">Profile</h3>
+                    <div className="flex items-center gap-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-800">
+                        <button
+                            onClick={() => fileInputRef.current?.click()}
+                            className="relative group cursor-pointer"
+                        >
+                            <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-slate-300 dark:border-slate-700 bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-2xl font-bold text-slate-500 transition-all group-hover:opacity-75">
+                                {profilePic ? (
+                                    <img src={profilePic} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    user?.username?.substring(0, 2).toUpperCase()
+                                )}
                             </div>
-                            <div>
-                                <p className="text-sm font-medium text-slate-900 dark:text-[var(--text-primary)]">Theme</p>
-                                <p className="text-xs text-slate-500">Select your preferred interface theme</p>
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Upload className="w-6 h-6 text-white drop-shadow-md" />
                             </div>
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                className="hidden"
+                                accept="image/*"
+                                onChange={handleFileChange}
+                            />
+                        </button>
+                        <div className="flex-1 space-y-1">
+                            <p className="text-lg font-bold text-slate-900 dark:text-white">{user?.username}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400 capitalize">{user?.role || 'User'}</p>
+                            <button
+                                onClick={() => fileInputRef.current?.click()}
+                                className="text-xs font-semibold text-red-600 dark:text-red-400 hover:underline"
+                            >
+                                Change Profile Picture
+                            </button>
                         </div>
+                    </div>
+                </div>
 
-                        <div className="flex bg-slate-100 dark:bg-slate-900 rounded-lg p-1 border border-slate-200 dark:border-slate-800">
+                {/* Data & Storage Section */}
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Data & Storage</h3>
+                    <div className="space-y-4">
+                        <div className="space-y-2">
+                            <label className="text-xs font-medium text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                                <FolderOpen className="w-3.5 h-3.5" />
+                                Local Collections Path
+                            </label>
+                            <input
+                                type="text"
+                                value={localCollectionsPath}
+                                onChange={(e) => setLocalCollectionsPath(e.target.value)}
+                                placeholder="e.g. /Users/name/collections"
+                                className="w-full px-4 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/50 text-slate-900 dark:text-white"
+                            />
+                            <p className="text-[10px] text-slate-500 italic">Specify where your local collections are stored on your machine.</p>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Appearance & Layout sections merged/existing */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <div>
+                        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Appearance</h3>
+                        <div className="flex bg-slate-100 dark:bg-slate-900 rounded-lg p-1 border border-slate-200 dark:border-slate-800 w-full">
                             <button
                                 onClick={() => setTheme('light')}
-                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${theme === 'light'
+                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${theme === 'light'
                                     ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
                                     : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                                     }`}
@@ -31,7 +123,7 @@ export function Settings({ theme, setTheme, layout, setLayout }) {
                             </button>
                             <button
                                 onClick={() => setTheme('dark')}
-                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${theme === 'dark'
+                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${theme === 'dark'
                                     ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
                                     : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                                     }`}
@@ -40,25 +132,13 @@ export function Settings({ theme, setTheme, layout, setLayout }) {
                             </button>
                         </div>
                     </div>
-                </div>
 
-                <div>
-                    <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-4">Layout</h3>
-                    <div className="flex items-center justify-between p-4 bg-slate-50 dark:bg-slate-800/50 rounded-lg border border-slate-200 dark:border-slate-800">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 bg-slate-200 dark:bg-slate-800 rounded-lg">
-                                <span className="text-lg">◫</span>
-                            </div>
-                            <div>
-                                <p className="text-sm font-medium text-slate-900 dark:text-white">Pane Layout</p>
-                                <p className="text-xs text-slate-500">Choose how request and response panes are arranged</p>
-                            </div>
-                        </div>
-
-                        <div className="flex bg-slate-100 dark:bg-slate-900 rounded-lg p-1 border border-slate-200 dark:border-slate-800">
+                    <div>
+                        <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Layout</h3>
+                        <div className="flex bg-slate-100 dark:bg-slate-900 rounded-lg p-1 border border-slate-200 dark:border-slate-800 w-full">
                             <button
                                 onClick={() => setLayout('vertical')}
-                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${layout === 'vertical'
+                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${layout === 'vertical'
                                     ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
                                     : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                                     }`}
@@ -67,7 +147,7 @@ export function Settings({ theme, setTheme, layout, setLayout }) {
                             </button>
                             <button
                                 onClick={() => setLayout('horizontal')}
-                                className={`px-3 py-1.5 text-xs font-medium rounded-md transition-all ${layout === 'horizontal'
+                                className={`flex-1 px-3 py-1.5 text-xs font-medium rounded-md transition-all ${layout === 'horizontal'
                                     ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm'
                                     : 'text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                                     }`}
@@ -78,13 +158,45 @@ export function Settings({ theme, setTheme, layout, setLayout }) {
                     </div>
                 </div>
 
-                <div className="pt-6 border-t border-slate-200 dark:border-slate-800">
-                    <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-4">About</h3>
-                    <p className="text-sm text-slate-400">
-                        Postman Studio v1.0.0
+                {/* Account Actions Section */}
+                <div className="pt-8 border-t border-slate-100 dark:border-slate-800 space-y-4">
+                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Account Security</h3>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={() => setIsResetPasswordOpen(true)}
+                            className="flex-1 py-2.5 text-sm font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-all text-center"
+                        >
+                            Reset Password
+                        </button>
+                        <button
+                            onClick={onLogout}
+                            className="flex-1 py-2.5 text-sm font-bold bg-red-600 hover:bg-red-500 text-white rounded-lg transition-all shadow-lg shadow-red-600/20 active:scale-95 text-center"
+                        >
+                            Logout
+                        </button>
+                    </div>
+                </div>
+
+                <div className="pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
+                    <p className="text-[10px] text-slate-400 font-medium tracking-tight">
+                        POSTMAN STUDIO • VERSION 1.1.0
                     </p>
                 </div>
             </div>
+
+            {tempImage && (
+                <ImageCropper
+                    image={tempImage}
+                    onCropComplete={handleCropComplete}
+                    onCancel={() => setTempImage(null)}
+                />
+            )}
+
+            <ResetPasswordModal
+                isOpen={isResetPasswordOpen}
+                onClose={() => setIsResetPasswordOpen(false)}
+                onSave={handleResetPassword}
+            />
         </div>
     );
 }
