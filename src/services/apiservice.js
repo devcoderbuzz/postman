@@ -106,42 +106,6 @@ export const getAllUsers = async (currentUser) => {
     }
 };
 
-/**
- * Get App Codes and Modules service.
- * Calls the /projects/modules endpoint.
- * 
- * @param {Object} currentUser - The current logged-in user object
- * @returns {Promise<any>} - The list of app codes and modules
- */
-export const getAppCodesAndModules = async (currentUser) => {
-    try {
-        const token = currentUser.token || sessionStorage.getItem('authToken');
-        
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/projects/modules`,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`
-            },
-            data: {
-                username: currentUser.username,
-                password: currentUser.password || 'Password@1234',
-                role: currentUser.role,
-                status: currentUser.status
-            }
-        });
-        
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to fetch app codes');
-        }
-        
-        return response.data.data;
-    } catch (error) {
-        console.error('Error fetching app codes:', error.message);
-        throw error;
-    }
-};
 
 /**
  * Get All App Codes for Admin service.
@@ -231,7 +195,7 @@ export const activateUser = async (userId, newPassword, token) => {
             data: {
                 userId: userId,
                 newPassword: newPassword,
-                status: 'active'
+                userStatus: 'active'
             }
         });
         

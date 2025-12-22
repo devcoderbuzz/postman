@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { X, Lock, KeyRound, ShieldCheck } from 'lucide-react';
 
-export function ResetPasswordModal({ isOpen, onClose, onSave, hideCurrentPassword = false }) {
+export function ResetPasswordModal({ isOpen, onClose, onSave, hideCurrentPassword = false, username = '' }) {
     const [currentPassword, setCurrentPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -68,6 +68,11 @@ export function ResetPasswordModal({ isOpen, onClose, onSave, hideCurrentPasswor
                 </div>
 
                 <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                    {username && (
+                        <div className="text-sm text-slate-500 dark:text-slate-400 -mt-2 mb-2">
+                            Resetting password for: <span className="font-semibold text-slate-700 dark:text-slate-200">{username}</span>
+                        </div>
+                    )}
                     {error && (
                         <div className="p-3 text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 rounded-lg animate-in slide-in-from-top-1 duration-200">
                             {error}

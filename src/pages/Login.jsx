@@ -103,6 +103,7 @@ export function Login() {
                 isOpen={isResetOpen}
                 onClose={() => setIsResetOpen(false)}
                 onSave={handleResetPassword}
+                username={tempUser?.username}
             />
         </div>
     );
