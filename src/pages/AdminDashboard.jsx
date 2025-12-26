@@ -79,7 +79,7 @@ export function AdminDashboard() {
                     const filteredUsers = fetchedUsers.filter(u => u.userName !== user.username);
                     setUsers(filteredUsers.map(u => ({
                         ...u,
-                        assignedAppCodes: u.assignedAppCodes || Array(u.projectCount || 0).fill(null)
+                        assignedAppCodes: u.assignedAppCodes || []
                     })));
                 }
             } catch (error) {
@@ -113,6 +113,54 @@ export function AdminDashboard() {
         fetchUsers();
         fetchAppCodes();
     }, [user]);
+
+    // Hydrate users with assigned app codes when hierarchy data is available
+    useEffect(() => {
+        if (allHierarchyData.length > 0 && users.length > 0) {
+            let hasChanges = false;
+
+            const updatedUsers = users.map(u => {
+                // Only hydrate if we have projectIds but NO app codes assigned yet
+                // This prevents infinite loops if some PIDs are invalid/not found
+                if (u.projectIds && u.projectIds.length > 0 && (!u.assignedAppCodes || u.assignedAppCodes.length === 0)) {
+
+                    const hydratedCodes = u.projectIds.map(pid => {
+                        // Handle potential object wrapper or primitive
+                        const searchId = (typeof pid === 'object' && pid !== null)
+                            ? (pid.projectId || pid.id || pid.projectCode)
+                            : pid;
+
+                        // Find matching code in hierarchy (loose equality for string/number match)
+                        const found = allHierarchyData.find(h =>
+                            h.projectId == searchId ||
+                            h.projectCode == searchId ||
+                            h.id == searchId
+                        );
+
+                        if (found) {
+                            return {
+                                ...found,
+                                id: found.id || `${found.projectCode}-${found.moduleName}`,
+                                projectName: found.projectCode || found.projectName,
+                                moduleName: found.moduleName
+                            };
+                        }
+                        return null;
+                    }).filter(Boolean);
+
+                    if (hydratedCodes.length > 0) {
+                        hasChanges = true;
+                        return { ...u, assignedAppCodes: hydratedCodes };
+                    }
+                }
+                return u;
+            });
+
+            if (hasChanges) {
+                setUsers(updatedUsers);
+            }
+        }
+    }, [allHierarchyData, users]);
 
     // Refresh on view switch
     useEffect(() => {
@@ -240,8 +288,8 @@ export function AdminDashboard() {
 
     // Helper to get unassigned codes for a user
     const getUnassignedCodes = (user) => {
-        if (!user) return [];
-        const assignedIds = user.assignedAppCodes.map(ac => ac.id);
+        if (!user || !user.assignedAppCodes) return [];
+        const assignedIds = user.assignedAppCodes.filter(Boolean).map(ac => ac.id);
         return appCodes.filter(ac => !assignedIds.includes(ac.id));
     };
 
@@ -582,6 +630,9 @@ export function AdminDashboard() {
                         </div>
                         <div className="p-6">
                             <h4 className="text-sm font-semibold mb-3 text-slate-600 dark:text-slate-400">Assigned App Codes</h4>
+
+
+
                             {users.find(u => u.id === editingUser.id)?.assignedAppCodes.length === 0 ? (
                                 <p className="text-sm text-slate-500 italic">No app codes assigned.</p>
                             ) : (

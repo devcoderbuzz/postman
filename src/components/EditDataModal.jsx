@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
-import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical, Save, Folder, FileText } from 'lucide-react';
 
 import { ConfirmationModal } from './ConfirmationModal';
 import { ImportModal } from './ImportModal';
@@ -10,6 +10,8 @@ export function EditDataPanel() {
     const { user } = useAuth();
     const [assignedAppCodes, setAssignedAppCodes] = useState([]);
     const [selectedAppCodeId, setSelectedAppCodeId] = useState('');
+    const [selectedProject, setSelectedProject] = useState('');
+    const [selectedModule, setSelectedModule] = useState('');
     const [collections, setCollections] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [expandedCollections, setExpandedCollections] = useState(new Set());
@@ -41,26 +43,65 @@ export function EditDataPanel() {
     });
 
     useEffect(() => {
-        if (user && user.assignedAppCodes) {
-            setAssignedAppCodes(user.assignedAppCodes);
-        }
+        const fetchCodes = async () => {
+            if (user) {
+                try {
+                    const { getAllAppCodesForAdmin } = await import('../services/apiservice');
+                    const hierarchyData = await getAllAppCodesForAdmin(user);
+
+                    // Logic to robustly determine assignments
+                    // If user has projectIds, use those to filter hierarchy
+                    // Fallback to user.assignedAppCodes if projectIds is empty but assignedAppCodes exists
+
+                    let filtered = [];
+                    const userProjectIds = user.projectIds || [];
+
+                    if (userProjectIds.length > 0) {
+                        filtered = hierarchyData.filter(project =>
+                            userProjectIds.includes(project.projectCode) || userProjectIds.includes(project.projectId)
+                        );
+                    } else if (user.assignedAppCodes && user.assignedAppCodes.length > 0) {
+                        // If projectIds not present, maybe we can trust assignedAppCodes
+                        // taking care to match structure if possible, but hierarchyData is better source of truth for full list
+                        filtered = user.assignedAppCodes;
+                    }
+
+                    // Normalize the data structure
+                    const formatted = filtered.map(p => ({
+                        ...p,
+                        projectName: p.projectCode || p.projectName,
+                        moduleName: p.moduleName || 'default',
+                        projectId: p.projectId || p.id
+                    }));
+
+                    setAssignedAppCodes(formatted);
+                } catch (e) {
+                    console.error("Failed to fetch app codes in EditDataPanel", e);
+                    // Fallback
+                    if (user.assignedAppCodes) setAssignedAppCodes(user.assignedAppCodes);
+                }
+            }
+        };
+        fetchCodes();
     }, [user]);
 
     useEffect(() => {
         if (selectedAppCodeId) {
-            setIsLoading(true);
+            // Find the app code object
             const appCode = assignedAppCodes.find(ac => (ac.projectId || ac.id) == selectedAppCodeId);
+
             if (appCode) {
-                apiService.getCollectionsByProjectId(appCode.projectId || appCode.id)
-                    .then(data => {
-                        setCollections(data || []);
-                        setIsLoading(false);
-                    })
-                    .catch(err => {
-                        console.error(err);
-                        setCollections([]);
-                        setIsLoading(false);
-                    });
+                // Use collections from the hierarchy data if available
+                if (appCode.collections && Array.isArray(appCode.collections)) {
+                    setCollections(appCode.collections.map(c => ({
+                        ...c,
+                        originalName: c.name // Track original name from source
+                    })));
+                } else {
+                    setCollections([]);
+                    // Optional: Try fetching if we believed there was a real API, 
+                    // but we know apiService.getCollectionsByProjectId is a mock returning []
+                }
             }
         } else {
             setCollections([]);
@@ -113,8 +154,9 @@ export function EditDataPanel() {
         if (!newCollectionName.trim() || !selectedAppCodeId) return;
 
         const newCol = {
-            collectionId: `new-${Date.now()}`,
+            collectionId: `new- ${Date.now()} `,
             name: newCollectionName,
+            originalName: newCollectionName, // Initially matches, but ID indicates new
             requests: []
         };
 
@@ -195,7 +237,7 @@ export function EditDataPanel() {
 
     const handleCreateNewRequest = (collectionId) => {
         const newReq = {
-            requestId: `new-req-${Date.now()}`,
+            requestId: `new- req - ${Date.now()} `,
             name: 'New Request',
             method: 'GET',
             url: 'https://api.example.com/endpoint',
@@ -221,7 +263,17 @@ export function EditDataPanel() {
                     : col
             ));
         }
+        setRenamingCollectionId(null);
         setRenameValue('');
+    };
+
+    const handleSaveCollectionName = (e, colId) => {
+        e.stopPropagation();
+        setCollections(collections.map(col =>
+            col.collectionId === colId
+                ? { ...col, originalName: col.name }
+                : col
+        ));
     };
 
     const handleImport = (type, data) => {
@@ -232,7 +284,7 @@ export function EditDataPanel() {
                 const parsed = JSON.parse(data);
                 // Handle Postman Format v2.1 or generic
                 let newCol = {
-                    collectionId: `import-col-${Date.now()}`,
+                    collectionId: `import -col - ${Date.now()} `,
                     name: parsed.info?.name || parsed.name || 'Imported Collection',
                     requests: []
                 };
@@ -246,7 +298,7 @@ export function EditDataPanel() {
                         } else if (item.request) {
                             // Request
                             reqs.push({
-                                requestId: `req-${Date.now()}-${Math.random()}`,
+                                requestId: `req - ${Date.now()} -${Math.random()} `,
                                 name: item.name,
                                 method: item.request.method || 'GET',
                                 url: typeof item.request.url === 'string' ? item.request.url : item.request.url?.raw || '',
@@ -272,7 +324,7 @@ export function EditDataPanel() {
                 const dataMatch = data.match(/--data\s+['"](.*?)['"]/);
 
                 const newReq = {
-                    requestId: `curl-${Date.now()}`,
+                    requestId: `curl - ${Date.now()} `,
                     name: 'Imported cURL',
                     method: methodMatch ? methodMatch[1] : 'GET',
                     url: urlMatch ? urlMatch[1] : '',
@@ -290,9 +342,9 @@ export function EditDataPanel() {
                     setCollections(collections.map(c => c.collectionId === existingCurlCol.collectionId ? { ...c, requests: [...c.requests, { ...newReq, collectionId: c.collectionId }] } : c));
                 } else {
                     const newCurlCol = {
-                        collectionId: `curl-col-${Date.now()}`,
+                        collectionId: `curl - col - ${Date.now()} `,
                         name: 'cURL Imports',
-                        requests: [{ ...newReq, collectionId: `curl-col-${Date.now()}` }]
+                        requests: [{ ...newReq, collectionId: `curl - col - ${Date.now()} ` }]
                     };
                     setCollections([...collections, newCurlCol]);
                 }
@@ -307,24 +359,63 @@ export function EditDataPanel() {
         <div className="flex-1 flex overflow-hidden bg-white dark:bg-slate-900 relative">
             <div
                 className="border-r border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-slate-900 relative"
-                style={{ width: `${sidebarWidth}px`, flexShrink: 0 }}
+                style={{ width: `${sidebarWidth} px`, flexShrink: 0 }}
             >
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800">
                     <h2 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">My App Codes</h2>
-                    <label className="block text-xs font-semibold mb-2 text-slate-600 dark:text-slate-400">App Code</label>
-                    <select
-                        value={selectedAppCodeId}
-                        onChange={(e) => setSelectedAppCodeId(e.target.value)}
-                        className="w-full p-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md outline-none focus:border-red-500 dark:text-white"
-                    >
-                        <option value="">Select App Code...</option>
-                        {assignedAppCodes.map(ac => (
-                            <option key={ac.projectId || ac.id} value={ac.projectId || ac.id}>
-                                {ac.projectName} - {ac.moduleName}
-                            </option>
-                        ))}
-                    </select>
 
+                    {/* Project Dropdown */}
+                    <div className="mb-3">
+                        <label className="block text-xs font-semibold mb-2 text-slate-600 dark:text-slate-400">Project</label>
+                        <select
+                            value={selectedProject}
+                            onChange={(e) => {
+                                const proj = e.target.value;
+                                setSelectedProject(proj);
+                                setSelectedModule(''); // Reset module when project changes
+                                setSelectedAppCodeId('');
+                            }}
+                            className="w-full p-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md outline-none focus:border-red-500 dark:text-white"
+                        >
+                            <option value="">Select Project...</option>
+                            {[...new Set(assignedAppCodes.map(ac => ac.projectName || ac.projectCode))].filter(Boolean).map(pName => (
+                                <option key={pName} value={pName}>{pName}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Module Dropdown */}
+                    <div>
+                        <label className="block text-xs font-semibold mb-2 text-slate-600 dark:text-slate-400">Module</label>
+                        <select
+                            value={selectedModule}
+                            onChange={(e) => {
+                                const mod = e.target.value;
+                                setSelectedModule(mod);
+                                if (selectedProject && mod) {
+                                    const ac = assignedAppCodes.find(item =>
+                                        (item.projectName === selectedProject || item.projectCode === selectedProject) &&
+                                        item.moduleName === mod
+                                    );
+                                    if (ac) {
+                                        setSelectedAppCodeId(ac.projectId || ac.id);
+                                    }
+                                } else {
+                                    setSelectedAppCodeId('');
+                                }
+                            }}
+                            className="w-full p-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md outline-none focus:border-red-500 dark:text-white"
+                            disabled={!selectedProject}
+                        >
+                            <option value="">Select Module...</option>
+                            {selectedProject && assignedAppCodes
+                                .filter(ac => (ac.projectName === selectedProject || ac.projectCode === selectedProject))
+                                .map(ac => (
+                                    <option key={ac.moduleName} value={ac.moduleName}>{ac.moduleName}</option>
+                                ))
+                            }
+                        </select>
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto">
@@ -337,32 +428,57 @@ export function EditDataPanel() {
                     ) : collections.length === 0 ? (
                         <div className="p-4 text-center text-xs text-slate-400">No collections found</div>
                     ) : (
-                        <div className="divide-y divide-slate-200 dark:divide-slate-800">
+                        <div className="space-y-0.5 px-2">
                             {collections.map(col => (
-                                <div key={col.collectionId} className="bg-white dark:bg-slate-900">
+                                <div key={col.collectionId}>
                                     <div
-                                        className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 group"
-                                        onClick={() => !renamingCollectionId && toggleCollection(col.collectionId)}
+                                        className={`flex items-center gap-1 p-1 rounded group transition-colors ${expandedCollections.has(col.collectionId) ? '' : 'hover:bg-slate-200 dark:hover:bg-white/5'
+                                            }`}
                                     >
-                                        <div className="flex items-center gap-2 flex-1 overflow-hidden">
+                                        <button
+                                            onClick={() => !renamingCollectionId && toggleCollection(col.collectionId)}
+                                            className="p-0.5"
+                                        >
                                             {expandedCollections.has(col.collectionId) ?
-                                                <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" /> :
-                                                <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                                                <ChevronDown className="w-3 h-3 text-slate-500 dark:text-slate-400" /> :
+                                                <ChevronRight className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                                             }
-                                            {renamingCollectionId === col.collectionId ? (
-                                                <RenameInput
-                                                    value={renameValue}
-                                                    onChange={setRenameValue}
-                                                    onConfirm={handleConfirmRename}
-                                                />
-                                            ) : (
-                                                <span className="text-sm font-medium truncate text-slate-700 dark:text-slate-300">{col.name}</span>
-                                            )}
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-slate-500">
-                                                {col.requests?.length || 0}
-                                            </span>
+                                        </button>
+
+                                        <Folder className="w-4 h-4 text-yellow-600 shrink-0" />
+
+                                        {renamingCollectionId === col.collectionId ? (
+                                            <RenameInput
+                                                value={renameValue}
+                                                onChange={setRenameValue}
+                                                onConfirm={handleConfirmRename}
+                                            />
+                                        ) : (
+                                            <div
+                                                className="flex items-center gap-2 overflow-hidden flex-1 cursor-pointer"
+                                                onClick={() => !renamingCollectionId && toggleCollection(col.collectionId)}
+                                            >
+                                                <span className={`text-xs truncate flex-1 ${(col.name !== col.originalName || col.collectionId.toString().startsWith('new-'))
+                                                        ? 'font-bold text-slate-900 dark:text-white'
+                                                        : 'text-slate-700 dark:text-slate-300'
+                                                    }`}>
+                                                    {col.name}
+                                                </span>
+
+                                                {/* Show Save button if modified */}
+                                                {(col.name !== col.originalName || col.collectionId.toString().startsWith('new-')) && (
+                                                    <button
+                                                        onClick={(e) => handleSaveCollectionName(e, col.collectionId)}
+                                                        className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
+                                                        title="Save Collection Name"
+                                                    >
+                                                        <Save className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             {renamingCollectionId !== col.collectionId && (
                                                 <div className="relative">
                                                     <button
@@ -370,9 +486,9 @@ export function EditDataPanel() {
                                                             e.stopPropagation();
                                                             setActiveMenuCollectionId(activeMenuCollectionId === col.collectionId ? null : col.collectionId);
                                                         }}
-                                                        className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                                                        className="p-1 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
                                                     >
-                                                        <MoreVertical className="w-4 h-4" />
+                                                        <MoreVertical className="w-3.5 h-3.5" />
                                                     </button>
 
                                                     {activeMenuCollectionId === col.collectionId && (
@@ -405,40 +521,42 @@ export function EditDataPanel() {
                                     </div>
 
                                     {expandedCollections.has(col.collectionId) && (
-                                        <div className="bg-slate-50 dark:bg-slate-800 px-4 py-2 border-l-4 border-red-500">
+                                        <div className="ml-4 space-y-0.5">
                                             {(!col.requests || col.requests.length === 0) ? (
-                                                <div className="text-xs text-slate-400 italic py-2">No requests</div>
+                                                <div className="text-xs text-slate-400 italic py-1 px-2">No requests</div>
                                             ) : (
-                                                <div className="space-y-1">
-                                                    {col.requests.map(req => (
-                                                        <div
-                                                            key={req.requestId}
-                                                            className={`group flex items-center justify-between p-2 rounded border cursor-pointer ${editingRequest?.requestId === req.requestId
-                                                                ? 'bg-red-50 dark:bg-red-900/20 border-red-300 dark:border-red-700'
-                                                                : 'hover:bg-white dark:hover:bg-slate-900 border-transparent hover:border-slate-200 dark:hover:border-slate-700'
-                                                                }`}
-                                                            onClick={() => { setEditingRequest({ ...req, collectionId: col.collectionId }); setIsCreatingRequest(false); }}
+                                                col.requests.map(req => (
+                                                    <div
+                                                        key={req.requestId}
+                                                        className={`flex items-center gap-2 p-1 rounded group cursor-pointer ${editingRequest?.requestId === req.requestId
+                                                                ? 'bg-red-50 dark:bg-red-900/20 text-red-500'
+                                                                : 'hover:bg-slate-200 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400'
+                                                            }`}
+                                                        onClick={() => { setEditingRequest({ ...req, collectionId: col.collectionId }); setIsCreatingRequest(false); }}
+                                                    >
+                                                        <FileText className="w-3 h-3 shrink-0" />
+
+                                                        <span className={`text-[10px] font-bold uppercase w-12 shrink-0 ${req.method === 'GET' ? 'text-green-500' :
+                                                                req.method === 'POST' ? 'text-yellow-500' :
+                                                                    req.method === 'PUT' ? 'text-blue-500' :
+                                                                        req.method === 'DELETE' ? 'text-red-500' : 'text-purple-500'
+                                                            }`}>
+                                                            {req.method}
+                                                        </span>
+
+                                                        <span className="text-xs truncate flex-1">
+                                                            {req.name}
+                                                        </span>
+
+                                                        <button
+                                                            onClick={(e) => { e.stopPropagation(); confirmDeleteRequest(col.collectionId, req.requestId); }}
+                                                            className="p-1 opacity-0 group-hover:opacity-100 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-500 hover:text-red-500 transition-opacity"
+                                                            title="Delete"
                                                         >
-                                                            <div className="flex items-center gap-2 flex-1 overflow-hidden">
-                                                                <span className={`text-[10px] font-bold w-12 shrink-0 ${req.method === 'GET' ? 'text-green-500' :
-                                                                    req.method === 'POST' ? 'text-yellow-500' :
-                                                                        req.method === 'PUT' ? 'text-blue-500' :
-                                                                            req.method === 'DELETE' ? 'text-red-500' : 'text-purple-500'
-                                                                    }`}>{req.method}</span>
-                                                                <span className="text-xs truncate text-slate-600 dark:text-slate-400">{req.name}</span>
-                                                            </div>
-                                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <button
-                                                                    onClick={(e) => { e.stopPropagation(); confirmDeleteRequest(col.collectionId, req.requestId); }}
-                                                                    className="p-1 text-slate-400 hover:text-red-500 rounded"
-                                                                    title="Delete"
-                                                                >
-                                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                                            <Trash2 className="w-3 h-3" />
+                                                        </button>
+                                                    </div>
+                                                ))
                                             )}
                                         </div>
                                     )}

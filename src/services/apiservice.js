@@ -209,3 +209,36 @@ export const activateUser = async (userId, newPassword, token) => {
         throw error;
     }
 };
+
+/**
+ * Create Request Data service.
+ * Calls the /requests endpoint to create a new request.
+ * 
+ * @param {Object} requestData - The request data object
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data (created request)
+ */
+export const createRequestData = async (requestData, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/requests`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: requestData
+        });
+        
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to create request');
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error creating request:', error.message);
+        throw error;
+    }
+};

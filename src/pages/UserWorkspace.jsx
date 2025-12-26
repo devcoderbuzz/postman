@@ -23,6 +23,201 @@ import { EditDataPanel } from '../components/EditDataModal';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
+import { ChevronRight, ChevronDown } from 'lucide-react';
+
+function ConsoleSection({ title, children, defaultExpanded = false, className = "" }) {
+    const [expanded, setExpanded] = useState(defaultExpanded);
+    return (
+        <div className={cn("ml-2", className)}>
+            <div
+                className="flex items-center gap-1 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 py-0.5 rounded px-1 select-none"
+                onClick={() => setExpanded(!expanded)}
+            >
+                <div className="text-slate-400">
+                    {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                </div>
+                <span className="text-slate-600 dark:text-slate-400 font-medium text-xs">{title}</span>
+            </div>
+            {expanded && (
+                <div className="ml-4 border-l border-slate-200 dark:border-slate-700 pl-2 my-1">
+                    {children}
+                </div>
+            )}
+        </div>
+    );
+}
+
+function JsonTree({ data }) {
+    if (typeof data !== 'object' || data === null) {
+        // Primitive values
+        const isString = typeof data === 'string';
+        return (
+            <span className={cn(
+                "break-all",
+                isString ? "text-green-600 dark:text-[#a8ff60]" : "text-orange-600 dark:text-[#ce9178]"
+            )}>
+                {isString ? `"${data}"` : String(data)}
+            </span>
+        );
+    }
+
+    return (
+        <div className="font-mono text-[11px] leading-relaxed">
+            {Object.entries(data).map(([key, value], index) => {
+                const isObject = typeof value === 'object' && value !== null;
+                return (
+                    <div key={key} className="flex">
+                        <span className="text-blue-600 dark:text-[#9cdcfe] mr-1">"{key}":</span>
+                        {isObject ? (
+                            <div className="flex-1">
+                                <span>{'{'}</span>
+                                <div className="pl-4 border-l border-slate-200 dark:border-slate-800">
+                                    <JsonTree data={value} />
+                                </div>
+                                <span>{'}'}{index < Object.keys(data).length - 1 ? ',' : ''}</span>
+                            </div>
+                        ) : (
+                            <span>
+                                <JsonTree data={value} />
+                                {index < Object.keys(data).length - 1 ? ',' : ''}
+                            </span>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+function ConsoleItem({ item, isLatest }) {
+    const [expanded, setExpanded] = useState(false);
+
+    // Helper to parse if string
+    const parseIfString = (data) => {
+        if (typeof data === 'string') {
+            try { return JSON.parse(data); } catch (e) { return data; }
+        }
+        return data;
+    }
+
+    const requestBody = parseIfString(item.requestBody);
+    const responseBody = parseIfString(item.responseData);
+
+    return (
+        <div className="border-b border-slate-100 dark:border-slate-800 last:border-0 font-mono text-[11px]">
+            {/* Top Level Request Line */}
+            <div
+                className={cn(
+                    "flex gap-2 py-1 px-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 items-center",
+                    expanded ? "bg-slate-50 dark:bg-slate-800/50" : "",
+                    isLatest ? "font-bold text-slate-900 dark:text-white" : "opacity-60 grayscale hover:opacity-100 transition-all"
+                )}
+                onClick={() => setExpanded(!expanded)}
+            >
+                <div className="text-slate-400">
+                    {expanded ? <ChevronDown className="w-3 h-3" /> : <ChevronRight className="w-3 h-3" />}
+                </div>
+
+                {/* Timestamp */}
+                <span className="w-16 text-slate-500 text-[10px] font-mono shrink-0">
+                    {item.timestamp ? item.timestamp.split(' ')[1] : ''}
+                </span>
+
+                <div className="flex items-center gap-2 flex-1 overflow-hidden">
+                    <span className={cn(
+                        "font-bold",
+                        item.method === 'GET' && "text-purple-600 dark:text-purple-400",
+                        item.method === 'POST' && "text-yellow-600 dark:text-yellow-400",
+                        item.method === 'PUT' && "text-blue-600 dark:text-blue-400",
+                        item.method === 'DELETE' && "text-red-600 dark:text-red-400"
+                    )}>{item.method}</span>
+                    <span className="text-slate-600 dark:text-slate-300 truncate">{item.url}</span>
+                </div>
+                <div className="flex items-center gap-3 text-[10px]">
+                    <span className={cn(
+                        "font-bold",
+                        item.status >= 200 && item.status < 300 ? "text-green-600 dark:text-green-400" : "text-red-600 dark:text-red-400"
+                    )}>{item.status}</span>
+                    <span className="text-slate-400">{item.time}ms</span>
+                </div>
+            </div>
+
+            {
+                expanded && (
+                    <div className="pb-2 bg-white dark:bg-[#0d1117] text-slate-600 dark:text-[#d4d4d4]">
+                        {/* Network Section */}
+                        {/* <ConsoleSection title="Network">
+                        <div className="grid grid-cols-[100px_1fr] gap-1 text-[11px]">
+                            <span className="text-slate-400">Status Code:</span>
+                            <span className={item.status < 300 ? "text-green-600" : "text-red-600"}>{item.status}</span>
+                            <span className="text-slate-400">Duration:</span>
+                            <span>{item.time} ms</span>
+                        </div>
+                    </ConsoleSection> */}
+
+                        {/* Request Headers */}
+                        <ConsoleSection title="Request Headers">
+                            <div className="space-y-0.5">
+                                {Object.entries(item.requestHeaders || {}).map(([key, value]) => (
+                                    <div key={key} className="flex gap-2">
+                                        <span className="text-slate-500 dark:text-[#858585]">{key}:</span>
+                                        <span className="text-blue-600 dark:text-[#9cdcfe]">"{String(value)}"</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </ConsoleSection>
+
+                        {/* Request Body */}
+                        {item.requestBody && (
+                            <ConsoleSection title="Request Body">
+                                {typeof requestBody === 'object' ? (
+                                    <div className="ml-2">
+                                        <span>{'{'}</span>
+                                        <div className="pl-2 border-l border-slate-200 dark:border-slate-800 my-0.5">
+                                            <JsonTree data={requestBody} />
+                                        </div>
+                                        <span>{'}'}</span>
+                                    </div>
+                                ) : (
+                                    <pre className="whitespace-pre-wrap text-blue-600 dark:text-[#ce9178]">{item.requestBody}</pre>
+                                )}
+                            </ConsoleSection>
+                        )}
+
+                        {/* Response Headers */}
+                        <ConsoleSection title="Response Headers">
+                            <div className="space-y-0.5">
+                                {Object.entries(item.responseHeaders || {}).map(([key, value]) => (
+                                    <div key={key} className="flex gap-2">
+                                        <span className="text-slate-500 dark:text-[#858585]">{key}:</span>
+                                        <span className="text-blue-600 dark:text-[#9cdcfe]">"{String(value)}"</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </ConsoleSection>
+
+                        {/* Response Body */}
+                        {item.responseData && (
+                            <ConsoleSection title="Response Body" defaultExpanded={true}>
+                                {typeof responseBody === 'object' ? (
+                                    <div className="ml-2">
+                                        <span>{'{'}</span>
+                                        <div className="pl-2 border-l border-slate-200 dark:border-slate-800 my-0.5">
+                                            <JsonTree data={responseBody} />
+                                        </div>
+                                        <span>{'}'}</span>
+                                    </div>
+                                ) : (
+                                    <pre className="whitespace-pre-wrap text-green-600 dark:text-[#ce9178]">{String(item.responseData)}</pre>
+                                )}
+                            </ConsoleSection>
+                        )}
+                    </div>
+                )
+            }
+        </div >
+    );
+}
 
 export function UserWorkspace() {
     const { user, logout } = useAuth();
@@ -120,8 +315,17 @@ export function UserWorkspace() {
 
     const fetchServerCollections = async (projectId) => {
         try {
-            console.log(`Fetching collections for Project ID: ${projectId}`);
-            const fetchedCollections = await apiService.getCollectionsByProjectId(projectId);
+            let fetchedCollections = null;
+
+            // Try to find in rawAppCodes first (since we loaded hierarchy for user/dev)
+            const localProject = rawAppCodes.find(app => (app.projectId === projectId || app.projectCode === projectId));
+            if (localProject && localProject.collections) {
+                console.log(`Using cached collections for Project ID: ${projectId}`);
+                fetchedCollections = localProject.collections;
+            } else {
+                console.log(`Fetching collections for Project ID: ${projectId}`);
+                fetchedCollections = await apiService.getCollectionsByProjectId(projectId);
+            }
 
             if (fetchedCollections && Array.isArray(fetchedCollections)) {
                 const mappedCollections = fetchedCollections.map(col => ({
@@ -289,23 +493,74 @@ export function UserWorkspace() {
     // INITIALIZATION: Fetch projects for the logged-in user
     useEffect(() => {
         const initWorkspace = async () => {
-            // Use user.assignedAppCodes if available (from mock Login)
-            // OR fetch from server if dynamic
             if (user) {
-                if (user.assignedAppCodes && user.assignedAppCodes.length > 0) {
-                    setRawAppCodes(user.assignedAppCodes);
-                    // Extract unique projects
-                    const uniqueProjects = [...new Set(user.assignedAppCodes.map(app => app.projectName))]
-                        .map(name => ({ id: name, name: name }));
+                // For User or Developer roles, fetch and filter Server Collections based on projectIds
+                if (user.role === 'user' || user.role === 'developer' || user.role === 'dev') {
+                    try {
+                        const { getAllAppCodesForAdmin } = await import('../services/apiservice');
+                        const hierarchyData = await getAllAppCodesForAdmin(user);
 
-                    if (uniqueProjects.length > 0) {
-                        setProjects(uniqueProjects);
-                        setActiveProject(uniqueProjects[0].id);
+                        // Filter hierarchy to only include projects user is assigned to
+                        const userProjectIds = user.projectIds || [];
+                        const filteredProjects = hierarchyData.filter(project =>
+                            userProjectIds.includes(project.projectCode) || userProjectIds.includes(project.projectId)
+                        );
+
+
+                        const formattedAppCodes = filteredProjects.map(p => ({
+                            ...p,
+                            projectName: p.projectCode || p.projectName,
+                            moduleName: p.moduleName || 'default'
+                        }));
+                        setRawAppCodes(formattedAppCodes);
+
+                        // Map into serverCollections format (flattened list of collections)
+                        const allCollections = [];
+                        filteredProjects.forEach(proj => {
+                            if (proj.collections) {
+                                proj.collections.forEach(col => {
+                                    allCollections.push({
+                                        id: col.collectionId ? col.collectionId.toString() : Date.now().toString() + Math.random(),
+                                        name: col.name,
+                                        requests: col.requests ? col.requests.map(req => ({
+                                            id: req.requestId ? req.requestId.toString() : Date.now().toString() + Math.random(),
+                                            name: req.name,
+                                            method: req.method,
+                                            url: req.url,
+                                            params: [],
+                                            headers: typeof req.headers === 'string' ? JSON.parse(req.headers || '[]') : (req.headers || []),
+                                            body: req.body,
+                                            bodyType: req.body ? 'json' : 'none',
+                                            authType: 'none',
+                                            authData: {}
+                                        })) : []
+                                    });
+                                });
+                            }
+                        });
+                        setServerCollections(allCollections);
+
+                        // Set up projects and modules dropdowns for legacy behavior if needed
+                        const uniqueProjects = [...new Set(filteredProjects.map(app => app.projectCode))]
+                            .map(name => ({ id: name, name: name }));
+                        if (uniqueProjects.length > 0) {
+                            setProjects(uniqueProjects);
+                            setActiveProject(uniqueProjects[0].id);
+                        }
+                    } catch (e) {
+                        console.error('Failed to initialize server collections for user/dev:', e);
                     }
-                } else {
-                    // Fallback: Fetch all public projects if no specific assignments (legacy behavior or admin)
-                    // OR if user.role is admin, fetch all
-                    if (user.role === 'admin' || !user.assignedAppCodes) {
+                } else if (user.role === 'admin') {
+                    // Admin logic (existing)
+                    if (user.assignedAppCodes && user.assignedAppCodes.length > 0) {
+                        setRawAppCodes(user.assignedAppCodes);
+                        const uniqueProjects = [...new Set(user.assignedAppCodes.map(app => app.projectName))]
+                            .map(name => ({ id: name, name: name }));
+                        if (uniqueProjects.length > 0) {
+                            setProjects(uniqueProjects);
+                            setActiveProject(uniqueProjects[0].id);
+                        }
+                    } else {
                         try {
                             const fetchedData = await apiService.getAllProjects();
                             if (fetchedData && Array.isArray(fetchedData)) {
@@ -426,6 +681,12 @@ export function UserWorkspace() {
                 body: request.body,
                 authType: request.authType,
                 authData: request.authData,
+                requestHeaders: config.headers,
+                requestBody: config.data,
+                responseHeaders: res.headers,
+                responseData: res.data,
+                time: endTime - startTime,
+                expanded: false
             };
             setHistory(prev => [historyEntry, ...prev].slice(0, 50));
         } catch (err) {
@@ -455,6 +716,12 @@ export function UserWorkspace() {
                     body: request.body,
                     authType: request.authType,
                     authData: request.authData,
+                    requestHeaders: config.headers,
+                    requestBody: config.data,
+                    responseHeaders: err.response.headers,
+                    responseData: err.response.data,
+                    time: Date.now() - startTime,
+                    expanded: false
                 };
                 setHistory(prev => [historyEntry, ...prev].slice(0, 50));
             }
@@ -909,38 +1176,30 @@ export function UserWorkspace() {
 
             {
                 showConsole && (
-                    <div className="h-48 border-t border-slate-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--bg-primary)] flex flex-col">
+                    <div className="h-64 border-t border-slate-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--bg-primary)] flex flex-col transition-all duration-300">
                         <div className="flex items-center justify-between px-3 py-1 border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-50 dark:bg-[var(--bg-secondary)]">
                             <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Console</span>
-                            <button onClick={() => setShowConsole(false)} className="text-slate-500 hover:text-slate-900 dark:hover:text-white">
-                                <X className="w-3.5 h-3.5" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <button onClick={() => setHistory([])} className="text-xs text-slate-500 hover:text-slate-900 dark:hover:text-white" title="Clear Console">
+                                    Clear
+                                </button>
+                                <button onClick={() => setShowConsole(false)} className="text-slate-500 hover:text-slate-900 dark:hover:text-white">
+                                    <X className="w-3.5 h-3.5" />
+                                </button>
+                            </div>
                         </div>
-                        <div className="flex-1 overflow-auto p-2 font-mono text-xs">
+                        <div className="flex-1 overflow-auto p-0 font-mono text-xs">
                             {history.length === 0 ? (
-                                <div className="text-slate-400 dark:text-slate-600 italic">No console logs</div>
+                                <div className="p-4 text-slate-400 dark:text-slate-600 italic">No console logs</div>
                             ) : (
-                                [...history].reverse().map((item, i) => (
-                                    <div key={i} className={cn("flex gap-2 py-0.5", i === 0 ? "font-bold text-slate-900 dark:text-white" : "text-slate-600 dark:text-slate-400")}>
-                                        <span className="w-16">{item.timestamp.split(' ')[1]}</span>
-                                        <span className={cn(
-                                            "w-12 uppercase",
-                                            item.method === 'GET' && "text-green-600 dark:text-green-500",
-                                            item.method === 'POST' && "text-yellow-600 dark:text-yellow-500",
-                                            item.method === 'PUT' && "text-blue-600 dark:text-blue-500",
-                                            item.method === 'DELETE' && "text-red-600 dark:text-red-500"
-                                        )}>{item.method}</span>
-                                        <span className="flex-1 truncate">{item.url}</span>
-                                        <span className={cn(
-                                            item.status >= 200 && item.status < 300 ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500"
-                                        )}>{item.status}</span>
-                                        <span className="text-slate-400">{item.time}ms</span>
-                                    </div>
+                                history.map((item, i) => (
+                                    <ConsoleItem key={i} item={item} isLatest={i === 0} />
                                 ))
                             )}
                         </div>
                     </div>
                 )
+
             }
 
             <Footer

@@ -58,7 +58,8 @@ export const AuthProvider = ({ children }) => {
                     role: role,
                     status: data.status,
                     token: data.token || 'mock-token', // Backend should return token
-                    assignedAppCodes: data.assignedAppCodes || []
+                    assignedAppCodes: data.assignedAppCodes || [],
+                    projectIds: data.projectIds || []
                 };
 
                 console.log('Login successful. UserData:', userData);
