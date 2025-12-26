@@ -1,5 +1,4 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import { apiService } from '../services/api';
 import { login as loginService } from '../services/apiservice';
 
 const AuthContext = createContext(null);
@@ -17,6 +16,10 @@ export const AuthProvider = ({ children }) => {
             try {
                 const parsedUser = JSON.parse(storedUser);
                 if (parsedUser && typeof parsedUser === 'object') {
+                    // Ensure id exists even for old sessions
+                    if (!parsedUser.id && !parsedUser.userId) {
+                        parsedUser.id = parsedUser.username?.toLowerCase() === 'admin' ? 1 : Date.now();
+                    }
                     setUser({ ...parsedUser, token: storedToken });
                 }
             } catch (e) {
@@ -55,6 +58,7 @@ export const AuthProvider = ({ children }) => {
 
                 const userData = {
                     username: data.username || username,
+                    id: data.id || data.userId || (username.toLowerCase() === 'admin' ? 1 : Date.now()),
                     role: role,
                     status: data.status,
                     token: data.token || 'mock-token', // Backend should return token

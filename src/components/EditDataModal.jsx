@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { apiService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical, Save, Folder, FileText } from 'lucide-react';
 
@@ -459,8 +458,8 @@ export function EditDataPanel() {
                                                 onClick={() => !renamingCollectionId && toggleCollection(col.collectionId)}
                                             >
                                                 <span className={`text-xs truncate flex-1 ${(col.name !== col.originalName || col.collectionId.toString().startsWith('new-'))
-                                                        ? 'font-bold text-slate-900 dark:text-white'
-                                                        : 'text-slate-700 dark:text-slate-300'
+                                                    ? 'font-bold text-slate-900 dark:text-white'
+                                                    : 'text-slate-700 dark:text-slate-300'
                                                     }`}>
                                                     {col.name}
                                                 </span>
@@ -529,17 +528,17 @@ export function EditDataPanel() {
                                                     <div
                                                         key={req.requestId}
                                                         className={`flex items-center gap-2 p-1 rounded group cursor-pointer ${editingRequest?.requestId === req.requestId
-                                                                ? 'bg-red-50 dark:bg-red-900/20 text-red-500'
-                                                                : 'hover:bg-slate-200 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400'
+                                                            ? 'bg-red-50 dark:bg-red-900/20 text-red-500'
+                                                            : 'hover:bg-slate-200 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400'
                                                             }`}
                                                         onClick={() => { setEditingRequest({ ...req, collectionId: col.collectionId }); setIsCreatingRequest(false); }}
                                                     >
                                                         <FileText className="w-3 h-3 shrink-0" />
 
                                                         <span className={`text-[10px] font-bold uppercase w-12 shrink-0 ${req.method === 'GET' ? 'text-green-500' :
-                                                                req.method === 'POST' ? 'text-yellow-500' :
-                                                                    req.method === 'PUT' ? 'text-blue-500' :
-                                                                        req.method === 'DELETE' ? 'text-red-500' : 'text-purple-500'
+                                                            req.method === 'POST' ? 'text-yellow-500' :
+                                                                req.method === 'PUT' ? 'text-blue-500' :
+                                                                    req.method === 'DELETE' ? 'text-red-500' : 'text-purple-500'
                                                             }`}>
                                                             {req.method}
                                                         </span>

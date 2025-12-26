@@ -242,3 +242,62 @@ export const createRequestData = async (requestData, token) => {
         throw error;
     }
 };
+
+
+
+/**
+ * Update Profile Picture service.
+ * Calls the /users/update-profile-pic endpoint.
+ * 
+ * @param {number} userId - The user ID
+ * @param {string} profileImage - Base64 encoded image string
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const updateProfilePic = async (userId, profileImage, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/users/update-profile-pic`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: {
+                userId: userId,
+                profileImage: profileImage
+            }
+        });
+        
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to update profile picture');
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error updating profile picture:', error.message);
+        throw error;
+    }
+};
+
+// --- MIGRATED FROM api.js ---
+
+export const getAllProjects = async () => {
+    console.log('Fetching Projects...');
+    return new Promise(resolve => {
+      setTimeout(() => {
+        resolve([]);
+      }, 600);
+    });
+};
+
+export const getCollectionsByProjectId = async (projectId) => {
+    console.log(`Fetching Collections for Project ${projectId}...`);
+    return new Promise(resolve => {
+      setTimeout(() => {
+        resolve([]);
+      }, 500);
+    });
+};

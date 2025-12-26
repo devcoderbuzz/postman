@@ -386,6 +386,7 @@ export function AdminDashboard() {
                                             <table className="w-full text-left text-sm">
                                                 <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                                                     <tr>
+                                                        <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-12"></th>
                                                         <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-1/5">Username</th>
                                                         <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-1/5">Role</th>
                                                         <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-1/5 text-center">App Codes</th>
@@ -396,6 +397,15 @@ export function AdminDashboard() {
                                                 <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
                                                     {users.map(u => (
                                                         <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                                            <td className="px-6 py-4">
+                                                                <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                                                                    {u.profileImage ? (
+                                                                        <img src={u.profileImage} alt="" className="w-full h-full object-cover" />
+                                                                    ) : (
+                                                                        <span className="text-[10px] font-bold text-slate-500">{u.userName?.substring(0, 2).toUpperCase()}</span>
+                                                                    )}
+                                                                </div>
+                                                            </td>
                                                             <td className="px-6 py-4 font-medium">{u.userName}</td>
                                                             <td className="px-6 py-4 capitalize text-slate-600 dark:text-slate-400">{u.userRole}</td>
                                                             <td className="px-6 py-4 text-center">

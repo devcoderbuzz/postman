@@ -5,14 +5,32 @@ import dotenv from 'dotenv';
 import http from 'http';
 import https from 'https';
 import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+const logToFile = (message) => {
+  try {
+      const logPath = path.join(process.cwd(), 'api_debug.log');
+      const timestamp = new Date().toISOString();
+      fs.appendFileSync(logPath, `[${timestamp}] ${message}\n`);
+  } catch (e) {
+      console.error('Failed to log to file', e);
+  }
+};
+
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+import { updateProfilePic, getUserProfile } from './controllers/userController.js';
+
+// Direct API routes
+app.post('/api/users/update-profile-pic', updateProfilePic);
 
 // Proxy endpoint
 const axiosInstance = axios.create({
@@ -23,20 +41,83 @@ const axiosInstance = axios.create({
 app.post('/proxy', async (req, res) => {
   try {
     const { method, url, headers, data } = req.body;
+    logToFile(`PROXY REQ: ${method} ${url} | bodyDataKeys: ${data ? Object.keys(data).join(',') : 'none'}`);
+    console.log(`Proxy hit: ${method} ${url}`);
+
+    // Intercept update profile pic
+    if (url && url.includes('/users/update-profile-pic') && method === 'POST') {
+       console.log('INTERCEPTED update-profile-pic');
+       const mockReq = { body: data };
+       const mockRes = {
+           status: (code) => ({
+               json: (jsonData) => res.json({ 
+                   status: code, 
+                   statusText: code === 200 ? 'OK' : 'Error',
+                   headers: { 'content-type': 'application/json' },
+                   data: jsonData,
+                   isError: code >= 400 
+               })
+           })
+       };
+       return updateProfilePic(mockReq, mockRes);
+    }
     
     // Forward the request
-    const response = await axiosInstance({
-      method,
-      url,
-      headers,
-      data
-    });
+    const forwardMsg = `FORWARDING TO: ${method} ${url}`;
+    logToFile(forwardMsg);
+    console.log(forwardMsg);
     
+    // Sanitize headers to avoid host/origin mismatches
+    const forwardHeaders = { ...headers };
+    delete forwardHeaders.host;
+    delete forwardHeaders.connection;
+    delete forwardHeaders.origin;
+    delete forwardHeaders.referer;
+
+    let response;
+    try {
+      response = await axiosInstance({
+        method,
+        url,
+        headers: forwardHeaders,
+        data
+      });
+      const respMsg = `BACKEND RESPONDED: ${response.status} ${response.statusText}`;
+      logToFile(respMsg);
+      console.log(respMsg);
+    } catch (forwardError) {
+      const errorMsg = `BACKEND ERROR: ${forwardError.message}`;
+      logToFile(errorMsg);
+      console.error(errorMsg);
+      throw forwardError; // Re-throw to be caught by main catch
+    }
+    
+    let responseData = response.data;
+
+    // Intercept responses to inject profile images
+    if (url && url.includes('/users/login') && method === 'POST' && responseData) {
+        // Inject profile image for login
+        const username = data.username || data.userName;
+        const storedUser = getUserProfile(responseData.id || responseData.userId, username);
+        if (storedUser && storedUser.profileImage) {
+            logToFile(`Injecting profile pic for login: ${username}`);
+            responseData.profileImage = storedUser.profileImage;
+        }
+    } else if (url && url.includes('/users/project-count') && method === 'POST' && Array.isArray(responseData)) {
+        // Inject profile images for user list
+        logToFile(`Injecting profile pics for user list (${responseData.length} users)`);
+        responseData = responseData.map(u => {
+            const username = u.username || u.userName;
+            const stored = getUserProfile(u.id || u.userId, username);
+            return stored && stored.profileImage ? { ...u, profileImage: stored.profileImage } : u;
+        });
+    }
+
     res.json({
       status: response.status,
       statusText: response.statusText,
       headers: response.headers,
-      data: response.data
+      data: responseData
     });
   } catch (error) {
     if (error.response) {

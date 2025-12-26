@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { apiService } from '../services/api';
+import { getCollectionsByProjectId, getAllProjects } from '../services/apiservice';
 import { Layout } from '../components/Layout';
 import { RequestBar } from '../components/RequestBar';
 import { Tabs } from '../components/Tabs';
@@ -324,7 +324,7 @@ export function UserWorkspace() {
                 fetchedCollections = localProject.collections;
             } else {
                 console.log(`Fetching collections for Project ID: ${projectId}`);
-                fetchedCollections = await apiService.getCollectionsByProjectId(projectId);
+                fetchedCollections = await getCollectionsByProjectId(projectId);
             }
 
             if (fetchedCollections && Array.isArray(fetchedCollections)) {
@@ -562,7 +562,7 @@ export function UserWorkspace() {
                         }
                     } else {
                         try {
-                            const fetchedData = await apiService.getAllProjects();
+                            const fetchedData = await getAllProjects();
                             if (fetchedData && Array.isArray(fetchedData)) {
                                 setRawAppCodes(fetchedData);
                                 const uniqueProjects = [...new Set(fetchedData.map(app => app.projectName))]
@@ -743,7 +743,7 @@ export function UserWorkspace() {
     const refreshProject = async () => {
         if (user && user.assignedAppCodes) return; // Don't refresh if hardcoded assignments
         try {
-            const fetchedData = await apiService.getAllProjects();
+            const fetchedData = await getAllProjects();
             if (fetchedData && Array.isArray(fetchedData)) {
                 setRawAppCodes(fetchedData);
                 const uniqueProjects = [...new Set(fetchedData.map(app => app.projectName))]

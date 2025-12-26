@@ -2,6 +2,7 @@ import { useState, useRef } from 'react';
 import { Moon, Sun, Upload, FolderOpen } from 'lucide-react';
 import { ImageCropper } from './ImageCropper';
 import { ResetPasswordModal } from './ResetPasswordModal';
+import { updateProfilePic } from '../services/apiservice';
 
 export function Settings({
     user,
@@ -37,9 +38,27 @@ export function Settings({
         }
     };
 
-    const handleCropComplete = (croppedImage) => {
-        setProfilePic(croppedImage);
-        setTempImage(null);
+    const handleCropComplete = async (croppedImage) => {
+        try {
+            const sizeKB = Math.round(croppedImage.length / 1024);
+            console.log(`Saving image of size: ${sizeKB}KB`);
+
+            if (user?.id) {
+                await updateProfilePic(user.id, croppedImage, user.token);
+                // Update local storage too so reload keeps it
+                localStorage.setItem('profilePic', croppedImage);
+            } else {
+                alert(`Warning: No user ID in session (user: ${user?.username}). Please re-login.`);
+                return;
+            }
+            setProfilePic(croppedImage);
+            setTempImage(null);
+            alert(`Profile picture updated successfully! (${sizeKB}KB)`);
+        } catch (error) {
+            console.error('Failed to update profile pic:', error);
+            const sizeKB = Math.round(croppedImage.length / 1024);
+            alert(`Error (${sizeKB}KB): ${error.message || 'Unknown error'}`);
+        }
     };
 
     return (
