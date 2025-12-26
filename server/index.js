@@ -103,7 +103,7 @@ app.post('/proxy', async (req, res) => {
             logToFile(`Injecting profile pic for login: ${username}`);
             responseData.profileImage = storedUser.profileImage;
         }
-    } else if (url && url.includes('/users/project-count') && method === 'POST' && Array.isArray(responseData)) {
+    } else if (url && url.includes('/users/project-count') && method === 'GET' && Array.isArray(responseData)) {
         // Inject profile images for user list
         logToFile(`Injecting profile pics for user list (${responseData.length} users)`);
         responseData = responseData.map(u => {
