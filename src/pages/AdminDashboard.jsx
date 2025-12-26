@@ -42,6 +42,8 @@ export function AdminDashboard() {
     const [assigningUser, setAssigningUser] = useState(null); // For "Add" (Assign Code)
     const [isCreatingUser, setIsCreatingUser] = useState(false); // For "Create User" modal
     const [isCreatingAppCode, setIsCreatingAppCode] = useState(false); // For "Create App Code" modal
+    const [editingUserProjectDetails, setEditingUserProjectDetails] = useState([]);
+    const [isFetchingProjectDetails, setIsFetchingProjectDetails] = useState(false);
 
     const [selectedProjectCode, setSelectedProjectCode] = useState('');
     const [selectedModuleName, setSelectedModuleName] = useState('');
@@ -302,6 +304,27 @@ export function AdminDashboard() {
         }));
     };
 
+    const handleEditUser = async (userToEdit) => {
+        setEditingUser(userToEdit);
+        setEditingUserProjectDetails([]);
+
+        // Use projectIds if available, fallback to assignedAppCodes mapping
+        const projectIds = userToEdit.projectIds || [];
+
+        if (projectIds.length > 0) {
+            setIsFetchingProjectDetails(true);
+            try {
+                const { GetProjectDetails } = await import('../services/apiservice');
+                const details = await GetProjectDetails(projectIds, user?.token);
+                setEditingUserProjectDetails(details || []);
+            } catch (error) {
+                console.error('Failed to fetch project details:', error);
+            } finally {
+                setIsFetchingProjectDetails(false);
+            }
+        }
+    };
+
     // Update collections when app code is selected
     useEffect(() => {
         if (!selectedAppCode) {
@@ -420,7 +443,7 @@ export function AdminDashboard() {
                                                             </td>
                                                             <td className="px-6 py-4 text-right space-x-2">
                                                                 <button
-                                                                    onClick={() => setEditingUser(u)}
+                                                                    onClick={() => handleEditUser(u)}
                                                                     className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium text-xs px-2 py-1 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-800"
                                                                 >
                                                                     Edit
@@ -643,15 +666,18 @@ export function AdminDashboard() {
 
 
 
-                            {users.find(u => u.id === editingUser.id)?.assignedAppCodes.length === 0 ? (
-                                <p className="text-sm text-slate-500 italic">No app codes assigned.</p>
-                            ) : (
+                            {isFetchingProjectDetails ? (
+                                <div className="flex items-center justify-center p-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
+                                </div>
+                            ) : (editingUserProjectDetails.length > 0 || (users.find(u => u.id === editingUser.id)?.assignedAppCodes.length > 0)) ? (
                                 <ul className="space-y-2 max-h-60 overflow-y-auto">
-                                    {users.find(u => u.id === editingUser.id)?.assignedAppCodes.map(ac => (
-                                        <li key={ac.id} className="flex justify-between items-center p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-700 text-sm">
+                                    {/* Show fetched details if available, otherwise fallback to existing assignedAppCodes */}
+                                    {(editingUserProjectDetails.length > 0 ? editingUserProjectDetails : users.find(u => u.id === editingUser.id)?.assignedAppCodes).map(ac => (
+                                        <li key={ac.id || ac.projectCode} className="flex justify-between items-center p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-700 text-sm">
                                             <div>
-                                                <div className="font-medium">{ac.projectName}</div>
-                                                <div className="text-xs text-slate-500">{ac.moduleName}</div>
+                                                <div className="font-medium">{ac.projectName || ac.projectCode}</div>
+                                                <div className="text-xs text-slate-500">{ac.moduleName || ac.description}</div>
                                             </div>
                                             <button
                                                 onClick={() => handleUnassignAppCode(editingUser.id, ac.id)}
@@ -662,6 +688,8 @@ export function AdminDashboard() {
                                         </li>
                                     ))}
                                 </ul>
+                            ) : (
+                                <p className="text-sm text-slate-500 italic">No app codes assigned.</p>
                             )}
                         </div>
                         <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900 text-right">

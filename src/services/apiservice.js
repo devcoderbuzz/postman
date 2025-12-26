@@ -81,7 +81,7 @@ export const getAllUsers = async (currentUser) => {
         const token = currentUser.token || sessionStorage.getItem('authToken');
         
         const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
+            method: 'GET',
             url: `${BASE_URL}/users/project-count`,
             headers: {
                 'Content-Type': 'application/json',
@@ -278,6 +278,39 @@ export const updateProfilePic = async (userId, profileImage, token) => {
         return response.data.data;
     } catch (error) {
         console.error('Error updating profile picture:', error.message);
+        throw error;
+    }
+};
+
+/**
+ * Get Project Details service.
+ * Calls the /projects/all endpoint with a list of project IDs.
+ * 
+ * @param {Array<number>} projectIds - Array of project IDs (e.g., [1, 2])
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The project details
+ */
+export const GetProjectDetails = async (projectIds, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/projects/all`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: projectIds
+        });
+        
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to fetch project details');
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error fetching project details:', error.message);
         throw error;
     }
 };
