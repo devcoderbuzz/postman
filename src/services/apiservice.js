@@ -442,6 +442,41 @@ export const deleteUser = async (userId, token) => {
     }
 };
 
+/**
+ * Update User Status service.
+ * Calls the /users/update-status endpoint to change a user's status.
+ * 
+ * @param {number} userId - The user ID
+ * @param {string} status - The new status (e.g., 'active', 'inactive', 'pending')
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const updateUser = async (userDataObject, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        console.log('Updating User...', userDataObject, authToken);
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/users/update`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: userDataObject
+        });
+        
+        if (response.data.isError) {
+             const errorDetail = JSON.stringify(response.data.data || response.data);
+             throw new Error(`Failed to update user status. Server response: ${errorDetail}`);
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error updating status:', error.message);
+        throw error;
+    }
+};
+
 // --- MIGRATED FROM api.js ---
 
 export const getAllProjects = async () => {

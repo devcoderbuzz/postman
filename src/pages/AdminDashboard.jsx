@@ -406,13 +406,39 @@ export function AdminDashboard() {
         return appCodes.filter(ac => !assignedIds.includes(ac.id));
     };
 
-    const handleToggleUserStatus = (userId) => {
-        setUsers(users.map(u => {
-            if (u.id === userId) {
-                return { ...u, status: u.status === 'active' ? 'inactive' : 'active' };
+    const handleUpdateUserStatus = async (userId, newStatus) => {
+        try {
+            const { updateUser } = await import('../services/apiservice');
+            const validUserId = parseInt(userId, 10);
+            if (isNaN(validUserId)) {
+                alert('Error: Invalid User ID.');
+                return;
             }
-            return u;
-        }));
+
+            await updateUser({ userId: validUserId, status: newStatus }, user?.token);
+
+            // Refresh from server
+            await fetchUsers();
+
+            // Update local editing user if open
+            if (editingUser && editingUser.id === userId) {
+                setEditingUser(prev => ({ ...prev, status: newStatus }));
+            }
+
+            alert(`User status updated to ${newStatus}`);
+        } catch (error) {
+            console.error('Failed to update status:', error);
+            const backendMsg = error.response?.data?.data?.message || error.message;
+            alert(`Error updating status: ${backendMsg}`);
+        }
+    };
+
+    const handleToggleUserStatus = (userId) => {
+        const targetUser = users.find(u => u.id === userId);
+        if (targetUser) {
+            const nextStatus = targetUser.status === 'active' ? 'inactive' : 'active';
+            handleUpdateUserStatus(userId, nextStatus);
+        }
     };
 
     const handleEditUser = async (userToEdit) => {
@@ -773,6 +799,23 @@ export function AdminDashboard() {
                             <h3 className="font-bold text-lg">Edit Access: {editingUser.username}</h3>
                             <button onClick={() => { setEditingUser(null); fetchUsers(); }} className="text-slate-500 hover:text-slate-700">✕</button>
                         </div>
+                        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-900/10 flex justify-between items-center">
+                            <div className="flex flex-col">
+                                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">User Status</span>
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500 italic">Affects immediate login access</span>
+                            </div>
+                            <select
+                                value={editingUser.status || 'active'}
+                                onChange={(e) => handleUpdateUserStatus(editingUser.id, e.target.value)}
+                                className="text-xs font-black bg-slate-50 dark:bg-slate-900 text-red-600 border border-slate-100 dark:border-slate-700 rounded-md px-4 py-2 outline-none transition-all cursor-pointer shadow-sm hover:shadow-md appearance-none min-w-[140px] text-center"
+                            >
+                                <option value="active">Active</option>
+                                <option value="inactive">Inactive</option>
+                                <option value="pending">Pending</option>
+                                <option value="resetpassword">Reset Password</option>
+                            </select>
+                        </div>
+
                         <div className="p-6">
                             <h4 className="text-sm font-semibold mb-3 text-slate-600 dark:text-slate-400">Assigned App Codes</h4>
 
