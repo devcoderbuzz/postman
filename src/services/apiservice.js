@@ -315,6 +315,86 @@ export const GetProjectDetails = async (projectIds, token) => {
     }
 };
 
+/**
+ * Unassign user from project service.
+ * Calls the /users/remove-project endpoint to unassign a project from a user.
+ * 
+ * @param {number} userId - The user ID
+ * @param {number} projectId - The project ID
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const unassignUserFromProject = async (userId, projectId, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/users/unassign-project`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: {
+                userId: userId,
+                projectId: projectId
+            }
+        });
+        
+        if (response.data.isError) {
+             // Debugging: Stringify the entire data to see what the error actually is
+             const errorDetail = JSON.stringify(response.data.data || response.data);
+             throw new Error(`Failed to unassign project. Server response: ${errorDetail}`);
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error unassigning project:', error.message);
+        throw error;
+    }
+};
+
+/**
+ * Assign user to project service.
+ * Calls the /users/add-project endpoint to assign a project to a user.
+ * 
+ * @param {number} userId - The user ID
+ * @param {number} projectId - The project ID
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const assignUserToProject = async (userId, projectId, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        console.log('Assigning User to Project...', userId, projectId, authToken);
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/users/assign-project`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: {
+                userId: userId,
+                projectId: projectId
+            }
+        });
+        
+        if (response.data.isError) {
+             // Debugging: Stringify the entire data to see what the error actually is
+             const errorDetail = JSON.stringify(response.data.data || response.data);
+             throw new Error(`Failed to assign project. Server response: ${errorDetail}`);
+        }
+        console.log('User assigned to Project successfully 124...', response.data.data);
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error assigning project:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
 // --- MIGRATED FROM api.js ---
 
 export const getAllProjects = async () => {

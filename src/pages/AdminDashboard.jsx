@@ -81,6 +81,7 @@ export function AdminDashboard() {
                     const filteredUsers = fetchedUsers.filter(u => u.userName !== user.username);
                     setUsers(filteredUsers.map(u => ({
                         ...u,
+                        id: u.id || u.userId,
                         assignedAppCodes: u.assignedAppCodes || []
                     })));
                 }
@@ -100,7 +101,8 @@ export function AdminDashboard() {
                     id: `${item.projectCode}-${item.moduleName}`,
                     projectName: item.projectCode,
                     moduleName: item.moduleName,
-                    projectId: item.projectCode,
+                    projectId: item.projectId || item.id, // Use numeric projectId from API
+                    projectCode: item.projectCode, // Keep projectCode for display
                     collections: item.collections || []
                 }));
                 setAppCodes(mappedCodes);
@@ -263,28 +265,120 @@ export function AdminDashboard() {
         }
     };
 
-    const handleUnassignAppCode = (userId, appCodeId) => {
-        setUsers(users.map(u => {
-            if (u.id === userId) {
-                return { ...u, assignedAppCodes: u.assignedAppCodes.filter(ac => ac.id !== appCodeId) };
+    const handleUnassignAppCode = async (userId, appCodeId) => {
+        if (!window.confirm("Are you sure you want to unassign this project?")) return;
+
+        try {
+            const { unassignUserFromProject } = await import('../services/apiservice');
+
+            // Find the project object to get the valid numeric projectId
+            const userInState = users.find(u => u.id === userId);
+
+            // Look in editing details first, then in the user state
+            const projectObj = editingUserProjectDetails.find(ac => (ac.id === appCodeId || ac.projectCode === appCodeId)) ||
+                userInState?.assignedAppCodes?.find(ac => (ac.id === appCodeId || ac.projectCode === appCodeId));
+
+            // Extract numeric ID
+            let projectIdToUnassign = null;
+
+            if (projectObj) {
+                // Prioritize explicit numeric projectId
+                if (projectObj.projectId) projectIdToUnassign = projectObj.projectId;
+                // Fallback to 'id' if it looks numeric
+                else if (projectObj.id && !isNaN(parseInt(projectObj.id))) projectIdToUnassign = projectObj.id;
+            } else {
+                // If no object found, check if the passed appCodeId itself is numeric
+                if (!isNaN(parseInt(appCodeId))) projectIdToUnassign = appCodeId;
             }
-            return u;
-        }));
+
+            // Strict Validation
+            const validProjectId = parseInt(projectIdToUnassign, 10);
+            const validUserId = parseInt(userId, 10);
+
+            if (isNaN(validProjectId)) {
+                console.error('Invalid/Missing Project ID. Obj:', projectObj, 'Raw:', appCodeId);
+                alert('Error: Could not determine numeric Project ID for deletion.');
+                return;
+            }
+            if (isNaN(validUserId)) {
+                console.error('Invalid User ID:', userId);
+                alert('Error: Invalid User ID.');
+                return;
+            }
+
+            console.log(`Unassigning User ${validUserId} from Project ${validProjectId}`);
+
+            await unassignUserFromProject(validUserId, validProjectId, user?.token);
+
+            // Update local state and refresh
+            setUsers(users.map(u => {
+                if (u.id === userId) {
+                    return { ...u, assignedAppCodes: (u.assignedAppCodes || []).filter(ac => (ac.id || ac.projectCode) !== appCodeId) };
+                }
+                return u;
+            }));
+
+            if (editingUser && editingUser.id === userId) {
+                setEditingUserProjectDetails(prev => prev.filter(ac => (ac.id || ac.projectCode) !== appCodeId));
+            }
+
+            // Refresh from server to be sure
+            await fetchUsers();
+
+            alert('Project unassigned successfully');
+        } catch (error) {
+            console.error('Failed to unassign project:', error);
+            const backendMsg = error.response?.data?.data?.message || error.message;
+            alert(`Error unassigning project: ${backendMsg}`);
+        }
     };
 
-    const handleAssignAppCode = () => {
+    const handleAssignAppCode = async () => {
         if (!assigningUser || !selectedAppCodeId) return;
         const appCode = appCodes.find(ac => ac.id.toString() === selectedAppCodeId);
 
         if (appCode) {
-            setUsers(users.map(u => {
-                if (u.id === assigningUser.id) {
-                    return { ...u, assignedAppCodes: [...u.assignedAppCodes, appCode] };
+            try {
+                const { assignUserToProject } = await import('../services/apiservice');
+
+                // Ensure numeric IDs
+                const projectIdToAssign = parseInt(appCode.projectId, 10);
+                if (isNaN(projectIdToAssign)) {
+                    console.error('Invalid Project ID:', appCode);
+                    alert('Cannot assign: Invalid numeric Project ID found.');
+                    return;
                 }
-                return u;
-            }));
-            setAssigningUser(null);
-            setSelectedAppCodeId('');
+
+                if (!user?.token || user.token === 'mock-token') {
+                    alert('Error: Authentication token is missing or invalid. Please logout and login again.');
+                    return;
+                }
+
+                // Determine User ID
+                const rawUserId = assigningUser.userId || assigningUser.id;
+                const userIdToAssign = parseInt(rawUserId, 10);
+                if (isNaN(userIdToAssign)) {
+                    console.error('Invalid User ID:', assigningUser);
+                    alert('Cannot assign: Invalid numeric User ID found.');
+                    return;
+                }
+
+                console.log(`Assigning User ${userIdToAssign} to Project ${projectIdToAssign}`);
+
+                await assignUserToProject(userIdToAssign, projectIdToAssign, user?.token);
+
+                // Refresh user list from server to reflect changes
+                await fetchUsers();
+
+                setAssigningUser(null);
+                setSelectedAppCodeId('');
+                alert('Project assigned successfully');
+            } catch (error) {
+                console.error('Failed to assign project:', error);
+                // Extract possible detailed message from proxy/backend response
+                const backendMsg = error.response?.data?.data?.message || error.message;
+                alert(`Error assigning project: ${backendMsg}`);
+            }
         }
     };
 
@@ -308,6 +402,7 @@ export function AdminDashboard() {
         setEditingUser(userToEdit);
         setEditingUserProjectDetails([]);
 
+        const userId = userToEdit.userId || userToEdit.id;
         // Use projectIds if available, fallback to assignedAppCodes mapping
         const projectIds = userToEdit.projectIds || [];
 
@@ -659,7 +754,7 @@ export function AdminDashboard() {
                     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden">
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
                             <h3 className="font-bold text-lg">Edit Access: {editingUser.username}</h3>
-                            <button onClick={() => setEditingUser(null)} className="text-slate-500 hover:text-slate-700">✕</button>
+                            <button onClick={() => { setEditingUser(null); fetchUsers(); }} className="text-slate-500 hover:text-slate-700">✕</button>
                         </div>
                         <div className="p-6">
                             <h4 className="text-sm font-semibold mb-3 text-slate-600 dark:text-slate-400">Assigned App Codes</h4>
@@ -673,14 +768,14 @@ export function AdminDashboard() {
                             ) : (editingUserProjectDetails.length > 0 || (users.find(u => u.id === editingUser.id)?.assignedAppCodes.length > 0)) ? (
                                 <ul className="space-y-2 max-h-60 overflow-y-auto">
                                     {/* Show fetched details if available, otherwise fallback to existing assignedAppCodes */}
-                                    {(editingUserProjectDetails.length > 0 ? editingUserProjectDetails : users.find(u => u.id === editingUser.id)?.assignedAppCodes).map(ac => (
+                                    {(editingUserProjectDetails.length > 0 ? editingUserProjectDetails : users.find(u => u.id === editingUser.id)?.assignedAppCodes || []).map(ac => (
                                         <li key={ac.id || ac.projectCode} className="flex justify-between items-center p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-700 text-sm">
                                             <div>
                                                 <div className="font-medium">{ac.projectName || ac.projectCode}</div>
                                                 <div className="text-xs text-slate-500">{ac.moduleName || ac.description}</div>
                                             </div>
                                             <button
-                                                onClick={() => handleUnassignAppCode(editingUser.id, ac.id)}
+                                                onClick={() => handleUnassignAppCode(editingUser.id, ac.id || ac.projectCode)}
                                                 className="text-red-500 hover:text-red-700 text-xs px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                                             >
                                                 Delete
@@ -693,7 +788,7 @@ export function AdminDashboard() {
                             )}
                         </div>
                         <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900 text-right">
-                            <button onClick={() => setEditingUser(null)} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Close</button>
+                            <button onClick={() => { setEditingUser(null); fetchUsers(); }} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Close</button>
                         </div>
                     </div>
                 </div>

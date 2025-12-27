@@ -116,3 +116,54 @@ export const updateProfilePic = (req, res) => {
         });
     }
 };
+
+export const assignProject = (req, res) => {
+    try {
+        const { userId, projectId } = req.body;
+        logToFile(`Assign Project Request - userId: ${userId}, projectId: ${projectId}`);
+
+        if (!userId || !projectId) {
+            return res.status(400).json({
+                message: 'userId and projectId are required',
+                isError: true
+            });
+        }
+
+        const users = readData();
+        const userIndex = users.findIndex(u => u.id == userId || u.userId == userId);
+
+        if (userIndex === -1) {
+            logToFile(`User not found for ID: ${userId}`);
+            return res.status(404).json({
+                message: 'User not found',
+                isError: true
+            });
+        }
+
+        if (!users[userIndex].projectIds) {
+            users[userIndex].projectIds = [];
+        }
+
+        // Avoid duplicates
+        if (!users[userIndex].projectIds.includes(projectId)) {
+            users[userIndex].projectIds.push(projectId);
+        }
+
+        if (writeData(users)) {
+            logToFile(`Success: Assigned project ${projectId} to user ${userId}`);
+            return res.status(200).json({
+                message: 'Project assigned successfully',
+                data: { userId, projectId }
+            });
+        } else {
+            throw new Error('Failed to save data');
+        }
+    } catch (error) {
+        logToFile(`Exception in assignProject: ${error.message}`);
+        return res.status(500).json({
+            message: 'Internal server error',
+            error: error.message,
+            isError: true
+        });
+    }
+};

@@ -27,7 +27,7 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-import { updateProfilePic, getUserProfile } from './controllers/userController.js';
+import { updateProfilePic, getUserProfile, assignProject } from './controllers/userController.js';
 
 // Direct API routes
 app.post('/api/users/update-profile-pic', updateProfilePic);
@@ -61,6 +61,28 @@ app.post('/proxy', async (req, res) => {
        };
        return updateProfilePic(mockReq, mockRes);
     }
+
+    // Intercept add project
+    /* 
+    const isAddProject = url && url.includes('/users/add-project');
+    console.log(`Checking interception for add-project: ${url} -> Match? ${isAddProject}`);
+    if (isAddProject && method === 'POST') {
+       console.log('INTERCEPTED add-project');
+       const mockReq = { body: data };
+       const mockRes = {
+           status: (code) => ({
+               json: (jsonData) => res.json({ 
+                   status: code, 
+                   statusText: code === 200 ? 'OK' : 'Error',
+                   headers: { 'content-type': 'application/json' },
+                   data: jsonData,
+                   isError: code >= 400 
+               })
+           })
+       };
+       return assignProject(mockReq, mockRes);
+    }
+    */
     
     // Forward the request
     const forwardMsg = `FORWARDING TO: ${method} ${url}`;
