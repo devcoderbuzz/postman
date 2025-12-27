@@ -208,33 +208,26 @@ export function AdminDashboard() {
                 username: newUsername,
                 password: newPassword,
                 role: newUserRole,
-                status: newUserStatus,
+                status: "RESETPASSWORD",
                 profileImage: profileImageData
             };
 
             // Dynamically import register to avoid top-level dependency issues if any
             const { register } = await import('../services/apiservice');
-            const createdUser = await register(userData);
+            await register(userData);
 
-            // Update local state for immediate feedback
-            // Assuming backend returns the created user object or we construct a display version
-            const userForDisplay = {
-                ...userData,
-                id: createdUser?.id || Date.now(),
-                assignedAppCodes: []
-            };
-
-            setUsers([...users, userForDisplay]);
+            // Clear inputs and close modal
             setNewUsername('');
             setNewPassword('');
             setNewUserRole('user');
             setNewUserStatus('active');
             setIsCreatingUser(false);
 
-            // Refresh user list from server
-            await fetchUsers();
-
+            // Show success message FIRST
             alert(`User ${userData.username} created successfully!`);
+
+            // Refresh user list from server AFTER alert is dismissed
+            await fetchUsers();
         } catch (error) {
             console.error('Failed to create user:', error);
             alert(`Error creating user: ${error.message}`);
@@ -415,7 +408,7 @@ export function AdminDashboard() {
                 return;
             }
 
-            await updateUser({ userId: validUserId, status: newStatus }, user?.token);
+            await updateUser({ id: validUserId, status: newStatus }, user?.token);
 
             // Refresh from server
             await fetchUsers();
@@ -809,17 +802,15 @@ export function AdminDashboard() {
                                 onChange={(e) => handleUpdateUserStatus(editingUser.id, e.target.value)}
                                 className="text-xs font-black bg-slate-50 dark:bg-slate-900 text-red-600 border border-slate-100 dark:border-slate-700 rounded-md px-4 py-2 outline-none transition-all cursor-pointer shadow-sm hover:shadow-md appearance-none min-w-[140px] text-center"
                             >
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
-                                <option value="pending">Pending</option>
-                                <option value="resetpassword">Reset Password</option>
+                                <option value="ACTIVE">ACTIVE</option>
+                                <option value="PENDING">PENDING</option>
+                                <option value="DISABLED">DISABLED</option>
+                                <option value="RESETPASSWORD">RESET PASSWORD</option>
                             </select>
                         </div>
 
                         <div className="p-6">
                             <h4 className="text-sm font-semibold mb-3 text-slate-600 dark:text-slate-400">Assigned App Codes</h4>
-
-
 
                             {isFetchingProjectDetails ? (
                                 <div className="flex items-center justify-center p-8">
@@ -828,8 +819,8 @@ export function AdminDashboard() {
                             ) : (editingUserProjectDetails.length > 0 || (users.find(u => u.id === editingUser.id)?.assignedAppCodes.length > 0)) ? (
                                 <ul className="space-y-2 max-h-60 overflow-y-auto">
                                     {/* Show fetched details if available, otherwise fallback to existing assignedAppCodes */}
-                                    {(editingUserProjectDetails.length > 0 ? editingUserProjectDetails : users.find(u => u.id === editingUser.id)?.assignedAppCodes || []).map(ac => (
-                                        <li key={ac.id || ac.projectCode} className="flex justify-between items-center p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-700 text-sm">
+                                    {(editingUserProjectDetails.length > 0 ? editingUserProjectDetails : users.find(u => u.id === editingUser.id)?.assignedAppCodes || []).map((ac, index) => (
+                                        <li key={ac.id ? `id-${ac.id}` : `pc-${ac.projectCode}-${ac.moduleName || index}`} className="flex justify-between items-center p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-700 text-sm">
                                             <div>
                                                 <div className="font-medium">{ac.projectName || ac.projectCode}</div>
                                                 <div className="text-xs text-slate-500">{ac.moduleName || ac.description}</div>
@@ -847,8 +838,9 @@ export function AdminDashboard() {
                                 <p className="text-sm text-slate-500 italic">No app codes assigned.</p>
                             )}
                         </div>
-                        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900 text-right">
-                            <button onClick={() => { setEditingUser(null); fetchUsers(); }} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Close</button>
+                        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800 text-right flex justify-center">
+                            {/* <button onClick={() => { setEditingUser(null); fetchUsers(); }} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Close</button> */}
+                            <button onClick={() => { setEditingUser(null); fetchUsers(); }} className="bg-red-600 text-white px-8 py-2 rounded text-sm hover:bg-red-700 font-medium">Close</button>
                         </div>
                     </div>
                 </div>
@@ -959,7 +951,7 @@ export function AdminDashboard() {
 
                                     </select>
                                 </div>
-                                <div>
+                                {/* <div>
                                     <label className="block text-xs font-medium mb-1">Status</label>
                                     <select
                                         value={newUserStatus}
@@ -970,7 +962,7 @@ export function AdminDashboard() {
                                         <option value="inactive">Inactive</option>
                                         <option value="resetpassword">ResetPassword</option>
                                     </select>
-                                </div>
+                                </div> */}
                             </div>
                             <div className="flex justify-end gap-2">
                                 <button type="button" onClick={() => setIsCreatingUser(false)} className="px-3 py-2 text-slate-600 dark:text-slate-400 text-sm hover:underline">Cancel</button>
