@@ -789,7 +789,7 @@ export function AdminDashboard() {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden">
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                            <h3 className="font-bold text-lg">Edit Access: {editingUser.username}</h3>
+                            <h3 className="font-bold">Edit Access<span className="ml-3 text-slate-600 dark:text-slate-400 font-medium">{editingUser.userName || editingUser.username}</span></h3>
                             <button onClick={() => { setEditingUser(null); fetchUsers(); }} className="text-slate-500 hover:text-slate-700">✕</button>
                         </div>
                         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-900/10 flex justify-between items-center">
@@ -849,13 +849,20 @@ export function AdminDashboard() {
             {/* Add App Code Modal */}
             {assigningUser && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-sm">
-                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700">
-                            <h3 className="font-bold text-lg">Assign App Code</h3>
-                            <p className="text-xs text-slate-500 mt-1">To user: {assigningUser.username}</p>
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden">
+                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                            <h3 className="font-bold text-sm">Assign App Code<span className="ml-9 text-slate-600 dark:text-slate-400">{assigningUser.userName || assigningUser.username}</span></h3>
+                            <button onClick={() => setAssigningUser(null)} className="text-slate-500 hover:text-slate-700">✕</button>
                         </div>
-                        <div className="p-6">
-                            <label className="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Project</label>
+                        {/* <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-900/10 mb-4">
+                            <div className="flex flex-col">
+                                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">New Assignment</span>
+                                <span className="text-[10px] text-slate-400 dark:text-slate-500 italic">Select a project and module to grant access</span>
+                            </div>
+                        </div> */}
+                        <br></br>
+                        <div className="px-6 pb-6">
+                            <label className="block text-xs font-bold mb-2 uppercase tracking-wide text-slate-600 dark:text-slate-400">Project</label>
                             <select
                                 value={assignProjectCode}
                                 onChange={e => {
@@ -863,7 +870,7 @@ export function AdminDashboard() {
                                     setAssignModuleName('');
                                     setSelectedAppCodeId('');
                                 }}
-                                className="w-full border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700 mb-4 outline-none focus:border-red-500"
+                                className="w-full border rounded-md p-3 text-sm dark:bg-slate-900 dark:border-slate-700 mb-5 outline-none focus:ring-2 focus:ring-red-500 transition-all"
                             >
                                 <option value="">-- Select Project --</option>
                                 {[...new Set(getUnassignedCodes(users.find(u => u.id === assigningUser.id)).map(ac => ac.projectName))].map(proj => (
@@ -871,7 +878,7 @@ export function AdminDashboard() {
                                 ))}
                             </select>
 
-                            <label className="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Module</label>
+                            <label className="block text-xs font-bold mb-2 uppercase tracking-wide text-slate-600 dark:text-slate-400">Module</label>
                             <select
                                 value={assignModuleName}
                                 onChange={e => {
@@ -881,7 +888,7 @@ export function AdminDashboard() {
                                     const match = unassigned.find(ac => ac.projectName === assignProjectCode && ac.moduleName === val);
                                     setSelectedAppCodeId(match ? match.id : '');
                                 }}
-                                className="w-full border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700 mb-4 outline-none focus:border-red-500"
+                                className="w-full border rounded-md p-3 text-sm dark:bg-slate-900 dark:border-slate-700 mb-8 outline-none focus:ring-2 focus:ring-red-500 transition-all"
                                 disabled={!assignProjectCode}
                             >
                                 <option value="">-- Select Module --</option>
@@ -892,15 +899,15 @@ export function AdminDashboard() {
                                     ))
                                 }
                             </select>
-                            <div className="flex justify-end gap-2">
-                                <button onClick={() => setAssigningUser(null)} className="px-3 py-2 text-slate-600 dark:text-slate-400 text-sm hover:underline">Cancel</button>
+                            <div className="flex justify-center flex-col gap-3">
                                 <button
                                     onClick={handleAssignAppCode}
                                     disabled={!selectedAppCodeId}
-                                    className="px-4 py-2 bg-red-600 text-white rounded text-sm font-medium hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="w-full py-3 bg-red-600 text-white rounded-md text-sm font-black hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest shadow-lg shadow-red-500/20 active:scale-95 transition-all"
                                 >
-                                    Confirm
+                                    Confirm Assignment
                                 </button>
+                                <button onClick={() => setAssigningUser(null)} className="text-xs font-bold text-slate-500 hover:text-red-600 uppercase tracking-tight py-2 transition-colors">Cancel</button>
                             </div>
                         </div>
                     </div>
