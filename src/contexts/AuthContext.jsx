@@ -7,27 +7,31 @@ export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        // Check for persisted session
-        const storedUser = sessionStorage.getItem('user');
-        const storedToken = sessionStorage.getItem('authToken');
+    const logout = () => {
+        setUser(null);
+        sessionStorage.clear();
+        localStorage.removeItem('profilePic'); // Optional: keep or clear profile pic
+    };
 
-        if (storedUser && storedToken && storedUser !== 'undefined') {
-            try {
-                const parsedUser = JSON.parse(storedUser);
-                if (parsedUser && typeof parsedUser === 'object') {
-                    // Ensure id exists even for old sessions
-                    if (!parsedUser.id && !parsedUser.userId) {
-                        parsedUser.id = parsedUser.username?.toLowerCase() === 'admin' ? 1 : Date.now();
-                    }
-                    setUser({ ...parsedUser, token: storedToken });
-                }
-            } catch (e) {
-                console.error('Failed to parse stored user', e);
-                sessionStorage.clear();
-            }
-        }
+    useEffect(() => {
+        // Requirement 1: Logout on page refresh.
+        // We explicitly clear any persisted session data instead of restoring it.
+        sessionStorage.removeItem('user');
+        sessionStorage.removeItem('authToken');
+        setUser(null);
         setLoading(false);
+
+        // Requirement 2: Listen for 403 logout events from api service
+        const handleAuthLogout = () => {
+            console.warn('Received auth-logout event (403). Logging out...');
+            logout();
+        };
+
+        window.addEventListener('auth-logout', handleAuthLogout);
+
+        return () => {
+            window.removeEventListener('auth-logout', handleAuthLogout);
+        };
     }, []);
 
     const login = async (username, password) => {
@@ -83,11 +87,7 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    const logout = () => {
-        setUser(null);
-        sessionStorage.clear();
-        localStorage.clear();
-    };
+
 
     return (
         <AuthContext.Provider value={{ user, login, logout, loading }}>

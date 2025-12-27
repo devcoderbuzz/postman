@@ -259,9 +259,26 @@ export function AdminDashboard() {
 
     // --- Action Handlers ---
 
-    const handleDeleteUser = (userId) => {
-        if (window.confirm("delete all users and corresponding app codes assigned")) {
-            setUsers(users.filter(u => u.id !== userId));
+    const handleDeleteUser = async (userId) => {
+        if (window.confirm("Are you sure you want to delete this user and all assigned app codes?")) {
+            try {
+                const { deleteUser } = await import('../services/apiservice');
+                const validUserId = parseInt(userId, 10);
+                if (isNaN(validUserId)) {
+                    alert('Error: Invalid User ID for deletion.');
+                    return;
+                }
+                await deleteUser(validUserId, user?.token);
+
+                // Refresh user list from server
+                await fetchUsers();
+
+                alert('User deleted successfully');
+            } catch (error) {
+                console.error('Failed to delete user:', error);
+                const backendMsg = error.response?.data?.data?.message || error.message;
+                alert(`Error deleting user: ${backendMsg}`);
+            }
         }
     };
 

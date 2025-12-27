@@ -1,6 +1,17 @@
 import axios from 'axios';
 
 const BASE_URL = 'http://localhost:8080/api';
+// Setup Axios Interceptor for 403 handling
+axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 403) {
+            console.warn('Axios Interceptor: 403 Forbidden detected. Dispatching global logout.');
+            window.dispatchEvent(new Event('auth-logout'));
+        }
+        return Promise.reject(error);
+    }
+);
 
 /**
  * Login service to authenticate users.
@@ -391,6 +402,42 @@ export const assignUserToProject = async (userId, projectId, token) => {
         return response.data.data;
     } catch (error) {
         console.error('Error assigning project:', error.response?.data || error.message);
+        throw error;
+    }
+};
+
+/**
+ * Delete User service.
+ * Calls the /users/delete endpoint to delete a user.
+ * 
+ * @param {number} userId - The user ID to delete
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const deleteUser = async (userId, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/users/delete`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: {
+                id: userId
+            }
+        });
+        
+        if (response.data.isError) {
+             const errorDetail = JSON.stringify(response.data.data || response.data);
+             throw new Error(`Failed to delete user. Server response: ${errorDetail}`);
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error deleting user:', error.message);
         throw error;
     }
 };
