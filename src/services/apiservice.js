@@ -37,7 +37,8 @@ export const login = async (username, password) => {
         // The proxy returns { status, data, headers, ... }
         // If data.isError is true, it was a 4xx/5xx from the target
         if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Login failed');
+            console.error('Login Error 1233:', response.data.data.error);   
+             throw new Error(response.data.data.error);
         }
         
         return response.data.data;
@@ -194,7 +195,7 @@ export const updatePassword = async (username, oldPassword, newPassword, token) 
  * @param {string} token - Authorization token
  * @returns {Promise<any>} - The response data
  */
-export const activateUser = async (userId, newPassword, token) => {
+export const activateUser = async (userId,userName, currentPassword, newPassword, token) => {
     try {
         const response = await axios.post('http://localhost:3001/proxy', {
             method: 'POST',
@@ -205,8 +206,10 @@ export const activateUser = async (userId, newPassword, token) => {
             },
             data: {
                 userId: userId,
+                username: userName,
+                currentPassword: currentPassword,
                 newPassword: newPassword,
-                userStatus: 'active'
+                userStatus: 'ACTIVE'
             }
         });
         
@@ -221,6 +224,34 @@ export const activateUser = async (userId, newPassword, token) => {
     }
 };
 
+
+export const resetPassword = async (userId, userName, currentPassword,newPassword, token) => {
+    try {
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/users/reset-password`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            data: {
+                userId: userId,
+                username: userName,
+                currentPassword: currentPassword,
+                newPassword: newPassword
+            }
+        });
+        
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Activation failed');
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error during user activation:', error.message);
+        throw error;
+    }
+};
 /**
  * Create Request Data service.
  * Calls the /requests endpoint to create a new request.

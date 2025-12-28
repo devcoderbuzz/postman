@@ -37,11 +37,13 @@ export function Login() {
         return canvas.toDataURL('image/png');
     };
 
-    const handleResetPassword = async (passwords) => {
+    const handleResetPassword = async (username, passwords) => {
         try {
             setError('');
             await activateUser(
                 tempUser.userId,
+                username,
+                passwords.currentPassword,
                 passwords.newPassword,
                 tempUser.token
             );
@@ -84,7 +86,7 @@ export function Login() {
         try {
             const user = await login(username, password);
             if (user && user.status === 'RESETPASSWORD') {
-                setTempUser({ ...user, originalPassword: password });
+                setTempUser({ ...user, originalPassword: password, username: user.username });
                 setIsResetOpen(true);
                 return;
             }
@@ -102,7 +104,7 @@ export function Login() {
                 setError('Invalid credentials or account inactive');
             }
         } catch (err) {
-            setError('Login service failed. Please check your connection or try again later.');
+            setError(err.message || 'Login failed');
             console.error('Submit Error:', err);
         }
     };

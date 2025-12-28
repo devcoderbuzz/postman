@@ -33,7 +33,7 @@ export function ResetPasswordModal({ isOpen, onClose, onSave, hideCurrentPasswor
             return;
         }
 
-        onSave({ currentPassword, newPassword });
+        onSave(username, { currentPassword, newPassword });
         handleClose();
     };
 
