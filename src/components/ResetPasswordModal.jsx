@@ -9,17 +9,22 @@ export function ResetPasswordModal({ isOpen, onClose, onSave, hideCurrentPasswor
 
     if (!isOpen) return null;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
 
-        if (onSave.length > 1) { // If it expects (passwords, isLoginReset)
-            if (!newPassword || !confirmPassword) {
-                setError('New password fields are required');
-                return;
-            }
-        } else if (!currentPassword || !newPassword || !confirmPassword) {
-            setError('All fields are required');
+        if (onSave.length > 2) { // If it expects (userId, userName, passwords) or similar
+            // This check might be complex depending on how it's used. 
+            // Let's just rely on validation and the callback.
+        }
+
+        if (!newPassword || !confirmPassword) {
+            setError('New password fields are required');
+            return;
+        }
+
+        if (!hideCurrentPassword && !currentPassword) {
+            setError('Current password is required');
             return;
         }
 
@@ -33,8 +38,12 @@ export function ResetPasswordModal({ isOpen, onClose, onSave, hideCurrentPasswor
             return;
         }
 
-        onSave(username, { currentPassword, newPassword });
-        handleClose();
+        try {
+            await onSave(username, { currentPassword, newPassword });
+            handleClose();
+        } catch (err) {
+            setError(err.message || 'Failed to update password');
+        }
     };
 
     const handleClose = () => {

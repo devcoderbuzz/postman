@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import { Moon, Sun, Upload, FolderOpen } from 'lucide-react';
 import { ImageCropper } from './ImageCropper';
 import { ResetPasswordModal } from './ResetPasswordModal';
-import { updateProfilePic } from '../services/apiservice';
+import { updateProfilePic, resetPassword } from '../services/apiservice';
 
 export function Settings({
     user,
@@ -20,11 +20,26 @@ export function Settings({
     const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
     const fileInputRef = useRef(null);
 
-    const handleResetPassword = (passwords) => {
-        // Here we would typically call an API to reset the password
-        console.log("Password reset requested for user:", user?.username);
-        console.log("Details:", passwords);
-        window.alert(`Password for ${user?.username} has been successfully reset!`);
+    const handleResetPassword = async (username, { currentPassword, newPassword }) => {
+        try {
+            if (!user?.id || !user?.token) {
+                throw new Error("User session invalid. Please re-login.");
+            }
+
+            await resetPassword(
+                user.id,
+                user.username,
+                currentPassword,
+                newPassword,
+                user.token
+            );
+
+            window.alert(`Password for ${user?.username} has been successfully reset!`);
+        } catch (error) {
+            console.error('Failed to reset password:', error);
+            // Re-throw so the modal can show the error
+            throw error;
+        }
     };
 
     const handleFileChange = (e) => {
@@ -215,6 +230,7 @@ export function Settings({
                 isOpen={isResetPasswordOpen}
                 onClose={() => setIsResetPasswordOpen(false)}
                 onSave={handleResetPassword}
+                username={user?.username}
             />
         </div>
     );

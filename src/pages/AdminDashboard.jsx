@@ -407,8 +407,13 @@ export function AdminDashboard() {
                 alert('Error: Invalid User ID.');
                 return;
             }
+            if (newStatus == 'RESETPASSWORD') {
+                await updateUser({ id: validUserId, status: newStatus, passwordDetails: "login@123" }, user?.token);
+            } else {
+                await updateUser({ id: validUserId, status: newStatus }, user?.token);
+            }
 
-            await updateUser({ id: validUserId, status: newStatus }, user?.token);
+
 
             // Refresh from server
             await fetchUsers();
@@ -435,6 +440,7 @@ export function AdminDashboard() {
     };
 
     const handleEditUser = async (userToEdit) => {
+        console.log("userToEdit", userToEdit);
         setEditingUser(userToEdit);
         setEditingUserProjectDetails([]);
 
@@ -798,7 +804,7 @@ export function AdminDashboard() {
                                 <span className="text-[10px] text-slate-400 dark:text-slate-500 italic">Affects immediate login access</span>
                             </div>
                             <select
-                                value={editingUser.status || 'active'}
+                                value={editingUser.userStatus || 'active'}
                                 onChange={(e) => handleUpdateUserStatus(editingUser.id, e.target.value)}
                                 className="text-xs font-black bg-slate-50 dark:bg-slate-900 text-red-600 border border-slate-100 dark:border-slate-700 rounded-md px-4 py-2 outline-none transition-all cursor-pointer shadow-sm hover:shadow-md appearance-none min-w-[140px] text-center"
                             >
@@ -839,7 +845,7 @@ export function AdminDashboard() {
                             )}
                         </div>
                         <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800 text-right flex justify-center">
-                            {/* <button onClick={() => { setEditingUser(null); fetchUsers(); }} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Close</button> */}
+
                             <button onClick={() => { setEditingUser(null); fetchUsers(); }} className="bg-red-600 text-white px-8 py-2 rounded text-sm hover:bg-red-700 font-medium">Close</button>
                         </div>
                     </div>

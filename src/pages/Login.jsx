@@ -53,6 +53,7 @@ export function Login() {
             setPassword('');
         } catch (err) {
             setError(err.message || 'Failed to reset password');
+            throw err;
         }
     };
 
