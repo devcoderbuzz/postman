@@ -527,3 +527,36 @@ export const getCollectionsByProjectId = async (projectId) => {
       }, 500);
     });
 };
+
+/**
+ * Create or Update Collections service.
+ * Calls the /collections/create endpoint.
+ * 
+ * @param {Object} collectionData - The collection data object (matches the requested JSON structure)
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data (created/updated collection)
+ */
+export const createUpdateCollections = async (collectionData, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/collections/create`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: collectionData
+        });
+        
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to create/update collection');
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error creating/updating collection:', error.message);
+        throw error;
+    }
+};

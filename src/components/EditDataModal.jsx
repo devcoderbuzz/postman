@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical, Save, Folder, FileText } from 'lucide-react';
+import { createUpdateCollections, getAllAppCodesForAdmin } from '../services/apiservice';
 
 import { ConfirmationModal } from './ConfirmationModal';
 import { ImportModal } from './ImportModal';
@@ -45,7 +46,6 @@ export function EditDataPanel() {
         const fetchCodes = async () => {
             if (user) {
                 try {
-                    const { getAllAppCodesForAdmin } = await import('../services/apiservice');
                     const hierarchyData = await getAllAppCodesForAdmin(user);
 
                     // Logic to robustly determine assignments
@@ -94,7 +94,8 @@ export function EditDataPanel() {
                 if (appCode.collections && Array.isArray(appCode.collections)) {
                     setCollections(appCode.collections.map(c => ({
                         ...c,
-                        originalName: c.name // Track original name from source
+                        originalName: c.name, // Track original name from source
+                        modified: false
                     })));
                 } else {
                     setCollections([]);
@@ -193,7 +194,8 @@ export function EditDataPanel() {
                 if (col.collectionId === collectionId) {
                     return {
                         ...col,
-                        requests: col.requests.filter(r => r.requestId !== requestId)
+                        requests: col.requests.filter(r => r.requestId !== requestId),
+                        modified: true
                     };
                 }
                 return col;
@@ -213,7 +215,8 @@ export function EditDataPanel() {
                 if (col.collectionId === creatingForCollection) {
                     return {
                         ...col,
-                        requests: [...(col.requests || []), updatedRequest]
+                        requests: [...(col.requests || []), updatedRequest],
+                        modified: true
                     };
                 }
                 return col;
@@ -226,7 +229,7 @@ export function EditDataPanel() {
                 if (reqIndex !== -1) {
                     const newRequests = [...col.requests];
                     newRequests[reqIndex] = updatedRequest;
-                    return { ...col, requests: newRequests };
+                    return { ...col, requests: newRequests, modified: true };
                 }
                 return col;
             }));
@@ -266,13 +269,44 @@ export function EditDataPanel() {
         setRenameValue('');
     };
 
-    const handleSaveCollectionName = (e, colId) => {
+    const handleSaveCollection = async (e, collection) => {
         e.stopPropagation();
-        setCollections(collections.map(col =>
-            col.collectionId === colId
-                ? { ...col, originalName: col.name }
-                : col
-        ));
+        setIsLoading(true);
+        try {
+            const payload = {
+                name: collection.name,
+                description: collection.description || `Collection for project ${selectedProject} `,
+                projectEntity: {
+                    Id: parseInt(selectedAppCodeId)
+                },
+                requests: (collection.requests || []).map(req => ({
+                    name: req.name,
+                    url: req.url,
+                    method: req.method,
+                    body: typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {}),
+                    headers: JSON.stringify(req.headers || {})
+                }))
+            };
+
+            const result = await createUpdateCollections(payload);
+
+            setCollections(collections.map(col =>
+                col.collectionId === collection.collectionId
+                    ? {
+                        ...col,
+                        originalName: col.name,
+                        modified: false,
+                        collectionId: result.collectionId || col.collectionId
+                    }
+                    : col
+            ));
+            alert('Collection saved successfully!');
+        } catch (error) {
+            console.error('Error saving collection:', error);
+            alert('Failed to save collection: ' + error.message);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const handleImport = (type, data) => {
@@ -457,7 +491,7 @@ export function EditDataPanel() {
                                                 className="flex items-center gap-2 overflow-hidden flex-1 cursor-pointer"
                                                 onClick={() => !renamingCollectionId && toggleCollection(col.collectionId)}
                                             >
-                                                <span className={`text-xs truncate flex-1 ${(col.name !== col.originalName || col.collectionId.toString().startsWith('new-'))
+                                                <span className={`text-xs truncate flex-1 ${(col.name !== col.originalName || col.modified || col.collectionId.toString().startsWith('new-'))
                                                     ? 'font-bold text-slate-900 dark:text-white'
                                                     : 'text-slate-700 dark:text-slate-300'
                                                     }`}>
@@ -465,11 +499,12 @@ export function EditDataPanel() {
                                                 </span>
 
                                                 {/* Show Save button if modified */}
-                                                {(col.name !== col.originalName || col.collectionId.toString().startsWith('new-')) && (
+                                                {(col.name !== col.originalName || col.modified || col.collectionId.toString().startsWith('new-')) && (
                                                     <button
-                                                        onClick={(e) => handleSaveCollectionName(e, col.collectionId)}
-                                                        className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20 rounded"
-                                                        title="Save Collection Name"
+                                                        onClick={(e) => handleSaveCollection(e, col)}
+                                                        className="p-1 text-green-600 hover:text-green-700 hover:bg-green-50 dark:hover:bg-green-900/20 rounded disabled:opacity-50"
+                                                        title="Save Collection"
+                                                        disabled={isLoading}
                                                     >
                                                         <Save className="w-3 h-3" />
                                                     </button>
