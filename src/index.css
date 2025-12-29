@@ -61,6 +61,12 @@
   --bg-primary: #ffffff;
   --bg-secondary: #f8fafc;
   --bg-tertiary: #f1f5f9;
+  --bg-surface: #ffffff;
+  --bg-sidebar: #f8fafc;
+  --border-color: #e2e8f0;    /* Slate 200 */
+  --text-primary: #0f172a;    /* Slate 900 */
+  --text-secondary: #64748b;  /* Slate 500 */
+  --accent-primary: #ef4444;  /* Red-500 accent */
 }
 
 [data-theme='dark'] {

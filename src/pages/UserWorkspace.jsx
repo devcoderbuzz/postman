@@ -13,7 +13,7 @@ import { HistoryPanel } from '../components/HistoryPanel';
 import { EnvironmentManager } from '../components/EnvironmentManager';
 import { RequestTabs } from '../components/RequestTabs';
 import { Footer } from '../components/Footer';
-import { X, Save, Moon, Sun } from 'lucide-react';
+import { X, Save, Moon, Sun, Globe } from 'lucide-react';
 import { cn, replaceEnvVariables } from '../lib/utils';
 import { SaveRequestModal } from '../components/SaveRequestModal';
 import { Header } from '../components/Header';
@@ -1011,11 +1011,11 @@ export function UserWorkspace() {
             />
 
             <Layout activeView={activeView} setActiveView={setActiveView}>
-                {activeView === 'editData' ? (
+                {(activeView === 'editData' || activeView === 'appcodes') ? (
                     <EditDataPanel />
                 ) : activeView === 'environments' ? (
                     <div className="flex-1 flex overflow-hidden">
-                        <div className="w-96 border-r border-slate-200 dark:border-slate-800 p-6 overflow-auto">
+                        <div className="w-80 border-r border-slate-200 dark:border-[var(--border-color)] p-6 overflow-auto bg-white dark:bg-[var(--bg-secondary)]">
                             <EnvironmentManager
                                 environments={environments}
                                 setEnvironments={setEnvironments}
@@ -1023,8 +1023,45 @@ export function UserWorkspace() {
                                 setActiveEnv={setActiveEnv}
                             />
                         </div>
-                        <div className="flex-1 flex items-center justify-center text-slate-500 dark:text-slate-400">
-                            <p className="text-sm">Select an environment to configure variables</p>
+                        <div className="flex-1 p-8 overflow-auto bg-slate-50 dark:bg-[var(--bg-primary)]">
+                            {activeEnv ? (
+                                <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h2 className="text-xl font-bold text-slate-900 dark:text-[var(--text-primary)]">
+                                                {environments.find(e => e.id === activeEnv)?.name}
+                                            </h2>
+                                            <p className="text-sm text-slate-500 dark:text-[var(--text-secondary)]">Environment variables are used to store and reuse values in your requests.</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white dark:bg-[var(--bg-surface)] rounded-xl border border-slate-200 dark:border-[var(--border-color)] shadow-sm overflow-hidden">
+                                        <div className="p-4 border-b border-slate-100 dark:border-[var(--border-color)] bg-slate-50/50 dark:bg-white/5">
+                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider dark:text-[var(--text-secondary)]">Variables</span>
+                                        </div>
+                                        <div className="p-4">
+                                            <KeyValueEditor
+                                                pairs={environments.find(e => e.id === activeEnv)?.variables || []}
+                                                setPairs={(newVariables) => {
+                                                    setEnvironments(prev => prev.map(env =>
+                                                        env.id === activeEnv ? { ...env, variables: newVariables } : env
+                                                    ));
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-slate-500 dark:text-[var(--text-secondary)] gap-4">
+                                    <div className="w-16 h-16 bg-slate-100 dark:bg-[var(--bg-secondary)] rounded-full flex items-center justify-center">
+                                        <Globe className="w-8 h-8 opacity-20 text-red-500" />
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="font-semibold text-slate-900 dark:text-[var(--text-primary)]">No Environment Selected</p>
+                                        <p className="text-sm">Select an environment from the list to configure its variables.</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 ) : activeView === 'settings' ? (
@@ -1043,12 +1080,20 @@ export function UserWorkspace() {
                 ) : (
                     <>
                         <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50/50 dark:bg-[var(--bg-secondary)]/50 backdrop-blur-sm">
-                            <div className="flex items-center gap-2">
-                                {activeEnv && (
-                                    <span className="text-xs px-2.5 py-1 bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-lg border border-slate-300 dark:border-slate-700 font-medium italic">
-                                        {environments.find(e => e.id === activeEnv)?.name}
-                                    </span>
-                                )}
+                            <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 bg-slate-100 dark:bg-[var(--bg-surface)] px-2 py-1 rounded-lg border border-slate-200 dark:border-[var(--border-color)]">
+                                    <Globe className="w-3.5 h-3.5 text-red-500" />
+                                    <select
+                                        value={activeEnv || ''}
+                                        onChange={(e) => setActiveEnv(e.target.value || null)}
+                                        className="bg-transparent text-xs font-semibold text-slate-700 dark:text-[var(--text-primary)] outline-none border-none pr-1 cursor-pointer min-w-[120px]"
+                                    >
+                                        <option value="">No Env</option>
+                                        {environments.map(env => (
+                                            <option key={env.id} value={env.id}>{env.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
                             </div>
                             <button
                                 onClick={saveToCollection}
