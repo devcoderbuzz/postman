@@ -560,3 +560,68 @@ export const createUpdateCollections = async (collectionData, token) => {
         throw error;
     }
 };
+
+/**
+ * Get environment details.
+ * Calls the /environments/search endpoint.
+ * 
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The environment details
+ */
+export const getEnvDetails = async (token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/environments/search`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: {}
+        });
+        
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to fetch environment details');
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error fetching environment details:', error.message);
+        throw error;
+    }
+};
+
+/**
+ * Update environment details.
+ * Calls the /environments/update endpoint.
+ * 
+ * @param {Object} envData - The environment data (envName and variables object)
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const updateEnvDetails = async (envData, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/environments/update`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: envData
+        });
+        
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to update environment details');
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error updating environment details:', error.message);
+        throw error;
+    }
+};

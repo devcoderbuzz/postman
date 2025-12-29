@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { getCollectionsByProjectId, getAllProjects } from '../services/apiservice';
+import { getCollectionsByProjectId, getAllProjects, getEnvDetails, updateEnvDetails } from '../services/apiservice';
 import { Layout } from '../components/Layout';
 import { RequestBar } from '../components/RequestBar';
 import { Tabs } from '../components/Tabs';
@@ -13,7 +13,7 @@ import { HistoryPanel } from '../components/HistoryPanel';
 import { EnvironmentManager } from '../components/EnvironmentManager';
 import { RequestTabs } from '../components/RequestTabs';
 import { Footer } from '../components/Footer';
-import { X, Save, Moon, Sun, Globe } from 'lucide-react';
+import { X, Save, Moon, Sun, Globe, Check } from 'lucide-react';
 import { cn, replaceEnvVariables } from '../lib/utils';
 import { SaveRequestModal } from '../components/SaveRequestModal';
 import { Header } from '../components/Header';
@@ -263,6 +263,7 @@ export function UserWorkspace() {
     const [errorMessage, setErrorMessage] = useState('');
     const [profilePic, setProfilePic] = useState(localStorage.getItem('profilePic') || '');
     const [localCollectionsPath, setLocalCollectionsPath] = useState(localStorage.getItem('localCollectionsPath') || '');
+    const [showEnvSaveSuccess, setShowEnvSaveSuccess] = useState(false);
 
     const handleLogout = () => {
         logout();
@@ -574,6 +575,28 @@ export function UserWorkspace() {
                             }
                         } catch (e) { console.error(e); }
                     }
+                }
+
+                // Fetch Environment Details
+                try {
+                    const envData = await getEnvDetails(user.token);
+                    if (envData && typeof envData === 'object') {
+                        const formattedEnvs = Object.keys(envData).map(envName => {
+                            const config = envData[envName];
+                            return {
+                                id: envName,
+                                name: envName,
+                                variables: Object.keys(config).map(key => ({
+                                    key: key,
+                                    value: config[key],
+                                    active: true
+                                }))
+                            };
+                        });
+                        setEnvironments(formattedEnvs);
+                    }
+                } catch (e) {
+                    console.error('Failed to fetch environment details in initWorkspace:', e);
                 }
             }
         };
@@ -1039,7 +1062,7 @@ export function UserWorkspace() {
                                         <div className="p-4 border-b border-slate-100 dark:border-[var(--border-color)] bg-slate-50/50 dark:bg-white/5">
                                             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider dark:text-[var(--text-secondary)]">Variables</span>
                                         </div>
-                                        <div className="p-4">
+                                        <div className="p-4 space-y-4">
                                             <KeyValueEditor
                                                 pairs={environments.find(e => e.id === activeEnv)?.variables || []}
                                                 setPairs={(newVariables) => {
@@ -1048,6 +1071,43 @@ export function UserWorkspace() {
                                                     ));
                                                 }}
                                             />
+                                            <div className="flex items-center justify-center gap-3 pt-2">
+                                                <button
+                                                    onClick={async () => {
+                                                        const currentEnv = environments.find(e => e.id === activeEnv);
+                                                        if (currentEnv) {
+                                                            const variablesObj = currentEnv.variables.reduce((acc, v) => {
+                                                                if (v.key) acc[v.key] = v.value;
+                                                                return acc;
+                                                            }, {});
+
+                                                            try {
+                                                                await updateEnvDetails({
+                                                                    envName: currentEnv.name,
+                                                                    variables: variablesObj
+                                                                }, user.token);
+
+                                                                localStorage.setItem('environments', JSON.stringify(environments));
+                                                                setShowEnvSaveSuccess(true);
+                                                                setTimeout(() => setShowEnvSaveSuccess(false), 2000);
+                                                            } catch (e) {
+                                                                console.error('Failed to update environment details:', e);
+                                                                setErrorMessage('Failed to save environment changes to the server.');
+                                                            }
+                                                        }
+                                                    }}
+                                                    className="flex items-center gap-2 px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-all shadow-lg shadow-red-600/20 active:scale-95"
+                                                >
+                                                    <Save className="w-4 h-4" />
+                                                    Save
+                                                </button>
+                                                {showEnvSaveSuccess && (
+                                                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-medium text-sm animate-in fade-in slide-in-from-left-2 duration-200">
+                                                        <Check className="w-4 h-4" />
+                                                        Changes saved successfully
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1079,21 +1139,19 @@ export function UserWorkspace() {
                     />
                 ) : (
                     <>
-                        <div className="flex items-center justify-between px-4 py-2.5 bg-slate-50/50 dark:bg-[var(--bg-secondary)]/50 backdrop-blur-sm">
-                            <div className="flex items-center gap-3">
-                                <div className="flex items-center gap-2 bg-slate-100 dark:bg-[var(--bg-surface)] px-2 py-1 rounded-lg border border-slate-200 dark:border-[var(--border-color)]">
-                                    <Globe className="w-3.5 h-3.5 text-red-500" />
-                                    <select
-                                        value={activeEnv || ''}
-                                        onChange={(e) => setActiveEnv(e.target.value || null)}
-                                        className="bg-transparent text-xs font-semibold text-slate-700 dark:text-[var(--text-primary)] outline-none border-none pr-1 cursor-pointer min-w-[120px]"
-                                    >
-                                        <option value="">No Env</option>
-                                        {environments.map(env => (
-                                            <option key={env.id} value={env.id}>{env.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
+                        <div className="flex items-center justify-end px-4 py-2.5 bg-slate-50/50 dark:bg-[var(--bg-secondary)]/50 backdrop-blur-sm gap-3">
+                            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 transition-all shadow-sm">
+                                <Globe className="w-3.5 h-3.5 text-red-500" />
+                                <select
+                                    value={activeEnv || ''}
+                                    onChange={(e) => setActiveEnv(e.target.value || null)}
+                                    className="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-200 outline-none border-none pr-1 cursor-pointer min-w-[100px]"
+                                >
+                                    <option value="">No Env</option>
+                                    {environments.map(env => (
+                                        <option key={env.id} value={env.id}>{env.name}</option>
+                                    ))}
+                                </select>
                             </div>
                             <button
                                 onClick={saveToCollection}
