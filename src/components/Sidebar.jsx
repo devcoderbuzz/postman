@@ -53,14 +53,12 @@ export function Sidebar({ activeView, setActiveView }) {
                         onClick={() => toggleView(user.role === 'admin' ? 'appcodes' : 'editData')}
                     />
                 )}
-                {(!user || user.role !== 'admin') && (
-                    <SidebarItem
-                        icon={Globe}
-                        label="Environments"
-                        active={activeView === 'environments'}
-                        onClick={() => toggleView('environments')}
-                    />
-                )}
+                <SidebarItem
+                    icon={Globe}
+                    label="Environments"
+                    active={activeView === 'environments'}
+                    onClick={() => toggleView('environments')}
+                />
                 <div className="flex-1" />
                 <SidebarItem
                     icon={Settings}

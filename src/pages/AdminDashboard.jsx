@@ -4,8 +4,12 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
 import { Settings } from '../components/Settings';
 import { Header } from '../components/Header';
-import { Settings as SettingsIcon, LogOut, Layout as LayoutIcon, User as UserIcon, Shield } from 'lucide-react';
+import { getEnvDetails, updateEnvDetails } from '../services/apiservice';
+import { EnvironmentManager } from '../components/EnvironmentManager';
+import { KeyValueEditor } from '../components/KeyValueEditor';
+import { Settings as SettingsIcon, LogOut, Layout as LayoutIcon, User as UserIcon, Shield, Save, Check, Globe, X } from 'lucide-react';
 import { Layout } from '../components/Layout';
+
 
 
 
@@ -18,6 +22,12 @@ export function AdminDashboard() {
     // Local state for management
     const [users, setUsers] = useState([]);
     const [appCodes, setAppCodes] = useState([]);
+    const [environments, setEnvironments] = useState([]);
+    const [activeEnv, setActiveEnv] = useState(null);
+    const [showEnvSaveSuccess, setShowEnvSaveSuccess] = useState(false);
+    const [showUserStatusSuccess, setShowUserStatusSuccess] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+
     const [allHierarchyData, setAllHierarchyData] = useState([]);
 
     // Form states
@@ -51,7 +61,36 @@ export function AdminDashboard() {
     const [assignProjectCode, setAssignProjectCode] = useState('');
     const [assignModuleName, setAssignModuleName] = useState('');
     const [selectedAppCodeId, setSelectedAppCodeId] = useState(''); // For the dropdown in "Add" modal
-    const [activeView, setActiveView] = useState('users'); // 'users', 'appcodes', or 'settings'
+    const [activeView, setActiveView] = useState('users'); // 'users', 'appcodes', 'settings', or 'environments'
+
+    const fetchEnvironments = async () => {
+        if (user && user.token) {
+            try {
+                const envData = await getEnvDetails(user.token);
+                if (envData && typeof envData === 'object') {
+                    const formattedEnvs = Object.keys(envData).map(envName => {
+                        const config = envData[envName];
+                        return {
+                            id: envName,
+                            name: envName,
+                            variables: Object.keys(config).map(key => ({
+                                key: key,
+                                value: config[key],
+                                active: true
+                            }))
+                        };
+                    });
+                    setEnvironments(formattedEnvs);
+                    if (formattedEnvs.length > 0 && !activeEnv) {
+                        setActiveEnv(formattedEnvs[0].id);
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to fetch environment details:', e);
+            }
+        }
+    };
+
     const [profilePic, setProfilePic] = useState(localStorage.getItem('profilePic') || '');
     const [localCollectionsPath, setLocalCollectionsPath] = useState(localStorage.getItem('localCollectionsPath') || '');
     const [layout, setLayout] = useState(localStorage.getItem('layout') || 'horizontal');
@@ -116,6 +155,7 @@ export function AdminDashboard() {
     useEffect(() => {
         fetchUsers();
         fetchAppCodes();
+        fetchEnvironments();
     }, [user]);
 
     // Hydrate users with assigned app codes when hierarchy data is available
@@ -172,6 +212,8 @@ export function AdminDashboard() {
             fetchUsers();
         } else if (activeView === 'appcodes') {
             fetchAppCodes();
+        } else if (activeView === 'environments') {
+            fetchEnvironments();
         }
     }, [activeView]);
 
@@ -400,6 +442,7 @@ export function AdminDashboard() {
     };
 
     const handleUpdateUserStatus = async (userId, newStatus) => {
+        setShowUserStatusSuccess(false);
         try {
             const { updateUser } = await import('../services/apiservice');
             const validUserId = parseInt(userId, 10);
@@ -408,33 +451,43 @@ export function AdminDashboard() {
                 return;
             }
             if (newStatus == 'RESETPASSWORD') {
-                await updateUser({ id: validUserId, status: newStatus, passwordDetails: "login@123" }, user?.token);
+                await updateUser({ id: validUserId, status: newStatus, userStatus: newStatus, passwordDetails: "login@123" }, user?.token);
             } else {
-                await updateUser({ id: validUserId, status: newStatus }, user?.token);
+                await updateUser({ id: validUserId, status: newStatus, userStatus: newStatus }, user?.token);
             }
 
+            // Update local state immediately for both the table and editing modal
+            setUsers(prevUsers => prevUsers.map(u =>
+                (u.id === validUserId || u.id == userId || u.userId === validUserId || u.userId == userId)
+                    ? { ...u, userStatus: newStatus }
+                    : u
+            ));
 
+            if (editingUser && (editingUser.id === validUserId || editingUser.userId === validUserId || editingUser.id == userId || editingUser.userId == userId)) {
+                setEditingUser(prev => ({ ...prev, userStatus: newStatus }));
+            }
 
-            // Refresh from server
+            // Refresh from server to ensure sync
             await fetchUsers();
 
-            // Update local editing user if open
-            if (editingUser && editingUser.id === userId) {
-                setEditingUser(prev => ({ ...prev, status: newStatus }));
-            }
+            // Show persistent success message in the modal
+            setShowUserStatusSuccess(true);
+            // We'll leave it visible until the modal is closed for "staying" effect
 
-            alert(`User status updated to ${newStatus}`);
+            // Keep the alert for unambiguous confirmation
+
         } catch (error) {
             console.error('Failed to update status:', error);
-            const backendMsg = error.response?.data?.data?.message || error.message;
+            const backendMsg = error.response?.data?.data?.message || error.response?.data?.data?.error || error.message;
             alert(`Error updating status: ${backendMsg}`);
         }
+
     };
 
     const handleToggleUserStatus = (userId) => {
         const targetUser = users.find(u => u.id === userId);
         if (targetUser) {
-            const nextStatus = targetUser.status === 'active' ? 'inactive' : 'active';
+            const nextStatus = targetUser.userStatus === 'ACTIVE' ? 'INACTIVE' : 'ACTIVE';
             handleUpdateUserStatus(userId, nextStatus);
         }
     };
@@ -453,7 +506,14 @@ export function AdminDashboard() {
             try {
                 const { GetProjectDetails } = await import('../services/apiservice');
                 const details = await GetProjectDetails(projectIds, user?.token);
-                setEditingUserProjectDetails(details || []);
+
+                // Only set details if we are still editing the same user
+                setEditingUser(current => {
+                    if (current && (current.userId === userId || current.id === userId)) {
+                        setEditingUserProjectDetails(details || []);
+                    }
+                    return current;
+                });
             } catch (error) {
                 console.error('Failed to fetch project details:', error);
             } finally {
@@ -461,6 +521,7 @@ export function AdminDashboard() {
             }
         }
     };
+
 
     // Update collections when app code is selected
     useEffect(() => {
@@ -523,8 +584,97 @@ export function AdminDashboard() {
                         localCollectionsPath={localCollectionsPath}
                         setLocalCollectionsPath={setLocalCollectionsPath}
                     />
+                ) : activeView === 'environments' ? (
+                    <div className="flex-1 flex overflow-hidden">
+                        <div className="w-80 border-r border-slate-200 dark:border-[var(--border-color)] p-6 overflow-auto bg-white dark:bg-[var(--bg-secondary)]">
+                            <EnvironmentManager
+                                environments={environments}
+                                setEnvironments={setEnvironments}
+                                activeEnv={activeEnv}
+                                setActiveEnv={setActiveEnv}
+                            />
+                        </div>
+                        <div className="flex-1 p-8 overflow-auto bg-slate-50 dark:bg-[var(--bg-primary)]">
+                            {activeEnv ? (
+                                <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h2 className="text-xl font-bold text-slate-900 dark:text-[var(--text-primary)]">
+                                                {environments.find(e => e.id === activeEnv)?.name}
+                                            </h2>
+                                            <p className="text-sm text-slate-500 dark:text-[var(--text-secondary)]">Environment variables are used to store and reuse values in your requests.</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="bg-white dark:bg-[var(--bg-surface)] rounded-xl border border-slate-200 dark:border-[var(--border-color)] shadow-sm overflow-hidden">
+                                        <div className="p-4 border-b border-slate-100 dark:border-[var(--border-color)] bg-slate-50/50 dark:bg-white/5">
+                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider dark:text-[var(--text-secondary)]">Variables</span>
+                                        </div>
+                                        <div className="p-4 space-y-4">
+                                            <KeyValueEditor
+                                                pairs={environments.find(e => e.id === activeEnv)?.variables || []}
+                                                setPairs={(newVariables) => {
+                                                    setEnvironments(prev => prev.map(env =>
+                                                        env.id === activeEnv ? { ...env, variables: newVariables } : env
+                                                    ));
+                                                }}
+                                            />
+                                            <div className="flex items-center justify-center gap-3 pt-2">
+                                                <button
+                                                    onClick={async () => {
+                                                        const currentEnv = environments.find(e => e.id === activeEnv);
+                                                        if (currentEnv) {
+                                                            const variablesObj = currentEnv.variables.reduce((acc, v) => {
+                                                                if (v.key) acc[v.key] = v.value;
+                                                                return acc;
+                                                            }, {});
+
+                                                            try {
+                                                                await updateEnvDetails({
+                                                                    envName: currentEnv.name,
+                                                                    variables: variablesObj
+                                                                }, user.token);
+
+                                                                localStorage.setItem('environments', JSON.stringify(environments));
+                                                                setShowEnvSaveSuccess(true);
+                                                                setTimeout(() => setShowEnvSaveSuccess(false), 2000);
+                                                            } catch (e) {
+                                                                console.error('Failed to update environment details:', e);
+                                                                setErrorMessage('Failed to save environment changes to the server.');
+                                                            }
+                                                        }
+                                                    }}
+                                                    className="flex items-center gap-2 px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-all shadow-lg shadow-red-600/20 active:scale-95"
+                                                >
+                                                    <Save className="w-4 h-4" />
+                                                    Save
+                                                </button>
+                                                {showEnvSaveSuccess && (
+                                                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-medium text-sm animate-in fade-in slide-in-from-left-2 duration-200">
+                                                        <Check className="w-4 h-4" />
+                                                        Changes saved successfully
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
+                                    <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-400">
+                                        <Globe className="w-8 h-8" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Environment Selected</h3>
+                                        <p className="text-sm text-slate-500 max-w-xs mx-auto">Select an environment from the sidebar or create a new one to manage variables.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 ) : (
                     <div className="flex-1 flex flex-col h-full overflow-hidden">
+
                         {/* Scrollable Content Area */}
                         <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar">
 
@@ -796,7 +946,7 @@ export function AdminDashboard() {
                     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md overflow-hidden">
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
                             <h3 className="font-bold">Edit Access<span className="ml-3 text-slate-600 dark:text-slate-400 font-medium">{editingUser.userName || editingUser.username}</span></h3>
-                            <button onClick={() => { setEditingUser(null); fetchUsers(); }} className="text-slate-500 hover:text-slate-700">✕</button>
+                            <button onClick={() => { setEditingUser(null); setShowUserStatusSuccess(false); fetchUsers(); }} className="text-slate-500 hover:text-slate-700">✕</button>
                         </div>
                         <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/30 dark:bg-slate-900/10 flex justify-between items-center">
                             <div className="flex flex-col">
@@ -814,6 +964,12 @@ export function AdminDashboard() {
                                 <option value="RESETPASSWORD">RESET PASSWORD</option>
                             </select>
                         </div>
+                        {showUserStatusSuccess && (
+                            <div className="px-6 py-2 bg-green-50 dark:bg-green-900/20 flex items-center gap-2 text-green-600 dark:text-green-400 text-xs font-bold animate-in fade-in slide-in-from-top-1 duration-200 border-b border-green-100 dark:border-green-900/30">
+                                <Check className="w-3 h-3" />
+                                Status updated successfully
+                            </div>
+                        )}
 
                         <div className="p-6">
                             <h4 className="text-sm font-semibold mb-3 text-slate-600 dark:text-slate-400">Assigned App Codes</h4>
@@ -846,7 +1002,7 @@ export function AdminDashboard() {
                         </div>
                         <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800 text-right flex justify-center">
 
-                            <button onClick={() => { setEditingUser(null); fetchUsers(); }} className="bg-red-600 text-white px-8 py-2 rounded text-sm hover:bg-red-700 font-medium">Close</button>
+                            <button onClick={() => { setEditingUser(null); setShowUserStatusSuccess(false); fetchUsers(); }} className="bg-red-600 text-white px-8 py-2 rounded text-sm hover:bg-red-700 font-medium">Close</button>
                         </div>
                     </div>
                 </div>

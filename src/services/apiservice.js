@@ -69,9 +69,9 @@ export const register = async (userData) => {
             },
             data: userData
         });
-        
+        console.log('Register Response:', response.data);
         if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Registration failed');
+             throw new Error(response.data.data?.error || response.data.statusText || 'Registration failed');
         }
         
         return response.data.data;

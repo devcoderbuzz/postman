@@ -73,7 +73,7 @@ export function Login() {
                 status: 'PENDING',
                 profileImage: profileImageData
             });
-            window.alert('Registration successful! You can now login.');
+            window.alert('Registration successful!, please wait for admin to approve. ');
             setIsRegistering(false);
             setUsername(regUsername);
         } catch (err) {
