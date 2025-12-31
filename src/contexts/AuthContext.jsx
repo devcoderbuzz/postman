@@ -46,10 +46,7 @@ export const AuthProvider = ({ children }) => {
                     return { ...data, needsReset: true };
                 }
 
-                if (data.status && data.status.toLowerCase() !== 'active') {
-                    alert('User account is not active. Please contact support.');
-                    return null;
-                }
+
 
                 // Determine role. Backend might return it, or we use defaults for now.
                 // Assuming backend returns 'role', otherwise fallback to mock logic.

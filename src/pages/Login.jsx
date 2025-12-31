@@ -102,7 +102,7 @@ export function Login() {
                     navigate('/workspace');
                 }
             } else {
-                setError('Invalid credentials or account inactive');
+                //setError('Invalid credentials or account inactive');
             }
         } catch (err) {
             setError(err.message || 'Login failed');
