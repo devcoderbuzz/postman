@@ -53,6 +53,15 @@
 @theme {
   --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  /* Tighter border radius globally */
+  --radius-sm: 0.1rem;    /* 1.6px - Sharper small */
+  --radius: 0.2rem;       /* 3.2px - Default */
+  --radius-md: 0.3rem;    /* 4.8px - Medium */
+  --radius-lg: 0.4rem;    /* 6.4px - Large (was 8px) */
+  --radius-xl: 0.6rem;    /* 9.6px - XL (was 12px) */
+  --radius-2xl: 0.8rem;   /* 12.8px - 2XL (was 16px) */
+  --radius-3xl: 1.25rem;  /* 20px - 3XL (was 24px) */
 }
 
 :root {

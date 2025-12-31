@@ -7,7 +7,7 @@ import { Header } from '../components/Header';
 import { getEnvDetails, updateEnvDetails } from '../services/apiservice';
 import { EnvironmentManager } from '../components/EnvironmentManager';
 import { KeyValueEditor } from '../components/KeyValueEditor';
-import { Settings as SettingsIcon, LogOut, Layout as LayoutIcon, User as UserIcon, Shield, Save, Check, Globe, X } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut, Layout as LayoutIcon, User as UserIcon, Shield, Save, Check, Globe, X, ChevronDown } from 'lucide-react';
 import { Layout } from '../components/Layout';
 
 
@@ -768,55 +768,71 @@ export function AdminDashboard() {
                                     <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex-shrink-0">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-4">
-                                                <h2 className="text-lg font-bold whitespace-nowrap">App Code</h2>
+
 
                                                 {/* Project Dropdown */}
-                                                <select
-                                                    value={selectedProjectCode}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value;
-                                                        setSelectedProjectCode(val);
-                                                        setSelectedModuleName(''); // Reset module
-                                                        setSelectedAppCode(''); // Reset final selection
-                                                    }}
-                                                    className="w-48 border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700 focus:border-red-500 outline-none"
-                                                >
-                                                    <option value="">-- Project --</option>
-                                                    {[...new Set(appCodes.map(ac => ac.projectName))].map(projName => (
-                                                        <option key={projName} value={projName}>
-                                                            {projName}
-                                                        </option>
-                                                    ))}
-                                                </select>
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Project:</span>
+                                                    <div className="relative">
+                                                        <select
+                                                            value={selectedProjectCode}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value;
+                                                                setSelectedProjectCode(val);
+                                                                setSelectedModuleName(''); // Reset module
+                                                                setSelectedAppCode(''); // Reset final selection
+                                                            }}
+                                                            className="w-48 appearance-none border rounded-md p-2 pr-8 text-sm dark:bg-slate-900 dark:border-slate-700 focus:border-red-500 outline-none cursor-pointer"
+                                                        >
+                                                            <option value="">-- Select Project --</option>
+                                                            {[...new Set(appCodes.map(ac => ac.projectName))].map(projName => (
+                                                                <option key={projName} value={projName}>
+                                                                    {projName}
+                                                                </option>
+                                                            ))}
+                                                        </select>
+                                                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-slate-500">
+                                                            <ChevronDown className="w-4 h-4" />
+                                                        </div>
+                                                    </div>
+                                                </div>
 
                                                 {/* Module Dropdown */}
-                                                <select
-                                                    value={selectedModuleName}
-                                                    onChange={(e) => {
-                                                        const val = e.target.value;
-                                                        setSelectedModuleName(val);
-                                                        if (selectedProjectCode && val) {
-                                                            const found = appCodes.find(ac => ac.projectName === selectedProjectCode && ac.moduleName === val);
-                                                            if (found) {
-                                                                setSelectedAppCode(found.id);
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Module:</span>
+                                                    <div className="relative">
+                                                        <select
+                                                            value={selectedModuleName}
+                                                            onChange={(e) => {
+                                                                const val = e.target.value;
+                                                                setSelectedModuleName(val);
+                                                                if (selectedProjectCode && val) {
+                                                                    const found = appCodes.find(ac => ac.projectName === selectedProjectCode && ac.moduleName === val);
+                                                                    if (found) {
+                                                                        setSelectedAppCode(found.id);
+                                                                    }
+                                                                } else {
+                                                                    setSelectedAppCode('');
+                                                                }
+                                                            }}
+                                                            className="w-48 appearance-none border rounded-md p-2 pr-8 text-sm dark:bg-slate-900 dark:border-slate-700 focus:border-red-500 outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            disabled={!selectedProjectCode}
+                                                        >
+                                                            <option value="">-- Select Module --</option>
+                                                            {appCodes
+                                                                .filter(ac => ac.projectName === selectedProjectCode)
+                                                                .map(ac => (
+                                                                    <option key={ac.moduleName} value={ac.moduleName}>
+                                                                        {ac.moduleName}
+                                                                    </option>
+                                                                ))
                                                             }
-                                                        } else {
-                                                            setSelectedAppCode('');
-                                                        }
-                                                    }}
-                                                    className="w-48 border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700 focus:border-red-500 outline-none"
-                                                    disabled={!selectedProjectCode}
-                                                >
-                                                    <option value="">-- Module --</option>
-                                                    {appCodes
-                                                        .filter(ac => ac.projectName === selectedProjectCode)
-                                                        .map(ac => (
-                                                            <option key={ac.moduleName} value={ac.moduleName}>
-                                                                {ac.moduleName}
-                                                            </option>
-                                                        ))
-                                                    }
-                                                </select>
+                                                        </select>
+                                                        <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-slate-500">
+                                                            <ChevronDown className="w-4 h-4" />
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             </div>
                                             <button
                                                 onClick={() => setIsCreatingAppCode(true)}
