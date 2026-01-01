@@ -23,6 +23,17 @@ const logToFile = (message) => {
   }
 };
 
+const decodeToken = (token) => {
+    try {
+        if (!token || !token.includes('.')) return null;
+        const base64Payload = token.split('.')[1];
+        const payload = Buffer.from(base64Payload, 'base64').toString();
+        return JSON.parse(payload);
+    } catch (e) {
+        return null;
+    }
+};
+
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
@@ -111,9 +122,19 @@ app.post('/proxy', async (req, res) => {
         }
     }
 
+    logToFile(`FORWARDING DATA: ${JSON.stringify(finalData)}`);
+
     let response;
     try {
       console.log(`Forwarding to ${url} with headers:`, JSON.stringify(forwardHeaders));
+      const authHeader = forwardHeaders['Authorization'] || forwardHeaders['authorization'] || 'MISSING';
+      logToFile(`AUTH HEADER: ${authHeader}`);
+      
+      if (authHeader !== 'MISSING' && authHeader.startsWith('Bearer ')) {
+          const decoded = decodeToken(authHeader.split(' ')[1]);
+          if (decoded) logToFile(`TOKEN USER: ${decoded.sub || decoded.username || decoded.name}`);
+      }
+
       response = await axiosInstance({
         method,
         url,
@@ -131,6 +152,9 @@ app.post('/proxy', async (req, res) => {
     }
     
     let responseData = response.data;
+    if (url && url.includes('/projects/hierarchy')) {
+        logToFile(`HIERARCHY RESP: ${JSON.stringify(responseData)}`);
+    }
 
     // Intercept responses to inject profile images
     if (url && url.includes('/users/login') && method === 'POST' && responseData) {

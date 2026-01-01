@@ -84,6 +84,11 @@ export function BodyEditor({ bodyType, setBodyType, body, setBody, rawType = 'JS
         }
     };
 
+    useEffect(() => {
+        formatContent();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     const handleScroll = () => {
         if (textareaRef.current && lineNumbersRef.current) {
             lineNumbersRef.current.scrollTop = textareaRef.current.scrollTop;

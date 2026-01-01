@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical, Save, Folder, FileText } from 'lucide-react';
-import { createUpdateCollections, getAllAppCodesForAdmin } from '../services/apiservice';
+import { createUpdateCollections, getAllAppCodesForAdmin, deleteCollection } from '../services/apiservice';
 
 import { ConfirmationModal } from './ConfirmationModal';
 import { ImportModal } from './ImportModal';
@@ -66,13 +66,18 @@ export function EditDataPanel() {
                     }
 
                     // Normalize the data structure
-                    const formatted = filtered.map(p => ({
-                        ...p,
-                        projectName: p.projectCode || p.projectName,
-                        moduleName: p.moduleName || 'default',
-                        projectId: p.projectId || p.id
-                    }));
+                    const formatted = filtered.map(p => {
+                        const pid = parseInt(p.projectId || p.id);
+                        return {
+                            ...p,
+                            projectName: p.projectCode || p.projectName,
+                            moduleName: p.moduleName || 'default',
+                            projectId: pid
+                        };
+                    });
 
+                    console.log("DEBUG: Formatted app codes in EditDataPanel:", formatted);
+                    console.table(formatted.map(f => ({ name: f.projectName, mod: f.moduleName, pid: f.projectId, id: f.id })));
                     setAssignedAppCodes(formatted);
                 } catch (e) {
                     console.error("Failed to fetch app codes in EditDataPanel", e);
@@ -154,9 +159,9 @@ export function EditDataPanel() {
         if (!newCollectionName.trim() || !selectedAppCodeId) return;
 
         const newCol = {
-            collectionId: `new- ${Date.now()} `,
+            collectionId: `new-${Date.now()}`,
             name: newCollectionName,
-            originalName: newCollectionName, // Initially matches, but ID indicates new
+            originalName: newCollectionName,
             requests: []
         };
 
@@ -188,7 +193,25 @@ export function EditDataPanel() {
         const { type, collectionId, requestId } = deleteConfirmInfo;
 
         if (type === 'collection') {
-            setCollections(collections.filter(col => col.collectionId !== collectionId));
+            const isTransient = collectionId.toString().includes('new') || collectionId.toString().includes('import') || collectionId.toString().includes('curl');
+
+            if (!isTransient) {
+                // Call API for existing collections
+                deleteCollection(collectionId, user?.token)
+                    .then(() => {
+                        console.log(`Collection ${collectionId} deleted from server.`);
+                        // Update UI only after successful server deletion
+                        setCollections(prev => prev.filter(col => col.collectionId !== collectionId));
+                    })
+                    .catch(err => {
+                        console.error('Failed to delete collection:', err);
+                        alert(`Failed to delete collection from server: ${err.message}`);
+                        // Optionally, don't remove from UI so user knows it failed
+                    });
+            } else {
+                // Just remove from local state
+                setCollections(collections.filter(col => col.collectionId !== collectionId));
+            }
         } else if (type === 'request') {
             setCollections(collections.map(col => {
                 if (col.collectionId === collectionId) {
@@ -239,12 +262,12 @@ export function EditDataPanel() {
 
     const handleCreateNewRequest = (collectionId) => {
         const newReq = {
-            requestId: `new- req - ${Date.now()} `,
+            requestId: `new-req-${Date.now()}`, // Transient marker
             name: 'New Request',
             method: 'GET',
-            url: 'https://api.example.com/endpoint',
-            headers: { "Content-Type": "application/json" },
-            body: null,
+            url: '',
+            headers: {},
+            body: '',
             collectionId: collectionId
         };
         setEditingRequest(newReq);
@@ -270,33 +293,72 @@ export function EditDataPanel() {
     };
 
     const handleSaveCollection = async (e, collection) => {
+        const appId = selectedAppCodeId || 'NONE';
+        console.log(`DEBUG: handleSaveCollection triggered for appId: ${appId}`);
+
         e.stopPropagation();
         setIsLoading(true);
         try {
-            const payload = {
-                name: collection.name,
-                description: collection.description || `Collection for project ${selectedProject} `,
-                projectEntity: {
-                    Id: parseInt(selectedAppCodeId)
-                },
-                requests: (collection.requests || []).map(req => ({
-                    name: req.name,
-                    url: req.url,
-                    method: req.method,
-                    body: typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {}),
-                    headers: JSON.stringify(req.headers || {})
-                }))
+            // Helper to check if an ID is one of our temporary strings
+            const isTransientId = (id) => {
+                if (!id) return true;
+                const str = id.toString().toLowerCase();
+                return str.includes('new') || str.includes('import') || str.includes('req');
             };
 
-            const result = await createUpdateCollections(payload);
+            const isNewCollection = isTransientId(collection.collectionId);
+
+            // Find the selected app code to get its actual projectId
+            const currentAppCode = assignedAppCodes.find(ac => (ac.projectId || ac.id) == selectedAppCodeId);
+            const actualProjectId = currentAppCode?.projectId || (selectedAppCodeId ? parseInt(selectedAppCodeId) : null);
+
+            if (!actualProjectId || isNaN(actualProjectId)) {
+                const msg = `CRITICAL: Cannot save collection. Project ID is invalid.\nSelectedAppCodeId: ${appId}\nFound ProjectId: ${actualProjectId}`;
+                console.error(msg, { availableCodes: assignedAppCodes });
+                alert(msg + "\n\nPlease ensure a Project and Module are selected.");
+                setIsLoading(false);
+                return;
+            }
+
+            const payload = {
+                id: collection.id ? collection.id : (isNewCollection ? null : collection.collectionId),
+                collectionId: collection.id ? collection.id : (isNewCollection ? null : collection.collectionId),
+                name: collection.name,
+                description: collection.description || `Collection for project ${selectedProject}`,
+                projectId: actualProjectId,
+                projectEntity: {
+                    id: actualProjectId,
+                    projectId: actualProjectId
+                },
+                requests: (collection.requests || []).map(req => {
+                    const isNewReq = isTransientId(req.requestId);
+                    return {
+                        id: isNewReq ? null : req.requestId,
+                        requestId: isNewReq ? null : req.requestId,
+                        name: req.name,
+                        url: req.url,
+                        method: req.method,
+                        body: typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {}),
+                        headers: JSON.stringify(req.headers || {})
+                    };
+                })
+            };
+
+            const authToken = user?.token || sessionStorage.getItem('authToken');
+            if (!authToken || authToken === 'mock-token') {
+                console.warn("WARNING: Token is missing or invalid before saving collection:", authToken);
+            }
+
+            console.log("DEBUG: Saving collection with payload:", JSON.stringify(payload, null, 2));
+            const result = await createUpdateCollections(payload, authToken);
 
             setCollections(collections.map(col =>
                 col.collectionId === collection.collectionId
                     ? {
                         ...col,
-                        originalName: col.name,
-                        modified: false,
-                        collectionId: result.collectionId || col.collectionId
+                        ...result, // Sync all fields from backend (including collectionId and requests)
+                        originalName: result.name || col.name,
+                        modified: false
                     }
                     : col
             ));
@@ -317,7 +379,7 @@ export function EditDataPanel() {
                 const parsed = JSON.parse(data);
                 // Handle Postman Format v2.1 or generic
                 let newCol = {
-                    collectionId: `import -col - ${Date.now()} `,
+                    collectionId: `import-${Date.now()}`,
                     name: parsed.info?.name || parsed.name || 'Imported Collection',
                     requests: []
                 };
@@ -331,7 +393,7 @@ export function EditDataPanel() {
                         } else if (item.request) {
                             // Request
                             reqs.push({
-                                requestId: `req - ${Date.now()} -${Math.random()} `,
+                                requestId: `import-req-${Date.now()}-${Math.random()}`,
                                 name: item.name,
                                 method: item.request.method || 'GET',
                                 url: typeof item.request.url === 'string' ? item.request.url : item.request.url?.raw || '',
@@ -348,7 +410,27 @@ export function EditDataPanel() {
                     newCol.requests = extractRequests(parsed.item);
                 }
 
-                setCollections(prev => [...prev, newCol]);
+                setCollections(prev => {
+                    const existingIndex = prev.findIndex(c => c.name === newCol.name);
+                    if (existingIndex !== -1) {
+                        const updated = [...prev];
+                        const existing = updated[existingIndex];
+
+                        // Update existing collection with new requests
+                        // We keep the existing collectionId so saving it performs an update
+                        updated[existingIndex] = {
+                            ...existing,
+                            requests: newCol.requests.map(r => ({
+                                ...r,
+                                collectionId: existing.collectionId // Bind requests to existing collection
+                            })),
+                            modified: true
+                        };
+                        alert(`Collection "${newCol.name}" found. Overriding with imported content.`);
+                        return updated;
+                    }
+                    return [...prev, newCol];
+                });
             } else if (type === 'curl') {
                 // Very basic curl parsing
                 const methodMatch = data.match(/-X\s+([A-Z]+)/);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { getCollectionsByProjectId, getAllProjects, getEnvDetails, updateEnvDetails } from '../services/apiservice';
+import { getCollectionsByProjectId, getAllProjects, getEnvDetails, updateEnvDetails, getAllAppCodesForAdmin } from '../services/apiservice';
 import { Layout } from '../components/Layout';
 import { RequestBar } from '../components/RequestBar';
 import { Tabs } from '../components/Tabs';
@@ -377,7 +377,8 @@ export function UserWorkspace() {
                                 return [];
                             })(),
                             body: req.body,
-                            bodyType: req.body ? 'json' : 'none',
+                            bodyType: req.body ? 'raw' : 'none',
+                            rawType: 'JSON',
                             authType: 'none',
                             authData: {}
                         };
@@ -520,117 +521,131 @@ export function UserWorkspace() {
         }
     }, [isResizingConsole]);
 
+    // Fetches projects/collections/env data
+    const fetchWorkspaceData = async () => {
+        if (!user) return;
+
+        // For User or Developer roles, fetch and filter Server Collections based on projectIds
+        if (user.role === 'user' || user.role === 'developer' || user.role === 'dev') {
+            try {
+                // Using imported getAllAppCodesForAdmin instead of dynamic import
+                const hierarchyData = await getAllAppCodesForAdmin(user);
+
+                // Filter hierarchy to only include projects user is assigned to
+                const userProjectIds = user.projectIds || [];
+                const filteredProjects = hierarchyData.filter(project =>
+                    userProjectIds.includes(project.projectCode) || userProjectIds.includes(project.projectId)
+                );
+
+
+                const formattedAppCodes = filteredProjects.map(p => ({
+                    ...p,
+                    projectName: p.projectCode || p.projectName,
+                    moduleName: p.moduleName || 'default'
+                }));
+                setRawAppCodes(formattedAppCodes);
+
+                // Map into serverCollections format (flattened list of collections)
+                const allCollections = [];
+                filteredProjects.forEach(proj => {
+                    if (proj.collections) {
+                        proj.collections.forEach(col => {
+                            allCollections.push({
+                                id: col.collectionId ? col.collectionId.toString() : Date.now().toString() + Math.random(),
+                                name: col.name,
+                                requests: col.requests ? col.requests.map(req => ({
+                                    id: req.requestId ? req.requestId.toString() : Date.now().toString() + Math.random(),
+                                    name: req.name,
+                                    method: req.method,
+                                    url: req.url,
+                                    params: [],
+                                    headers: typeof req.headers === 'string' ? JSON.parse(req.headers || '[]') : (req.headers || []),
+                                    body: req.body,
+                                    bodyType: req.body ? 'raw' : 'none',
+                                    rawType: 'JSON',
+                                    authType: 'none',
+                                    authData: {}
+                                })) : []
+                            });
+                        });
+                    }
+                });
+                setServerCollections(allCollections);
+
+                // Set up projects and modules dropdowns for legacy behavior if needed
+                const uniqueProjects = [...new Set(filteredProjects.map(app => app.projectCode))]
+                    .map(name => ({ id: name, name: name }));
+                if (uniqueProjects.length > 0) {
+                    setProjects(uniqueProjects);
+                    // Only set active project if not already set, or default
+                    if (activeProject === 'default') {
+                        setActiveProject(uniqueProjects[0].id);
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to initialize server collections for user/dev:', e);
+            }
+        } else if (user.role === 'admin') {
+            // Admin logic (existing)
+            if (user.assignedAppCodes && user.assignedAppCodes.length > 0) {
+                setRawAppCodes(user.assignedAppCodes);
+                const uniqueProjects = [...new Set(user.assignedAppCodes.map(app => app.projectName))]
+                    .map(name => ({ id: name, name: name }));
+                if (uniqueProjects.length > 0) {
+                    setProjects(uniqueProjects);
+                    if (activeProject === 'default') setActiveProject(uniqueProjects[0].id);
+                }
+            } else {
+                try {
+                    const fetchedData = await getAllProjects();
+                    if (fetchedData && Array.isArray(fetchedData)) {
+                        setRawAppCodes(fetchedData);
+                        const uniqueProjects = [...new Set(fetchedData.map(app => app.projectName))]
+                            .map(name => ({ id: name, name: name }));
+                        if (uniqueProjects.length > 0) {
+                            setProjects(uniqueProjects);
+                            if (activeProject === 'default') setActiveProject(uniqueProjects[0].id);
+                        }
+                    }
+                } catch (e) { console.error(e); }
+            }
+        }
+
+        // Fetch Environment Details
+        try {
+            const envData = await getEnvDetails(user.token);
+            if (envData && typeof envData === 'object') {
+                const formattedEnvs = Object.keys(envData).map(envName => {
+                    const config = envData[envName];
+                    return {
+                        id: envName,
+                        name: envName,
+                        variables: Object.keys(config).map(key => ({
+                            key: key,
+                            value: config[key],
+                            active: true
+                        }))
+                    };
+                });
+                setEnvironments(formattedEnvs);
+            }
+        } catch (e) {
+            console.error('Failed to fetch environment details in initWorkspace:', e);
+        }
+    };
+
     // INITIALIZATION: Fetch projects for the logged-in user
     useEffect(() => {
-        const initWorkspace = async () => {
-            if (user) {
-                // For User or Developer roles, fetch and filter Server Collections based on projectIds
-                if (user.role === 'user' || user.role === 'developer' || user.role === 'dev') {
-                    try {
-                        const { getAllAppCodesForAdmin } = await import('../services/apiservice');
-                        const hierarchyData = await getAllAppCodesForAdmin(user);
-
-                        // Filter hierarchy to only include projects user is assigned to
-                        const userProjectIds = user.projectIds || [];
-                        const filteredProjects = hierarchyData.filter(project =>
-                            userProjectIds.includes(project.projectCode) || userProjectIds.includes(project.projectId)
-                        );
-
-
-                        const formattedAppCodes = filteredProjects.map(p => ({
-                            ...p,
-                            projectName: p.projectCode || p.projectName,
-                            moduleName: p.moduleName || 'default'
-                        }));
-                        setRawAppCodes(formattedAppCodes);
-
-                        // Map into serverCollections format (flattened list of collections)
-                        const allCollections = [];
-                        filteredProjects.forEach(proj => {
-                            if (proj.collections) {
-                                proj.collections.forEach(col => {
-                                    allCollections.push({
-                                        id: col.collectionId ? col.collectionId.toString() : Date.now().toString() + Math.random(),
-                                        name: col.name,
-                                        requests: col.requests ? col.requests.map(req => ({
-                                            id: req.requestId ? req.requestId.toString() : Date.now().toString() + Math.random(),
-                                            name: req.name,
-                                            method: req.method,
-                                            url: req.url,
-                                            params: [],
-                                            headers: typeof req.headers === 'string' ? JSON.parse(req.headers || '[]') : (req.headers || []),
-                                            body: req.body,
-                                            bodyType: req.body ? 'json' : 'none',
-                                            authType: 'none',
-                                            authData: {}
-                                        })) : []
-                                    });
-                                });
-                            }
-                        });
-                        setServerCollections(allCollections);
-
-                        // Set up projects and modules dropdowns for legacy behavior if needed
-                        const uniqueProjects = [...new Set(filteredProjects.map(app => app.projectCode))]
-                            .map(name => ({ id: name, name: name }));
-                        if (uniqueProjects.length > 0) {
-                            setProjects(uniqueProjects);
-                            setActiveProject(uniqueProjects[0].id);
-                        }
-                    } catch (e) {
-                        console.error('Failed to initialize server collections for user/dev:', e);
-                    }
-                } else if (user.role === 'admin') {
-                    // Admin logic (existing)
-                    if (user.assignedAppCodes && user.assignedAppCodes.length > 0) {
-                        setRawAppCodes(user.assignedAppCodes);
-                        const uniqueProjects = [...new Set(user.assignedAppCodes.map(app => app.projectName))]
-                            .map(name => ({ id: name, name: name }));
-                        if (uniqueProjects.length > 0) {
-                            setProjects(uniqueProjects);
-                            setActiveProject(uniqueProjects[0].id);
-                        }
-                    } else {
-                        try {
-                            const fetchedData = await getAllProjects();
-                            if (fetchedData && Array.isArray(fetchedData)) {
-                                setRawAppCodes(fetchedData);
-                                const uniqueProjects = [...new Set(fetchedData.map(app => app.projectName))]
-                                    .map(name => ({ id: name, name: name }));
-                                if (uniqueProjects.length > 0) {
-                                    setProjects(uniqueProjects);
-                                    setActiveProject(uniqueProjects[0].id);
-                                }
-                            }
-                        } catch (e) { console.error(e); }
-                    }
-                }
-
-                // Fetch Environment Details
-                try {
-                    const envData = await getEnvDetails(user.token);
-                    if (envData && typeof envData === 'object') {
-                        const formattedEnvs = Object.keys(envData).map(envName => {
-                            const config = envData[envName];
-                            return {
-                                id: envName,
-                                name: envName,
-                                variables: Object.keys(config).map(key => ({
-                                    key: key,
-                                    value: config[key],
-                                    active: true
-                                }))
-                            };
-                        });
-                        setEnvironments(formattedEnvs);
-                    }
-                } catch (e) {
-                    console.error('Failed to fetch environment details in initWorkspace:', e);
-                }
-            }
-        };
-        initWorkspace();
+        fetchWorkspaceData();
     }, [user]);
+
+    // Refresh when switching tabs/views
+    useEffect(() => {
+        if (activeView === 'collections') {
+            console.log("View switched to 'collections', refreshing workspace data...");
+            fetchWorkspaceData();
+        }
+    }, [activeView]);
 
 
     const tabs = [
@@ -862,6 +877,25 @@ export function UserWorkspace() {
     };
 
     const handleSaveRequest = (requestName, collectionId, isOverwrite = false) => {
+        // Minify/Clean body for saving
+        let processedBody = activeRequest.body;
+        if (activeRequest.body && typeof activeRequest.body === 'string' && activeRequest.bodyType === 'raw') {
+            try {
+                // Default to JSON if rawType is missing or explicit 'JSON'
+                if (!activeRequest.rawType || activeRequest.rawType === 'JSON') {
+                    // Try to parse and stringify to remove whitespace
+                    const parsed = JSON.parse(activeRequest.body);
+                    processedBody = JSON.stringify(parsed);
+                } else {
+                    // For XML/HTML/Text, remove newlines and extra spaces
+                    processedBody = activeRequest.body.replace(/[\r\n]+/g, '');
+                }
+            } catch (e) {
+                // If parsing fails, just strip newlines
+                processedBody = activeRequest.body.replace(/[\r\n]+/g, '');
+            }
+        }
+
         const updatedCollections = localCollections.map(col => {
             if (col.id === collectionId) {
                 let updatedRequests;
@@ -876,7 +910,7 @@ export function UserWorkspace() {
                                 params: activeRequest.params,
                                 headers: activeRequest.headers,
                                 bodyType: activeRequest.bodyType,
-                                body: activeRequest.body,
+                                body: processedBody,
                                 authType: activeRequest.authType,
                                 authData: activeRequest.authData,
                             };
@@ -892,7 +926,7 @@ export function UserWorkspace() {
                         params: activeRequest.params,
                         headers: activeRequest.headers,
                         bodyType: activeRequest.bodyType,
-                        body: activeRequest.body,
+                        body: processedBody,
                         authType: activeRequest.authType,
                         authData: activeRequest.authData,
                     };
@@ -911,15 +945,31 @@ export function UserWorkspace() {
     };
 
     const loadRequest = (request) => {
-        const existingReq = requests.find(r => r.id === request.id);
-        if (existingReq) {
-            setActiveRequestId(request.id);
-        } else {
-            const newTab = { ...request, response: null, error: null, isLoading: false };
-            setRequests(prev => [...prev, newTab]);
-            setActiveRequestId(request.id);
+        let reqToLoad = { ...request };
+        // Ensure legacy/malformed requests with body get treated as raw JSON
+        if (reqToLoad.body && (reqToLoad.bodyType === 'json' || !reqToLoad.bodyType || reqToLoad.bodyType === 'none')) {
+            reqToLoad.bodyType = 'raw';
+            reqToLoad.rawType = 'JSON';
         }
-        const col = localCollections.find(c => c.requests.find(r => r.id === request.id));
+
+        const existingReq = requests.find(r => r.id === reqToLoad.id);
+        if (existingReq) {
+            // Apply fixes to existing tab if needed
+            if (reqToLoad.body && (existingReq.bodyType === 'json' || existingReq.bodyType === 'none')) {
+                setRequests(prev => prev.map(r => r.id === reqToLoad.id ? { ...r, bodyType: 'raw', rawType: 'JSON' } : r));
+            }
+            setActiveRequestId(reqToLoad.id);
+        } else {
+            const newTab = { ...reqToLoad, response: null, error: null, isLoading: false };
+            setRequests(prev => [...prev, newTab]);
+            setActiveRequestId(reqToLoad.id);
+        }
+
+        if (reqToLoad.body) {
+            setActiveTab('body');
+        }
+
+        const col = localCollections.find(c => c.requests.find(r => r.id === reqToLoad.id));
         if (col) setActiveCollectionId(col.id);
     };
 
@@ -991,7 +1041,8 @@ export function UserWorkspace() {
                                     return acc;
                                 }, []) : [],
                                 body: item.request.body?.raw || null,
-                                bodyType: item.request.body?.raw ? 'json' : 'none',
+                                bodyType: item.request.body?.raw ? 'raw' : 'none',
+                                rawType: 'JSON',
                                 authType: 'none',
                                 authData: {}
                             });

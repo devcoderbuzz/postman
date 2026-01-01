@@ -537,6 +537,7 @@ export const getCollectionsByProjectId = async (projectId) => {
  * @returns {Promise<any>} - The response data (created/updated collection)
  */
 export const createUpdateCollections = async (collectionData, token) => {
+    console.log('Creating/Updating Collection...', collectionData);
     try {
         const authToken = token || sessionStorage.getItem('authToken');
         
@@ -557,6 +558,41 @@ export const createUpdateCollections = async (collectionData, token) => {
         return response.data.data;
     } catch (error) {
         console.error('Error creating/updating collection:', error.message);
+    }
+};
+
+/**
+ * Delete Collection service.
+ * Calls the /collections/delete endpoint.
+ * 
+ * @param {number} collectionId - The ID of the collection to delete
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const deleteCollection = async (collectionId, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        console.log('Deleting Collection...', collectionId);
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/collections/delete`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: {
+                id: collectionId
+            }
+        });
+        
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to delete collection');
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error deleting collection:', error.message);
         throw error;
     }
 };
