@@ -1,0 +1,175 @@
+
+[1m[46m RUN [49m[22m [36mv4.0.16 [39m[90m/Users/devcoder/Documents/Projects/postman/custom-postman-ui[39m
+      [2mCoverage enabled with [22m[33mv8[39m
+
+ [32m✓[39m src/components/__tests__/Tabs.test.jsx [2m([22m[2m3 tests[22m[2m)[22m[32m 116[2mms[22m[39m
+[90mstdout[2m | src/contexts/__tests__/AuthContext.test.jsx[2m > [22m[2mAuthContext[2m > [22m[2mshould login successfully
+[22m[39mLogin successful. UserData: {
+  username: [32m'testuser'[39m,
+  id: [33m1767191586826[39m,
+  role: [32m'user'[39m,
+  status: [90mundefined[39m,
+  token: [32m'abcd'[39m,
+  assignedAppCodes: [],
+  projectIds: []
+}
+
+[90mstdout[2m | src/contexts/__tests__/AuthContext.test.jsx[2m > [22m[2mAuthContext[2m > [22m[2mshould handle logout
+[22m[39mLogin successful. UserData: {
+  username: [32m'testuser'[39m,
+  id: [33m1767191586857[39m,
+  role: [32m'user'[39m,
+  status: [90mundefined[39m,
+  token: [32m'abcd'[39m,
+  assignedAppCodes: [],
+  projectIds: []
+}
+
+[90mstdout[2m | src/contexts/__tests__/AuthContext.test.jsx[2m > [22m[2mAuthContext[2m > [22m[2mshould handle global auth-logout event
+[22m[39mLogin successful. UserData: {
+  username: [32m'testuser'[39m,
+  id: [33m1767191586888[39m,
+  role: [32m'user'[39m,
+  status: [90mundefined[39m,
+  token: [32m'abcd'[39m,
+  assignedAppCodes: [],
+  projectIds: []
+}
+
+ [32m✓[39m src/contexts/__tests__/ThemeContext.test.jsx [2m([22m[2m3 tests[22m[2m)[22m[32m 125[2mms[22m[39m
+ [32m✓[39m src/contexts/__tests__/AuthContext.test.jsx [2m([22m[2m4 tests[22m[2m)[22m[32m 198[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/Sidebar.test.jsx [2m([22m[2m4 tests[22m[2m)[22m[32m 211[2mms[22m[39m
+[90mstdout[2m | src/components/__tests__/Settings_Extended.test.jsx[2m > [22m[2mSettings Extended[2m > [22m[2mhandles profile picture upload flow with mocks
+[22m[39mSaving image of size: 0KB
+
+ [32m✓[39m src/components/__tests__/Settings_Extended.test.jsx [2m([22m[2m6 tests[22m[2m)[22m[33m 600[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/SaveRequestModal.test.jsx [2m([22m[2m12 tests[22m[2m)[22m[33m 1376[2mms[22m[39m
+     [33m[2m✓[22m[39m handles collection selection [33m 746[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/KeyValueEditor.test.jsx [2m([22m[2m4 tests[22m[2m)[22m[33m 1334[2mms[22m[39m
+     [33m[2m✓[22m[39m renders pairs correctly [33m 1023[2mms[22m[39m
+ [32m✓[39m src/pages/__tests__/UserWorkspace.test.jsx [2m([22m[2m7 tests[22m[2m)[22m[33m 1242[2mms[22m[39m
+     [33m[2m✓[22m[39m renders workspace components [33m 309[2mms[22m[39m
+     [33m[2m✓[22m[39m handles sending a POST request with body [33m 309[2mms[22m[39m
+[90mstdout[2m | src/pages/__tests__/AdminDashboard.test.jsx[2m > [22m[2mAdminDashboard[2m > [22m[2mopens edit modal
+[22m[39muserToEdit {
+  id: [33m1[39m,
+  userId: [33m1[39m,
+  userName: [32m'user1'[39m,
+  userRole: [32m'user'[39m,
+  projectCount: [33m0[39m,
+  userStatus: [32m'active'[39m,
+  assignedAppCodes: []
+}
+
+ [32m✓[39m src/components/__tests__/ImportModal.test.jsx [2m([22m[2m16 tests[22m[2m)[22m[33m 2412[2mms[22m[39m
+     [33m[2m✓[22m[39m calls onImport with text data [33m 995[2mms[22m[39m
+     [33m[2m✓[22m[39m calls onImport with file data [33m 595[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/ResponseViewer.test.jsx [2m([22m[2m9 tests[22m[2m)[22m[33m 1358[2mms[22m[39m
+     [33m[2m✓[22m[39m switches to raw mode [33m 953[2mms[22m[39m
+ [32m✓[39m src/pages/__tests__/Login.test.jsx [2m([22m[2m5 tests[22m[2m)[22m[33m 2507[2mms[22m[39m
+     [33m[2m✓[22m[39m should render login form by default [33m 977[2mms[22m[39m
+     [33m[2m✓[22m[39m should switch to registration form [33m 825[2mms[22m[39m
+     [33m[2m✓[22m[39m should handle registration [33m 463[2mms[22m[39m
+[90mstdout[2m | src/pages/__tests__/AdminDashboard.test.jsx[2m > [22m[2mAdminDashboard[2m > [22m[2mopens add (assign) modal and handles assignment
+[22m[39mAssigning User 1 to Project 101
+
+[90mstdout[2m | src/pages/__tests__/AdminDashboard.test.jsx[2m > [22m[2mAdminDashboard[2m > [22m[2mhandles unassign app code
+[22m[39muserToEdit {
+  id: [33m2[39m,
+  userId: [33m2[39m,
+  userName: [32m'user2'[39m,
+  userRole: [32m'developer'[39m,
+  projectCount: [33m1[39m,
+  userStatus: [32m'active'[39m,
+  assignedAppCodes: [ { id: [33m101[39m, projectName: [32m'P1'[39m, moduleName: [32m'M1'[39m } ]
+}
+
+[90mstdout[2m | src/pages/__tests__/AdminDashboard.test.jsx[2m > [22m[2mAdminDashboard[2m > [22m[2mhandles user status change to INACTIVE
+[22m[39muserToEdit {
+  id: [33m1[39m,
+  userId: [33m1[39m,
+  userName: [32m'user1'[39m,
+  userRole: [32m'user'[39m,
+  projectCount: [33m0[39m,
+  userStatus: [32m'active'[39m,
+  assignedAppCodes: []
+}
+
+ [32m✓[39m src/pages/__tests__/AdminDashboard.test.jsx [2m([22m[2m13 tests[22m[2m)[22m[33m 2924[2mms[22m[39m
+     [33m[2m✓[22m[39m handles user creation [33m 1293[2mms[22m[39m
+     [33m[2m✓[22m[39m opens add (assign) modal and handles assignment [33m 573[2mms[22m[39m
+ [32m✓[39m src/pages/__tests__/AdminDashboard_Extended.test.jsx [2m([22m[2m5 tests[22m[2m)[22m[33m 3386[2mms[22m[39m
+     [33m[2m✓[22m[39m handles app code creation flow [33m 479[2mms[22m[39m
+     [33m[2m✓[22m[39m expands collections and views request details [33m 2042[2mms[22m[39m
+     [33m[2m✓[22m[39m handles request details with Object headers and Body object [33m 717[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/EnvironmentManager.test.jsx [2m([22m[2m6 tests[22m[2m)[22m[33m 324[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/EditDataModal.test.jsx [2m([22m[2m8 tests[22m[2m)[22m[33m 4448[2mms[22m[39m
+     [33m[2m✓[22m[39m fetches and displays projects in dropdown [33m 879[2mms[22m[39m
+     [33m[2m✓[22m[39m handles module selection and loads collections [33m 734[2mms[22m[39m
+     [33m[2m✓[22m[39m creates a new collection [33m 861[2mms[22m[39m
+     [33m[2m✓[22m[39m expands collection and shows "No requests" if empty [33m 360[2mms[22m[39m
+     [33m[2m✓[22m[39m opens import modal [33m 331[2mms[22m[39m
+     [33m[2m✓[22m[39m opens request editor and saves a new request to collection [33m 630[2mms[22m[39m
+     [33m[2m✓[22m[39m edits an existing request and handles headers [33m 392[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/BodyEditor.test.jsx [2m([22m[2m5 tests[22m[2m)[22m[33m 317[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/Layout.test.jsx [2m([22m[2m1 test[22m[2m)[22m[32m 102[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/Settings.test.jsx [2m([22m[2m7 tests[22m[2m | [22m[33m1 skipped[39m[2m)[22m[33m 330[2mms[22m[39m
+ [32m✓[39m src/lib/__tests__/utils.test.js [2m([22m[2m8 tests[22m[2m)[22m[32m 32[2mms[22m[39m
+[90mstdout[2m | src/services/__tests__/apiservice.test.js[2m > [22m[2mapiservice[2m > [22m[2mregister[2m > [22m[2mshould register successfully
+[22m[39mRegister Response: { isError: [33mfalse[39m, data: { id: [33m1[39m, username: [32m'newuser'[39m } }
+
+[90mstdout[2m | src/services/__tests__/apiservice.test.js[2m > [22m[2mapiservice[2m > [22m[2mgetAllProjects[2m > [22m[2mshould return empty array after timeout
+[22m[39mFetching Projects...
+
+[90mstdout[2m | src/services/__tests__/apiservice.test.js[2m > [22m[2mapiservice[2m > [22m[2mupdateUser[2m > [22m[2mshould update user status
+[22m[39mUpdating User... { id: [33m1[39m, status: [32m'ACTIVE'[39m } token
+
+[90mstdout[2m | src/services/__tests__/apiservice.test.js[2m > [22m[2mapiservice[2m > [22m[2mOther API functions[2m > [22m[2massignUserToProject
+[22m[39mAssigning User to Project... [33m1[39m [33m1[39m t
+
+[90mstdout[2m | src/services/__tests__/apiservice.test.js[2m > [22m[2mapiservice[2m > [22m[2mOther API functions[2m > [22m[2massignUserToProject
+[22m[39mUser assigned to Project successfully 124... { success: [33mtrue[39m }
+
+ [32m✓[39m src/services/__tests__/apiservice.test.js [2m([22m[2m20 tests[22m[2m)[22m[32m 81[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/ConfirmationModal.test.jsx [2m([22m[2m4 tests[22m[2m)[22m[32m 166[2mms[22m[39m
+ [32m✓[39m src/lib/__tests__/curlBuilder.test.js [2m([22m[2m3 tests[22m[2m)[22m[32m 11[2mms[22m[39m
+ [32m✓[39m src/pages/__tests__/UserWorkspace_Extended.test.jsx [2m([22m[2m4 tests[22m[2m)[22m[33m 1357[2mms[22m[39m
+     [33m[2m✓[22m[39m sends request with Bearer token [33m 402[2mms[22m[39m
+     [33m[2m✓[22m[39m replaces environment variables in URL [33m 518[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m23 passed[39m[22m[90m (23)[39m
+[2m      Tests [22m [1m[32m156 passed[39m[22m[2m | [22m[33m1 skipped[39m[90m (157)[39m
+[2m   Start at [22m 22:33:02
+[2m   Duration [22m 10.65s[2m (transform 9.51s, setup 9.74s, import 27.26s, tests 24.96s, environment 53.60s)[22m
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |   58.84 |    43.44 |   56.87 |    61.1 |                   
+ components        |    67.1 |    61.72 |   65.93 |   69.95 |                   
+  BodyEditor.jsx   |   95.45 |    81.25 |     100 |   95.45 | 35                
+  ...tionModal.jsx |     100 |    85.71 |     100 |     100 | 31                
+  ...DataModal.jsx |    53.6 |    46.18 |   51.02 |   56.03 | ...64,814,855-883 
+  ...ntManager.jsx |   82.14 |     62.5 |   92.85 |   86.95 | 28,73-74          
+  ImportModal.jsx  |      92 |    92.85 |      75 |   91.66 | 52,74             
+  ...lueEditor.jsx |   92.85 |      100 |   88.88 |   91.66 | 33                
+  Layout.jsx       |     100 |      100 |     100 |     100 |                   
+  ...nseViewer.jsx |   76.71 |    76.62 |      80 |   84.61 | ...64,66-67,69-70 
+  ...uestModal.jsx |     100 |      100 |     100 |     100 |                   
+  Settings.jsx     |   70.45 |    66.66 |   66.66 |   70.45 | ...14,183,225-231 
+  Sidebar.jsx      |   76.92 |    88.23 |   66.66 |   76.92 | 28,53-60          
+  Tabs.jsx         |     100 |      100 |     100 |     100 |                   
+ contexts          |   86.44 |    69.69 |     100 |    86.2 |                   
+  AuthContext.jsx  |   81.81 |    65.51 |     100 |   81.81 | ...55,57,75,79-83 
+  ThemeContext.jsx |     100 |      100 |     100 |     100 |                   
+ lib               |   76.31 |       56 |      75 |      75 |                   
+  curlBuilder.js   |   68.96 |    52.27 |      60 |   67.85 | ...30-31,33,39,55 
+  utils.js         |     100 |    83.33 |     100 |     100 | 14                
+ pages             |   50.58 |    32.75 |   45.23 |   53.03 |                   
+  ...Dashboard.jsx |   65.45 |    46.46 |   67.59 |   67.63 | ...1232,1276,1305 
+  Login.jsx        |   70.37 |    46.66 |   71.42 |   70.37 | ...97-102,205-233 
+  ...Workspace.jsx |   33.48 |    20.59 |   23.84 |   35.75 | ...1241,1258-1310 
+ services          |   64.94 |    27.77 |      80 |   64.94 |                   
+  apiservice.js    |   64.94 |    27.77 |      80 |   64.94 | ...92,619,624-625 
+-------------------|---------|----------|---------|---------|-------------------

@@ -122,8 +122,9 @@ export function Login() {
                 {!isRegistering ? (
                     <form onSubmit={handleSubmit}>
                         <div className="mb-5">
-                            <label className="block text-slate-700 dark:text-slate-300 text-xs font-bold mb-2 uppercase tracking-wide">Username</label>
+                            <label htmlFor="login-username" className="block text-slate-700 dark:text-slate-300 text-xs font-bold mb-2 uppercase tracking-wide">Username</label>
                             <input
+                                id="login-username"
                                 type="text"
                                 value={username}
                                 onChange={(e) => setUsername(e.target.value)}
@@ -144,8 +145,9 @@ export function Login() {
                             </div>
                         </div>
                         <div className="mb-8">
-                            <label className="block text-slate-700 dark:text-slate-300 text-xs font-bold mb-2 uppercase tracking-wide">Password</label>
+                            <label htmlFor="login-password" className="block text-slate-700 dark:text-slate-300 text-xs font-bold mb-2 uppercase tracking-wide">Password</label>
                             <input
+                                id="login-password"
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
@@ -163,8 +165,9 @@ export function Login() {
                 ) : (
                     <form onSubmit={handleRegister}>
                         <div className="mb-4">
-                            <label className="block text-slate-700 dark:text-slate-300 text-xs font-bold mb-2 uppercase tracking-wide">Username</label>
+                            <label htmlFor="reg-username" className="block text-slate-700 dark:text-slate-300 text-xs font-bold mb-2 uppercase tracking-wide">Username</label>
                             <input
+                                id="reg-username"
                                 type="text"
                                 value={regUsername}
                                 onChange={(e) => setRegUsername(e.target.value)}
@@ -173,8 +176,9 @@ export function Login() {
                             />
                         </div>
                         <div className="mb-4">
-                            <label className="block text-slate-700 dark:text-slate-300 text-xs font-bold mb-2 uppercase tracking-wide">Password</label>
+                            <label htmlFor="reg-password" className="block text-slate-700 dark:text-slate-300 text-xs font-bold mb-2 uppercase tracking-wide">Password</label>
                             <input
+                                id="reg-password"
                                 type="password"
                                 value={regPassword}
                                 onChange={(e) => setRegPassword(e.target.value)}
@@ -183,8 +187,9 @@ export function Login() {
                             />
                         </div>
                         <div className="mb-4">
-                            <label className="block text-slate-700 dark:text-slate-300 text-xs font-bold mb-2 uppercase tracking-wide">Confirm Password</label>
+                            <label htmlFor="reg-confirm" className="block text-slate-700 dark:text-slate-300 text-xs font-bold mb-2 uppercase tracking-wide">Confirm Password</label>
                             <input
+                                id="reg-confirm"
                                 type="password"
                                 value={confirmPassword}
                                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -193,8 +198,9 @@ export function Login() {
                             />
                         </div>
                         <div className="mb-6">
-                            <label className="block text-slate-700 dark:text-slate-300 text-xs font-bold mb-2 uppercase tracking-wide">Role</label>
+                            <label htmlFor="reg-role" className="block text-slate-700 dark:text-slate-300 text-xs font-bold mb-2 uppercase tracking-wide">Role</label>
                             <select
+                                id="reg-role"
                                 value={regRole}
                                 onChange={(e) => setRegRole(e.target.value)}
                                 className="w-full px-4 py-3 border rounded-md border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 transition-all font-medium"
