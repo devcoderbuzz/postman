@@ -90,19 +90,35 @@ app.post('/proxy', async (req, res) => {
     console.log(forwardMsg);
     
     // Sanitize headers to avoid host/origin mismatches
-    const forwardHeaders = { ...headers };
-    delete forwardHeaders.host;
-    delete forwardHeaders.connection;
-    delete forwardHeaders.origin;
-    delete forwardHeaders.referer;
+    const forwardHeaders = {};
+    Object.keys(headers || {}).forEach(key => {
+        const lowerKey = key.toLowerCase();
+        if (!['host', 'connection', 'origin', 'referer', 'content-length'].includes(lowerKey)) {
+            forwardHeaders[key] = headers[key];
+        }
+    });
+
+    // Ensure we don't forward double-stringified JSON
+    let finalData = data;
+    const contentType = (forwardHeaders['Content-Type'] || forwardHeaders['content-type'] || '').toLowerCase();
+    
+    if (typeof data === 'string' && contentType.includes('application/json')) {
+        try {
+            finalData = JSON.parse(data);
+            logToFile("Proxy auto-parsed stringified body for forwarding");
+        } catch (e) {
+            // Keep as string if it's not valid JSON
+        }
+    }
 
     let response;
     try {
+      console.log(`Forwarding to ${url} with headers:`, JSON.stringify(forwardHeaders));
       response = await axiosInstance({
         method,
         url,
         headers: forwardHeaders,
-        data
+        data: finalData
       });
       const respMsg = `BACKEND RESPONDED: ${response.status} ${response.statusText}`;
       logToFile(respMsg);

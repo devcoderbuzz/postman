@@ -13,8 +13,11 @@ export function replaceEnvVariables(text, environment) {
     environment.variables.forEach(({ key, value }) => {
         if (key) {
             const regex = new RegExp(`{{${key}}}`, 'g');
-            result = result.replace(regex, value);
+            const val = String(value);
+            result = result.replace(regex, () => val);
         }
     });
+    // Fix double slashes except protocol
+    result = result.replace(/([^:])\/\/+/g, '$1/');
     return result;
 }

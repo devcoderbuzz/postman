@@ -638,6 +638,7 @@ export function EditDataPanel() {
                 <div className="flex-1 overflow-hidden relative">
                     {editingRequest ? (
                         <RequestEditorPanel
+                            key={editingRequest.requestId}
                             request={editingRequest}
                             isCreating={isCreatingRequest}
                             onClose={() => { setEditingRequest(null); setIsCreatingRequest(false); setCreatingForCollection(null); }}
@@ -742,10 +743,21 @@ function RenameInput({ value, onChange, onConfirm }) {
 }
 
 function RequestEditorPanel({ request, isCreating, onClose, onSave }) {
-    const [editedReq, setEditedReq] = useState({ ...request });
+    const [editedReq, setEditedReq] = useState(() => {
+        const req = { ...request };
+        if (typeof req.body === 'object' && req.body !== null) {
+            req.body = JSON.stringify(req.body, null, 2);
+        }
+        return req;
+    });
+
     const [headers, setHeaders] = useState(() => {
-        const h = typeof request.headers === 'object' ? request.headers : {};
-        return Object.entries(h).map(([key, value]) => ({ key, value, id: Math.random() }));
+        let h = request.headers;
+        if (typeof h === 'string') {
+            try { h = JSON.parse(h); } catch (e) { h = {}; }
+        }
+        h = typeof h === 'object' && h !== null ? h : {};
+        return Object.entries(h).map(([key, value]) => ({ key, value: String(value), id: Math.random() }));
     });
 
     const handleChange = (field, value) => {

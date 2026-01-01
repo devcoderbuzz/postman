@@ -13,7 +13,7 @@ import { HistoryPanel } from '../components/HistoryPanel';
 import { EnvironmentManager } from '../components/EnvironmentManager';
 import { RequestTabs } from '../components/RequestTabs';
 import { Footer } from '../components/Footer';
-import { X, Save, Moon, Sun, Globe, Check } from 'lucide-react';
+import { X, Save, Moon, Sun, Globe, Check, AlignLeft, Settings as SettingsIcon, Code2, ShieldCheck } from 'lucide-react';
 import { cn, replaceEnvVariables } from '../lib/utils';
 import { SaveRequestModal } from '../components/SaveRequestModal';
 import { Header } from '../components/Header';
@@ -232,6 +232,7 @@ export function UserWorkspace() {
         params: [{ key: '', value: '', active: true }],
         headers: [{ key: '', value: '', active: true }],
         bodyType: 'none',
+        rawType: 'JSON',
         body: '',
         authType: 'none',
         authData: {},
@@ -284,9 +285,11 @@ export function UserWorkspace() {
 
     // Layout state
     const [collectionsPanelWidth, setCollectionsPanelWidth] = useState(280);
-    const [requestPanelHeight, setRequestPanelHeight] = useState(400); // For vertical split
-    const [requestPanelWidth, setRequestPanelWidth] = useState(500); // For horizontal split
+    const [requestPanelHeight, setRequestPanelHeight] = useState(window.innerHeight / 2 - 100); // Vertically balanced
+    const [requestPanelWidth, setRequestPanelWidth] = useState((window.innerWidth - 300) / 2); // Horizontally balanced
     const [isResizingRequest, setIsResizingRequest] = useState(false);
+    const [consoleHeight, setConsoleHeight] = useState(250);
+    const [isResizingConsole, setIsResizingConsole] = useState(false);
 
     // Project state
     const placeholderProjects = [{ id: 'default', name: 'Default Project' }];
@@ -432,9 +435,11 @@ export function UserWorkspace() {
     useEffect(() => {
         const savedCollections = localStorage.getItem('collections');
         const savedEnvironments = localStorage.getItem('environments');
+        const savedHistory = localStorage.getItem('consoleHistory');
         const savedLayout = localStorage.getItem('layout');
         if (savedCollections) setLocalCollections(JSON.parse(savedCollections));
         if (savedEnvironments) setEnvironments(JSON.parse(savedEnvironments));
+        if (savedHistory) setHistory(JSON.parse(savedHistory));
         if (savedLayout) setLayout(savedLayout);
     }, []);
 
@@ -458,7 +463,11 @@ export function UserWorkspace() {
 
     // Console / Footer State
     const [showConsole, setShowConsole] = useState(false);
-    const latestRequest = history.length > 0 ? history[history.length - 1] : null;
+    const latestRequest = history.length > 0 ? history[0] : null;
+
+    useEffect(() => {
+        localStorage.setItem('consoleHistory', JSON.stringify(history));
+    }, [history]);
 
     useEffect(() => {
         localStorage.setItem('environments', JSON.stringify(environments));
@@ -490,6 +499,26 @@ export function UserWorkspace() {
             };
         }
     }, [isResizingRequest]);
+
+    // Resize logic for Console
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            if (!isResizingConsole) return;
+            const newHeight = window.innerHeight - e.clientY - 32; // 32 for footer height
+            if (newHeight >= 40 && newHeight <= window.innerHeight - 200) {
+                setConsoleHeight(newHeight);
+            }
+        };
+        const handleMouseUp = () => { setIsResizingConsole(false); };
+        if (isResizingConsole) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            return () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+        }
+    }, [isResizingConsole]);
 
     // INITIALIZATION: Fetch projects for the logged-in user
     useEffect(() => {
@@ -605,10 +634,14 @@ export function UserWorkspace() {
 
 
     const tabs = [
+        { id: 'docs', label: 'Docs', icon: AlignLeft },
         { id: 'params', label: 'Params' },
-        { id: 'headers', label: 'Headers' },
-        { id: 'body', label: 'Body' },
         { id: 'auth', label: 'Auth' },
+        { id: 'headers', label: 'Headers', suffix: `(${activeRequest.headers.filter(h => h.key && h.active).length})` },
+        { id: 'body', label: 'Body', indicator: activeRequest.body && activeRequest.body.length > 0 },
+        { id: 'scripts', label: 'Scripts' },
+        { id: 'tests', label: 'Tests' },
+        { id: 'settings', label: 'Settings' },
     ];
 
     const applyAuth = (headersObj, paramsObj, request) => {
@@ -633,34 +666,67 @@ export function UserWorkspace() {
         const startTime = Date.now();
         let processedUrl = request.url;
 
+        let headersObj = {};
+        let paramsObj = {};
+        let config = {
+            method: request.method,
+            url: processedUrl,
+            headers: {},
+            params: {}
+        };
+
         try {
             const currentEnv = environments.find(env => env.id === activeEnv);
             processedUrl = replaceEnvVariables(request.url, currentEnv);
-            const paramsObj = request.params.reduce((acc, curr) => {
+            paramsObj = request.params.reduce((acc, curr) => {
                 if (curr.key && curr.active) acc[curr.key] = replaceEnvVariables(curr.value, currentEnv);
                 return acc;
             }, {});
-            const headersObj = request.headers.reduce((acc, curr) => {
+            headersObj = request.headers.reduce((acc, curr) => {
                 if (curr.key && curr.active) acc[curr.key] = replaceEnvVariables(curr.value, currentEnv);
                 return acc;
             }, {});
+
+            // Add standard headers to mimic Postman/Browser and prevent 403s
+            if (!headersObj['Accept']) headersObj['Accept'] = 'application/json, text/plain, */*';
+            if (!headersObj['User-Agent']) headersObj['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+            if (!headersObj['Accept-Language']) headersObj['Accept-Language'] = 'en-US,en;q=0.9';
+
             applyAuth(headersObj, paramsObj, request);
 
-            const config = {
-                method: request.method,
-                url: processedUrl,
-                params: paramsObj,
-                headers: headersObj,
-            };
+            console.log("DEBUG: Request Type Info", { bodyType: request.bodyType, rawType: request.rawType });
 
-            if (request.bodyType !== 'none' && request.body && ['POST', 'PUT', 'PATCH'].includes(request.method)) {
-                if (request.bodyType === 'json') {
-                    config.data = JSON.parse(request.body);
+            if (request.bodyType !== 'none' && request.body && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
+                // Replace environment variables in body
+                const processedBody = replaceEnvVariables(request.body, currentEnv);
+
+                const isJson = (request.bodyType || '').toLowerCase() === 'json' ||
+                    (request.bodyType === 'raw' && (request.rawType || 'JSON').toUpperCase() === 'JSON');
+
+                if (isJson) {
                     headersObj['Content-Type'] = 'application/json';
+                    try {
+                        config.data = JSON.parse(processedBody);
+                    } catch (e) {
+                        console.error("Failed to parse body as JSON:", e, "Body:", processedBody);
+                        config.data = processedBody;
+                    }
                 } else {
-                    config.data = request.body;
+                    config.data = processedBody;
                 }
             }
+
+            // Sync the latest values into config object
+            config.url = processedUrl;
+            config.params = paramsObj;
+            config.headers = { ...headersObj };
+
+            console.log("SENDING TO PROXY:", {
+                targetUrl: config.url,
+                method: config.method,
+                headers: config.headers,
+                data: config.data
+            });
 
             const proxyRes = await axios({
                 method: 'POST',
@@ -669,12 +735,15 @@ export function UserWorkspace() {
                     method: config.method,
                     url: config.url,
                     headers: config.headers,
-                    data: config.data
+                    data: config.data,
+                    params: config.params
                 }
             });
             const res = proxyRes.data;
             if (res.isError) {
                 throw {
+                    status: res.status,
+                    message: res.statusText || 'Proxy Error',
                     response: {
                         status: res.status,
                         statusText: res.statusText,
@@ -727,27 +796,26 @@ export function UserWorkspace() {
                 };
             }
             updateActiveRequest({ isLoading: false, error: errorData, response: responseData });
-            if (err.response) {
-                const historyEntry = {
-                    method: request.method,
-                    url: processedUrl,
-                    status: err.response.status,
-                    timestamp: new Date().toLocaleString(),
-                    params: request.params,
-                    headers: request.headers,
-                    bodyType: request.bodyType,
-                    body: request.body,
-                    authType: request.authType,
-                    authData: request.authData,
-                    requestHeaders: config.headers,
-                    requestBody: config.data,
-                    responseHeaders: err.response.headers,
-                    responseData: err.response.data,
-                    time: Date.now() - startTime,
-                    expanded: false
-                };
-                setHistory(prev => [historyEntry, ...prev].slice(0, 50));
-            }
+
+            const historyEntry = {
+                method: request.method,
+                url: processedUrl,
+                status: err.response ? err.response.status : (err.status || 'Error'),
+                timestamp: new Date().toLocaleString(),
+                params: request.params,
+                headers: request.headers,
+                bodyType: request.bodyType,
+                body: request.body,
+                authType: request.authType,
+                authData: request.authData,
+                requestHeaders: config.headers,
+                requestBody: config.data,
+                responseHeaders: err.response ? err.response.headers : {},
+                responseData: err.response ? err.response.data : (err.message || 'Network Error'),
+                time: Date.now() - startTime,
+                expanded: false
+            };
+            setHistory(prev => [historyEntry, ...prev].slice(0, 50));
         }
     };
 
@@ -871,6 +939,7 @@ export function UserWorkspace() {
             params: [{ key: '', value: '', active: true }],
             headers: [{ key: '', value: '', active: true }],
             bodyType: 'none',
+            rawType: 'JSON',
             body: '',
             authType: 'none',
             authData: {},
@@ -939,31 +1008,52 @@ export function UserWorkspace() {
                 window.alert('Collection imported successfully into Local Collections.');
 
             } else if (type === 'curl') {
-                // Keep the previous simple curl logic but improved if needed, or stick to provided parsing?
-                // The previous component parsed it passed as an object. The new ImportModal passes raw string.
-                // We need to parse the raw string here if the ImportModal passes raw string.
-                // Wait, ImportModal passes the raw text. So we need parsing logic here.
+                // Robust cURL parsing
+                const cleanData = data.replace(/\\\n/g, ' '); // Handle line continuations
 
-                // Simplified cURL parsing (similar to EditDataModal)
-                const methodMatch = data.match(/-X\s+([A-Z]+)/);
-                const urlMatch = data.match(/['"](http.*?)['"]/);
-                const headerMatches = [...data.matchAll(/-H\s+['"](.*?)['"]/g)];
-                const dataMatch = data.match(/--data\s+['"](.*?)['"]/);
+                // Extract Method
+                const methodMatch = cleanData.match(/-X\s+([A-Z]+)/);
+                const method = methodMatch ? methodMatch[1] : (cleanData.includes('-d ') || cleanData.includes('--data') ? 'POST' : 'GET');
+
+                // Extract URL (find the first thing that looks like a URL or starts with {{)
+                const urlMatch = cleanData.match(/(?:['"])(http[s]?:\/\/.*?|{{.*?}}.*?)(?:['"])/) || cleanData.match(/\s(http[s]?:\/\/.*?|{{.*?}}.*?)\s/);
+                const url = urlMatch ? urlMatch[1] : '';
+
+                // Extract Headers
+                const headerMatches = [...cleanData.matchAll(/-H\s+['"](.*?)['"]/g)];
+                const headers = headerMatches.reduce((acc, match) => {
+                    const firstColon = match[1].indexOf(':');
+                    if (firstColon !== -1) {
+                        const key = match[1].slice(0, firstColon).trim();
+                        const value = match[1].slice(firstColon + 1).trim();
+                        acc.push({ key, value, active: true });
+                    }
+                    return acc;
+                }, []);
+
+                // Extract Body (-d or --data)
+                // More resilient regex for quoted bodies
+                let body = '';
+                const bodyMatches = [...cleanData.matchAll(/(?:-d|--data(?:-raw)?)\s+(['"])([\s\S]*?)\1/g)];
+                if (bodyMatches.length > 0) {
+                    body = bodyMatches.map(m => m[2]).join('&');
+                } else {
+                    // Try to match unquoted body if quoted fails
+                    const unquotedMatch = cleanData.match(/(?:-d|--data(?:-raw)?)\s+([^{"' ]\S*)/);
+                    if (unquotedMatch) body = unquotedMatch[1];
+                }
 
                 const newId = Date.now().toString();
                 const newRequest = {
                     id: newId,
                     name: 'Imported cURL',
-                    method: methodMatch ? methodMatch[1] : 'GET',
-                    url: urlMatch ? urlMatch[1] : '',
+                    method: method,
+                    url: url,
                     params: [{ key: '', value: '', active: true }],
-                    headers: headerMatches.reduce((acc, match) => {
-                        const [key, val] = match[1].split(':').map(s => s.trim());
-                        if (key && val) acc.push({ key, value: val, active: true });
-                        return acc;
-                    }, []),
-                    bodyType: dataMatch ? 'json' : 'none',
-                    body: dataMatch ? dataMatch[1] : '',
+                    headers: headers.length > 0 ? headers : [{ key: '', value: '', active: true }],
+                    bodyType: body ? 'raw' : 'none',
+                    rawType: 'JSON',
+                    body: body,
                     authType: 'none',
                     authData: {},
                     response: null,
@@ -971,12 +1061,8 @@ export function UserWorkspace() {
                     isLoading: false
                 };
 
-                // Add to session requests
                 setRequests(prev => [...prev, newRequest]);
                 setActiveRequestId(newId);
-
-                // Option: Add to a local 'Imports' collection?
-                // For now, loading into workspace active tabs is standard for cURL.
             }
         } catch (e) {
             console.error(e);
@@ -1180,7 +1266,7 @@ export function UserWorkspace() {
                         />
 
                         <div className="flex-1 flex overflow-hidden">
-                            {activeView === 'history' && history.length > 0 && (
+                            {activeView === 'history' && (
                                 <div className="w-80 border-r border-slate-200 dark:border-[var(--border-color)]">
                                     <HistoryPanel
                                         history={history}
@@ -1221,15 +1307,25 @@ export function UserWorkspace() {
                                     <div className="flex-1 border-r border-slate-200 dark:border-[var(--border-color)] p-4 flex flex-col min-h-0 overflow-auto">
                                         <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
                                         <div className="flex-1 overflow-auto mt-2">
+                                            {activeTab === 'docs' && (
+                                                <div className="flex flex-col items-center justify-center h-64 text-slate-400 dark:text-slate-500">
+                                                    <AlignLeft className="w-12 h-12 mb-4 opacity-20" />
+                                                    <p className="text-sm font-medium">Documentation</p>
+                                                    <p className="text-xs mt-1">Add documentation for this request to help your team.</p>
+                                                </div>
+                                            )}
                                             {activeTab === 'params' && (
                                                 <div className="space-y-4">
-                                                    <p className="text-xs text-slate-500 mb-2">Query Parameters</p>
+                                                    <p className="text-xs text-slate-500 mb-2 font-semibold uppercase tracking-wider">Query Parameters</p>
                                                     <KeyValueEditor pairs={activeRequest.params} setPairs={(val) => updateActiveRequest({ params: val })} />
                                                 </div>
                                             )}
                                             {activeTab === 'headers' && (
                                                 <div className="space-y-4">
-                                                    <p className="text-xs text-slate-500 mb-2">Request Headers</p>
+                                                    <div className="flex items-center justify-between">
+                                                        <p className="text-xs text-slate-500 mb-2 font-semibold uppercase tracking-wider">Headers</p>
+                                                        <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">Auto-generated headers hidden</span>
+                                                    </div>
                                                     <KeyValueEditor pairs={activeRequest.headers} setPairs={(val) => updateActiveRequest({ headers: val })} />
                                                 </div>
                                             )}
@@ -1239,6 +1335,8 @@ export function UserWorkspace() {
                                                     setBodyType={(val) => updateActiveRequest({ bodyType: val })}
                                                     body={activeRequest.body}
                                                     setBody={(val) => updateActiveRequest({ body: val })}
+                                                    rawType={activeRequest.rawType || 'JSON'}
+                                                    setRawType={(val) => updateActiveRequest({ rawType: val })}
                                                 />
                                             )}
                                             {activeTab === 'auth' && (
@@ -1248,6 +1346,27 @@ export function UserWorkspace() {
                                                     authData={activeRequest.authData}
                                                     setAuthData={(val) => updateActiveRequest({ authData: val })}
                                                 />
+                                            )}
+                                            {activeTab === 'scripts' && (
+                                                <div className="flex flex-col items-center justify-center h-64 text-slate-400 dark:text-slate-500">
+                                                    <Code2 className="w-12 h-12 mb-4 opacity-20" />
+                                                    <p className="text-sm font-medium">Pre-request Scripts</p>
+                                                    <p className="text-xs mt-1">Write scripts to execute before the request is sent.</p>
+                                                </div>
+                                            )}
+                                            {activeTab === 'tests' && (
+                                                <div className="flex flex-col items-center justify-center h-64 text-slate-400 dark:text-slate-500">
+                                                    <ShieldCheck className="w-12 h-12 mb-4 opacity-20" />
+                                                    <p className="text-sm font-medium">Test Scripts</p>
+                                                    <p className="text-xs mt-1">Write tests to validate the response data.</p>
+                                                </div>
+                                            )}
+                                            {activeTab === 'settings' && (
+                                                <div className="flex flex-col items-center justify-center h-64 text-slate-400 dark:text-slate-500">
+                                                    <SettingsIcon className="w-12 h-12 mb-4 opacity-20" />
+                                                    <p className="text-sm font-medium">Request Settings</p>
+                                                    <p className="text-xs mt-1">Configure timeouts, SSL verification, and other settings.</p>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
@@ -1279,7 +1398,16 @@ export function UserWorkspace() {
 
             {
                 showConsole && (
-                    <div className="h-64 border-t border-slate-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--bg-primary)] flex flex-col transition-all duration-300">
+                    <div
+                        className="border-t border-slate-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--bg-primary)] flex flex-col"
+                        style={{ height: consoleHeight }}
+                    >
+                        {/* Resize handle */}
+                        <div
+                            className="h-1 hover:h-1.5 cursor-row-resize w-full bg-slate-200 dark:border-[var(--border-color)] hover:bg-red-500 transition-all flex items-center justify-center group z-50 -mt-0.5"
+                            onMouseDown={() => setIsResizingConsole(true)}
+                        >
+                        </div>
                         <div className="flex items-center justify-between px-3 py-1 border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-50 dark:bg-[var(--bg-secondary)]">
                             <span className="text-xs font-semibold text-slate-600 dark:text-slate-300">Console</span>
                             <div className="flex items-center gap-2">
@@ -1302,7 +1430,6 @@ export function UserWorkspace() {
                         </div>
                     </div>
                 )
-
             }
 
             <Footer
