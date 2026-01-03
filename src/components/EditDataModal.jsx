@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical, Save, Folder, FileText } from 'lucide-react';
-import { createUpdateCollections, getAllAppCodes, deleteCollection } from '../services/apiservice';
+import { createUpdateCollections, getAllAppCodes, deleteCollection, getCollectionDetails } from '../services/apiservice';
 
 import { ConfirmationModal } from './ConfirmationModal';
 import { ImportModal } from './ImportModal';
 
-export function EditDataPanel() {
+export function EditDataPanel({ refreshTrigger }) {
     const { user } = useAuth();
     const [assignedAppCodes, setAssignedAppCodes] = useState([]);
     const [selectedAppCodeId, setSelectedAppCodeId] = useState('');
@@ -46,7 +46,14 @@ export function EditDataPanel() {
         const fetchCodes = async () => {
             if (user) {
                 try {
-                    const hierarchyData = await getAllAppCodes(user.token);
+                    let hierarchyData;
+                    if (user.role === 'developer' || user.role === 'dev' || user.role === 'developer') {
+                        const projectIds = user.projectIds || [];
+                        console.log("Fetching collection details for developer projectIds:", projectIds);
+                        hierarchyData = await getCollectionDetails(projectIds, user.token);
+                    } else {
+                        hierarchyData = await getAllAppCodes(user.token);
+                    }
 
                     // Logic to robustly determine assignments
                     // If user has projectIds, use those to filter hierarchy
@@ -87,7 +94,7 @@ export function EditDataPanel() {
             }
         };
         fetchCodes();
-    }, [user]);
+    }, [user, refreshTrigger]);
 
     useEffect(() => {
         if (selectedAppCodeId) {

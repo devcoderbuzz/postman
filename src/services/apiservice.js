@@ -425,10 +425,10 @@ export const assignUserToProject = async (userId, projectId, token) => {
         
         if (response.data.isError) {
              // Debugging: Stringify the entire data to see what the error actually is
-             const errorDetail = JSON.stringify(response.data.data || response.data);
+             const errorDetail = JSON.stringify(response.data.data.error || response.data);
              throw new Error(`Failed to assign project. Server response: ${errorDetail}`);
         }
-        console.log('User assigned to Project successfully 124...', response.data.data);
+        console.log('User assigned to Project successfully 124...', response.data.data.error);
         
         return response.data.data;
     } catch (error) {
@@ -758,6 +758,39 @@ export const getAllAppCodes = async (token) => {
         return response.data.data;
     } catch (error) {
         console.error('Error fetching app codes:', error.message);
+        throw error;
+    }
+};
+
+/**
+ * Get collection details for specific project IDs.
+ * Calls the /projects/projectCollectionDetails endpoint.
+ *
+ * @param {Array<number>} projectIds - Array of project IDs
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const getCollectionDetails = async (projectIds, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/projects/projectCollectionDetails`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: projectIds
+        });
+
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to fetch collection details');
+        }
+
+        return response.data.data;
+    } catch (error) {
+        console.error('Error fetching collection details:', error.message);
         throw error;
     }
 };

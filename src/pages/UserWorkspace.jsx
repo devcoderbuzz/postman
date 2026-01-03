@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { getCollectionsByProjectId, getAllProjects, getEnvDetails, updateEnvDetails, getAllAppCodes } from '../services/apiservice';
+import { getCollectionsByProjectId, getAllProjects, getEnvDetails, updateEnvDetails, getAllAppCodes, getCollectionDetails } from '../services/apiservice';
 import { Layout } from '../components/Layout';
 import { RequestBar } from '../components/RequestBar';
 import { Tabs } from '../components/Tabs';
@@ -265,6 +265,15 @@ export function UserWorkspace() {
     const [profilePic, setProfilePic] = useState(localStorage.getItem('profilePic') || '');
     const [localCollectionsPath, setLocalCollectionsPath] = useState(localStorage.getItem('localCollectionsPath') || '');
     const [showEnvSaveSuccess, setShowEnvSaveSuccess] = useState(false);
+    const [editDataRefreshTrigger, setEditDataRefreshTrigger] = useState(0);
+
+    const handleRefreshView = (view) => {
+        if (view === 'editData') {
+            setEditDataRefreshTrigger(prev => prev + 1);
+        } else if (view === 'collections') {
+            fetchWorkspaceData();
+        }
+    };
 
     const handleLogout = () => {
         logout();
@@ -1170,9 +1179,9 @@ export function UserWorkspace() {
                 onImport={handleGlobalImport}
             />
 
-            <Layout activeView={activeView} setActiveView={setActiveView}>
+            <Layout activeView={activeView} setActiveView={setActiveView} onRefresh={handleRefreshView}>
                 {(activeView === 'editData' || activeView === 'appcodes') ? (
-                    <EditDataPanel />
+                    <EditDataPanel refreshTrigger={editDataRefreshTrigger} />
                 ) : activeView === 'environments' ? (
                     <div className="flex-1 flex overflow-hidden">
                         <div className="w-80 border-r border-slate-200 dark:border-[var(--border-color)] p-6 overflow-auto bg-white dark:bg-[var(--bg-secondary)]">

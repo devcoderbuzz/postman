@@ -485,8 +485,10 @@ export function AdminDashboard() {
     // Helper to get unassigned codes for a user
     const getUnassignedCodes = (user) => {
         if (!user || !user.assignedAppCodes) return [];
-        const assignedIds = user.assignedAppCodes.filter(Boolean).map(ac => ac.id);
-        return appCodes.filter(ac => !assignedIds.includes(ac.id));
+        // Map assigned project IDs (usually numeric IDs stored in 'id' property)
+        const assignedIds = user.assignedAppCodes.filter(Boolean).map(ac => String(ac.id));
+        // Filter out appCodes that are already assigned by comparing against projectId (the numeric ID)
+        return appCodes.filter(ac => !assignedIds.includes(String(ac.projectId)));
     };
 
     const handleUpdateUserStatus = async (userId, newStatus) => {
@@ -1256,7 +1258,7 @@ export function AdminDashboard() {
                                         onChange={e => setNewAppCode(e.target.value)}
                                         className="w-full border rounded p-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                                         required
-                                        placeholder="e.g. GAPI_CB_SG"
+                                        placeholder="e.g. GAPI-CB-SG"
                                     />
                                 </div>
                                 <div>
@@ -1267,7 +1269,7 @@ export function AdminDashboard() {
                                         onChange={e => setNewModuleName(e.target.value)}
                                         className="w-full border rounded p-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                                         required
-                                        placeholder="e.g. Auth"
+                                        placeholder="CASA, FD, LOAN etc"
                                     />
                                 </div>
                                 <div>
