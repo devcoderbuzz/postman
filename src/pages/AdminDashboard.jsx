@@ -32,13 +32,15 @@ export function AdminDashboard() {
 
     // Form states
     const [newUsername, setNewUsername] = useState('');
-    const [newPassword, setNewPassword] = useState('');
     const [newUserRole, setNewUserRole] = useState('user');
-    const [newUserStatus, setNewUserStatus] = useState('active');
+    const [newAppCode, setNewAppCode] = useState('');
 
-    const [newProjectName, setNewProjectName] = useState('');
+
+    const [appCode, setAppCode] = useState('');
     const [newModuleName, setNewModuleName] = useState('');
+    const [newDescription, setNewDescription] = useState('');
     const [newProjectId, setNewProjectId] = useState('');
+    const [editingAppCodeId, setEditingAppCodeId] = useState(null);
 
     // App Codes tab state
     const [selectedAppCode, setSelectedAppCode] = useState('');
@@ -55,10 +57,10 @@ export function AdminDashboard() {
     const [editingUserProjectDetails, setEditingUserProjectDetails] = useState([]);
     const [isFetchingProjectDetails, setIsFetchingProjectDetails] = useState(false);
 
-    const [selectedProjectCode, setSelectedProjectCode] = useState('');
+    const [selectedAppCodeName, setSelectedAppCodeName] = useState('');
     const [selectedModuleName, setSelectedModuleName] = useState('');
     // State for Assignment Modal
-    const [assignProjectCode, setAssignProjectCode] = useState('');
+    const [assignAppCodeName, setAssignAppCodeName] = useState('');
     const [assignModuleName, setAssignModuleName] = useState('');
     const [selectedAppCodeId, setSelectedAppCodeId] = useState(''); // For the dropdown in "Add" modal
     const [activeView, setActiveView] = useState('users'); // 'users', 'appcodes', 'settings', or 'environments'
@@ -133,15 +135,16 @@ export function AdminDashboard() {
     const fetchAppCodes = async () => {
         if (user) {
             try {
-                const { getAllAppCodesForAdmin } = await import('../services/apiservice');
-                const data = await getAllAppCodesForAdmin(user);
+                const { getAllAppCodes } = await import('../services/apiservice');
+                const data = await getAllAppCodes(user.token);
                 setAllHierarchyData(data);
                 const mappedCodes = data.map((item) => ({
-                    id: `${item.projectCode}-${item.moduleName}`,
-                    projectName: item.projectCode,
+                    id: `${item.appCode}-${item.moduleName}`,
+                    projectName: item.appCode,
                     moduleName: item.moduleName,
                     projectId: item.projectId || item.id, // Use numeric projectId from API
-                    projectCode: item.projectCode, // Keep projectCode for display
+                    appCode: item.appCode, // Keep appCode for display
+                    description: item.description || '',
                     collections: item.collections || []
                 }));
                 setAppCodes(mappedCodes);
@@ -171,21 +174,21 @@ export function AdminDashboard() {
                     const hydratedCodes = u.projectIds.map(pid => {
                         // Handle potential object wrapper or primitive
                         const searchId = (typeof pid === 'object' && pid !== null)
-                            ? (pid.projectId || pid.id || pid.projectCode)
+                            ? (pid.projectId || pid.id || pid.appCode)
                             : pid;
 
                         // Find matching code in hierarchy (loose equality for string/number match)
                         const found = allHierarchyData.find(h =>
                             h.projectId == searchId ||
-                            h.projectCode == searchId ||
+                            h.appCode == searchId ||
                             h.id == searchId
                         );
 
                         if (found) {
                             return {
                                 ...found,
-                                id: found.id || `${found.projectCode}-${found.moduleName}`,
-                                projectName: found.projectCode || found.projectName,
+                                id: found.id || `${found.appCode}-${found.moduleName}`,
+                                projectName: found.appCode || found.projectName,
                                 moduleName: found.moduleName
                             };
                         }
@@ -208,14 +211,18 @@ export function AdminDashboard() {
 
     // Refresh on view switch
     useEffect(() => {
-        if (activeView === 'users') {
-            fetchUsers();
-        } else if (activeView === 'appcodes') {
+        handleRefreshView(activeView);
+    }, [activeView]);
+
+    const handleRefreshView = (view) => {
+        if (view === 'appcodes' || view === 'manageAppCodes') {
             fetchAppCodes();
-        } else if (activeView === 'environments') {
+        } else if (view === 'users') {
+            fetchUsers();
+        } else if (view === 'environments') {
             fetchEnvironments();
         }
-    }, [activeView]);
+    };
 
     // Helper to generate profile image
     const generateProfileImage = (username) => {
@@ -248,7 +255,7 @@ export function AdminDashboard() {
 
             const userData = {
                 username: newUsername,
-                password: newPassword,
+                password: "login@1234",
                 role: newUserRole,
                 status: "RESETPASSWORD",
                 profileImage: profileImageData
@@ -260,9 +267,7 @@ export function AdminDashboard() {
 
             // Clear inputs and close modal
             setNewUsername('');
-            setNewPassword('');
             setNewUserRole('user');
-            setNewUserStatus('active');
             setIsCreatingUser(false);
 
             // Show success message FIRST
@@ -276,20 +281,63 @@ export function AdminDashboard() {
         }
     };
 
-    const handleCreateAppCode = (e) => {
+    const handleCreateAppCode = async (e) => {
         e.preventDefault();
-        const newCode = {
-            id: Date.now(),
-            projectName: newProjectName,
-            moduleName: newModuleName,
-            projectId: newProjectId
-        };
-        setAppCodes([...appCodes, newCode]);
-        setNewProjectName('');
-        setNewModuleName('');
-        setNewProjectId('');
-        setIsCreatingAppCode(false);
-        alert(`App Code for ${newCode.projectName} - ${newCode.moduleName} created!`);
+
+        try {
+            // Dynamically import to avoid circular dependencies/initialization issues
+            const { createUpdateProject } = await import('../services/apiservice');
+
+            const projectPayload = {
+                id: editingAppCodeId || null,
+                appCode: newAppCode,
+                moduleName: newModuleName,
+                description: newDescription
+            };
+
+            await createUpdateProject(projectPayload, user?.token);
+
+            // Success handling
+            alert(`App Code ${newAppCode} - ${newModuleName} ${editingAppCodeId ? 'updated' : 'created'} successfully!`);
+
+            // Clear form
+            setNewAppCode('');
+            setNewModuleName('');
+            setNewDescription('');
+            setEditingAppCodeId(null);
+            setIsCreatingAppCode(false);
+
+            // Refresh list
+            await fetchAppCodes();
+
+        } catch (error) {
+            console.error('Failed to create/update app code:', error);
+            const backendMsg = error.response?.data?.data?.message || error.message;
+            alert(`Error creating/updating app code: ${backendMsg}`);
+        }
+    };
+
+    const handleDeleteProject = async (projectId) => {
+        if (window.confirm("Are you sure you want to delete this project?")) {
+            try {
+                const { deleteProject } = await import('../services/apiservice');
+                await deleteProject(projectId, user?.token);
+                await fetchAppCodes();
+                alert('Project deleted successfully');
+            } catch (error) {
+                console.error('Failed to delete project:', error);
+                alert('Error deleting project: ' + error.message);
+            }
+        }
+    };
+
+    const handleEditProject = (project) => {
+        console.log("handleEditProject", project);
+        setNewAppCode(project.appCode || '');
+        setNewModuleName(project.moduleName || '');
+        setNewDescription(project.description || '');
+        setEditingAppCodeId(project.projectId);
+        setIsCreatingAppCode(true);
     };
 
     // --- Action Handlers ---
@@ -327,8 +375,8 @@ export function AdminDashboard() {
             const userInState = users.find(u => u.id === userId);
 
             // Look in editing details first, then in the user state
-            const projectObj = editingUserProjectDetails.find(ac => (ac.id === appCodeId || ac.projectCode === appCodeId)) ||
-                userInState?.assignedAppCodes?.find(ac => (ac.id === appCodeId || ac.projectCode === appCodeId));
+            const projectObj = editingUserProjectDetails.find(ac => (ac.id === appCodeId || ac.appCode === appCodeId)) ||
+                userInState?.assignedAppCodes?.find(ac => (ac.id === appCodeId || ac.appCode === appCodeId));
 
             // Extract numeric ID
             let projectIdToUnassign = null;
@@ -365,13 +413,13 @@ export function AdminDashboard() {
             // Update local state and refresh
             setUsers(users.map(u => {
                 if (u.id === userId) {
-                    return { ...u, assignedAppCodes: (u.assignedAppCodes || []).filter(ac => (ac.id || ac.projectCode) !== appCodeId) };
+                    return { ...u, assignedAppCodes: (u.assignedAppCodes || []).filter(ac => (ac.id || ac.appCode) !== appCodeId) };
                 }
                 return u;
             }));
 
             if (editingUser && editingUser.id === userId) {
-                setEditingUserProjectDetails(prev => prev.filter(ac => (ac.id || ac.projectCode) !== appCodeId));
+                setEditingUserProjectDetails(prev => prev.filter(ac => (ac.id || ac.appCode) !== appCodeId));
             }
 
             // Refresh from server to be sure
@@ -570,7 +618,7 @@ export function AdminDashboard() {
                 profilePic={profilePic}
             />
 
-            <Layout activeView={activeView} setActiveView={setActiveView}>
+            <Layout activeView={activeView} setActiveView={setActiveView} onRefresh={handleRefreshView}>
                 {activeView === 'settings' ? (
                     <Settings
                         user={user}
@@ -739,7 +787,7 @@ export function AdminDashboard() {
                                                                     onClick={() => {
                                                                         setAssigningUser(u);
                                                                         setSelectedAppCodeId('');
-                                                                        setAssignProjectCode('');
+                                                                        setAssignAppCodeName('');
                                                                         setAssignModuleName('');
                                                                     }}
                                                                     className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium text-xs px-2 py-1 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-800"
@@ -748,6 +796,63 @@ export function AdminDashboard() {
                                                                 </button>
                                                                 <button
                                                                     onClick={() => handleDeleteUser(u.id)}
+                                                                    className="text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-medium text-xs px-2 py-1 border border-red-100 dark:border-red-900/30 rounded hover:bg-red-50 dark:hover:bg-red-900/10"
+                                                                >
+                                                                    Delete
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {activeView === 'manageAppCodes' && (
+                                <div className="flex flex-col gap-8 h-full">
+                                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col flex-1 min-h-0">
+                                        <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                                            <h2 className="text-lg font-bold">App Codes</h2>
+                                            <button
+                                                onClick={() => {
+                                                    setEditingAppCodeId(null);
+                                                    setNewAppCode('');
+                                                    setNewModuleName('');
+                                                    setNewDescription('');
+                                                    setIsCreatingAppCode(true);
+                                                }}
+                                                className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 font-medium shadow-sm"
+                                            >
+                                                Create App Code
+                                            </button>
+                                        </div>
+                                        <div className="overflow-auto flex-1">
+                                            <table className="w-full text-left text-sm">
+                                                <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+                                                    <tr>
+                                                        <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300">App Code</th>
+                                                        <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300">Module Name</th>
+                                                        <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300">Description</th>
+                                                        <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 text-right">Actions</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                                                    {appCodes.map(code => (
+                                                        <tr key={code.id || code.projectId} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                                            <td className="px-6 py-3 font-medium">{code.appCode}</td>
+                                                            <td className="px-6 py-3">{code.moduleName}</td>
+                                                            <td className="px-6 py-3 text-slate-500 dark:text-slate-400 truncate max-w-xs">{code.description}</td>
+                                                            <td className="px-6 py-3 text-right space-x-2">
+                                                                <button
+                                                                    onClick={() => handleEditProject(code)}
+                                                                    className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium text-xs px-2 py-1 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-800"
+                                                                >
+                                                                    Edit
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteProject(code.projectId)}
                                                                     className="text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-medium text-xs px-2 py-1 border border-red-100 dark:border-red-900/30 rounded hover:bg-red-50 dark:hover:bg-red-900/10"
                                                                 >
                                                                     Delete
@@ -775,10 +880,10 @@ export function AdminDashboard() {
                                                     <span className="text-sm font-semibold text-slate-600 dark:text-slate-400">Project:</span>
                                                     <div className="relative">
                                                         <select
-                                                            value={selectedProjectCode}
+                                                            value={selectedAppCodeName}
                                                             onChange={(e) => {
                                                                 const val = e.target.value;
-                                                                setSelectedProjectCode(val);
+                                                                setSelectedAppCodeName(val);
                                                                 setSelectedModuleName(''); // Reset module
                                                                 setSelectedAppCode(''); // Reset final selection
                                                             }}
@@ -806,8 +911,8 @@ export function AdminDashboard() {
                                                             onChange={(e) => {
                                                                 const val = e.target.value;
                                                                 setSelectedModuleName(val);
-                                                                if (selectedProjectCode && val) {
-                                                                    const found = appCodes.find(ac => ac.projectName === selectedProjectCode && ac.moduleName === val);
+                                                                if (selectedAppCodeName && val) {
+                                                                    const found = appCodes.find(ac => ac.projectName === selectedAppCodeName && ac.moduleName === val);
                                                                     if (found) {
                                                                         setSelectedAppCode(found.id);
                                                                     }
@@ -816,11 +921,11 @@ export function AdminDashboard() {
                                                                 }
                                                             }}
                                                             className="w-48 appearance-none border rounded-md p-2 pr-8 text-sm dark:bg-slate-900 dark:border-slate-700 focus:border-red-500 outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-                                                            disabled={!selectedProjectCode}
+                                                            disabled={!selectedAppCodeName}
                                                         >
                                                             <option value="">-- Select Module --</option>
                                                             {appCodes
-                                                                .filter(ac => ac.projectName === selectedProjectCode)
+                                                                .filter(ac => ac.projectName === selectedAppCodeName)
                                                                 .map(ac => (
                                                                     <option key={ac.moduleName} value={ac.moduleName}>
                                                                         {ac.moduleName}
@@ -834,12 +939,7 @@ export function AdminDashboard() {
                                                     </div>
                                                 </div>
                                             </div>
-                                            <button
-                                                onClick={() => setIsCreatingAppCode(true)}
-                                                className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 font-medium shadow-sm shrink-0"
-                                            >
-                                                Create App Code
-                                            </button>
+
                                         </div>
                                     </div>
 
@@ -998,13 +1098,13 @@ export function AdminDashboard() {
                                 <ul className="space-y-2 max-h-60 overflow-y-auto">
                                     {/* Show fetched details if available, otherwise fallback to existing assignedAppCodes */}
                                     {(editingUserProjectDetails.length > 0 ? editingUserProjectDetails : users.find(u => u.id === editingUser.id)?.assignedAppCodes || []).map((ac, index) => (
-                                        <li key={ac.id ? `id-${ac.id}` : `pc-${ac.projectCode}-${ac.moduleName || index}`} className="flex justify-between items-center p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-700 text-sm">
+                                        <li key={ac.id ? `id-${ac.id}` : `pc-${ac.appCode}-${ac.moduleName || index}`} className="flex justify-between items-center p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-700 text-sm">
                                             <div>
-                                                <div className="font-medium">{ac.projectName || ac.projectCode}</div>
+                                                <div className="font-medium">{ac.projectName || ac.appCode}</div>
                                                 <div className="text-xs text-slate-500">{ac.moduleName || ac.description}</div>
                                             </div>
                                             <button
-                                                onClick={() => handleUnassignAppCode(editingUser.id, ac.id || ac.projectCode)}
+                                                onClick={() => handleUnassignAppCode(editingUser.id, ac.id || ac.appCode)}
                                                 className="text-red-500 hover:text-red-700 text-xs px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
                                             >
                                                 Delete
@@ -1042,9 +1142,9 @@ export function AdminDashboard() {
                         <div className="px-6 pb-6">
                             <label className="block text-xs font-bold mb-2 uppercase tracking-wide text-slate-600 dark:text-slate-400">Project</label>
                             <select
-                                value={assignProjectCode}
+                                value={assignAppCodeName}
                                 onChange={e => {
-                                    setAssignProjectCode(e.target.value);
+                                    setAssignAppCodeName(e.target.value);
                                     setAssignModuleName('');
                                     setSelectedAppCodeId('');
                                 }}
@@ -1063,15 +1163,15 @@ export function AdminDashboard() {
                                     const val = e.target.value;
                                     setAssignModuleName(val);
                                     const unassigned = getUnassignedCodes(users.find(u => u.id === assigningUser.id));
-                                    const match = unassigned.find(ac => ac.projectName === assignProjectCode && ac.moduleName === val);
+                                    const match = unassigned.find(ac => ac.projectName === assignAppCodeName && ac.moduleName === val);
                                     setSelectedAppCodeId(match ? match.id : '');
                                 }}
                                 className="w-full border rounded-md p-3 text-sm dark:bg-slate-900 dark:border-slate-700 mb-8 outline-none focus:ring-2 focus:ring-red-500 transition-all"
-                                disabled={!assignProjectCode}
+                                disabled={!assignAppCodeName}
                             >
                                 <option value="">-- Select Module --</option>
                                 {getUnassignedCodes(users.find(u => u.id === assigningUser.id))
-                                    .filter(ac => ac.projectName === assignProjectCode)
+                                    .filter(ac => ac.projectName === assignAppCodeName)
                                     .map(ac => (
                                         <option key={ac.moduleName} value={ac.moduleName}>{ac.moduleName}</option>
                                     ))
@@ -1113,16 +1213,7 @@ export function AdminDashboard() {
                                         autoFocus
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-medium mb-1">Password</label>
-                                    <input
-                                        type="password"
-                                        value={newPassword}
-                                        onChange={e => setNewPassword(e.target.value)}
-                                        className="w-full border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700"
-                                        required
-                                    />
-                                </div>
+
                                 <div>
                                     <label className="block text-xs font-medium mb-1">Role</label>
                                     <select
@@ -1136,18 +1227,7 @@ export function AdminDashboard() {
 
                                     </select>
                                 </div>
-                                {/* <div>
-                                    <label className="block text-xs font-medium mb-1">Status</label>
-                                    <select
-                                        value={newUserStatus}
-                                        onChange={e => setNewUserStatus(e.target.value)}
-                                        className="w-full border rounded p-2 text-sm dark:bg-slate-900 dark:border-slate-700"
-                                    >
-                                        <option value="active">Active</option>
-                                        <option value="inactive">Inactive</option>
-                                        <option value="resetpassword">ResetPassword</option>
-                                    </select>
-                                </div> */}
+
                             </div>
                             <div className="flex justify-end gap-2">
                                 <button type="button" onClick={() => setIsCreatingUser(false)} className="px-3 py-2 text-slate-600 dark:text-slate-400 text-sm hover:underline">Cancel</button>
@@ -1163,21 +1243,20 @@ export function AdminDashboard() {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                            <h3 className="font-bold text-lg">Create New App Code</h3>
+                            <h3 className="font-bold text-lg">{editingAppCodeId ? 'Edit App Code' : 'Create New App Code'}</h3>
                             <button onClick={() => setIsCreatingAppCode(false)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">✕</button>
                         </div>
                         <form onSubmit={handleCreateAppCode} className="p-6">
                             <div className="space-y-4 mb-6">
                                 <div>
-                                    <label className="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Project Name</label>
+                                    <label className="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">APP Code</label>
                                     <input
                                         type="text"
-                                        value={newProjectName}
-                                        onChange={e => setNewProjectName(e.target.value)}
+                                        value={newAppCode}
+                                        onChange={e => setNewAppCode(e.target.value)}
                                         className="w-full border rounded p-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
                                         required
-                                        placeholder="e.g. PaymentService"
-                                        autoFocus
+                                        placeholder="e.g. GAPI_CB_SG"
                                     />
                                 </div>
                                 <div>
@@ -1192,16 +1271,15 @@ export function AdminDashboard() {
                                     />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Project ID</label>
-                                    <input
-                                        type="text"
-                                        value={newProjectId}
-                                        onChange={e => setNewProjectId(e.target.value)}
-                                        className="w-full border rounded p-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-                                        required
-                                        placeholder="e.g. proj_123"
+                                    <label className="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Description</label>
+                                    <textarea
+                                        value={newDescription}
+                                        onChange={e => setNewDescription(e.target.value)}
+                                        className="w-full border rounded p-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 min-h-[80px]"
+                                        placeholder="Project description..."
                                     />
                                 </div>
+
                             </div>
                             <div className="flex justify-end gap-2">
                                 <button
@@ -1215,7 +1293,7 @@ export function AdminDashboard() {
                                     type="submit"
                                     className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 font-medium shadow-sm"
                                 >
-                                    Create App Code
+                                    {editingAppCodeId ? 'Save Changes' : 'Create App Code'}
                                 </button>
                             </div>
                         </form>

@@ -21,7 +21,8 @@ vi.mock('../../components/Header', () => ({
     Header: ({ setActiveView }) => (
         <div data-testid="header">
             <button onClick={() => setActiveView('users')}>Users View</button>
-            <button onClick={() => setActiveView('appcodes')}>App Codes View</button>
+            <button onClick={() => setActiveView('manageAppCodes')}>App Codes View</button>
+            <button onClick={() => setActiveView('appcodes')}>Collection Details View</button>
             <button onClick={() => setActiveView('environments')}>Environments View</button>
         </div>
     )
@@ -55,7 +56,7 @@ describe('AdminDashboard Extended', () => {
             projectId: 101,
             projectName: 'P1',
             moduleName: 'M1',
-            projectCode: 'P1',
+            appCode: 'P1',
             collections: [
                 {
                     collectionId: 'c1',
@@ -82,7 +83,7 @@ describe('AdminDashboard Extended', () => {
         useTheme.mockReturnValue({ theme: 'light', setTheme: mockSetTheme });
 
         apiService.getAllUsers.mockResolvedValue(mockUsers);
-        apiService.getAllAppCodesForAdmin.mockResolvedValue(mockAppCodes);
+        apiService.getAllAppCodes.mockResolvedValue(mockAppCodes);
         apiService.getEnvDetails.mockResolvedValue(mockEnvironments);
         apiService.updateEnvDetails.mockResolvedValue({ success: true });
         apiService.unassignUserFromProject.mockResolvedValue({ success: true });
@@ -106,9 +107,8 @@ describe('AdminDashboard Extended', () => {
         const modal = screen.getByText('Create New App Code').closest('div.fixed');
         const modalWithin = within(modal);
 
-        fireEvent.change(modalWithin.getByPlaceholderText('e.g. PaymentService'), { target: { value: 'NewP' } });
+        fireEvent.change(modalWithin.getByPlaceholderText('e.g. GAPI_CB_SG'), { target: { value: 'NewP' } });
         fireEvent.change(modalWithin.getByPlaceholderText('e.g. Auth'), { target: { value: 'NewM' } });
-        fireEvent.change(modalWithin.getByPlaceholderText('e.g. proj_123'), { target: { value: '123' } });
 
         fireEvent.click(modalWithin.getByText('Create App Code', { selector: 'button[type="submit"]' }));
 
@@ -119,9 +119,9 @@ describe('AdminDashboard Extended', () => {
 
     it('expands collections and views request details', async () => {
         render(<AdminDashboard />);
-        fireEvent.click(screen.getByText('App Codes View'));
+        fireEvent.click(screen.getByText('Collection Details View'));
 
-        await waitFor(() => expect(apiService.getAllAppCodesForAdmin).toHaveBeenCalled());
+        await waitFor(() => expect(apiService.getAllAppCodes).toHaveBeenCalled());
         await waitFor(() => expect(screen.getAllByRole('option').length).toBeGreaterThan(1));
 
         const projectSelect = screen.getByDisplayValue('-- Select Project --');
@@ -155,9 +155,9 @@ describe('AdminDashboard Extended', () => {
 
     it('handles request details with Object headers and Body object', async () => {
         render(<AdminDashboard />);
-        fireEvent.click(screen.getByText('App Codes View'));
+        fireEvent.click(screen.getByText('Collection Details View'));
 
-        await waitFor(() => expect(apiService.getAllAppCodesForAdmin).toHaveBeenCalled());
+        await waitFor(() => expect(apiService.getAllAppCodes).toHaveBeenCalled());
         await waitFor(() => expect(screen.getAllByRole('option').length).toBeGreaterThan(1));
 
         fireEvent.change(screen.getByDisplayValue('-- Select Project --'), { target: { value: 'P1' } });

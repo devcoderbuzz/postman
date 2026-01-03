@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical, Save, Folder, FileText } from 'lucide-react';
-import { createUpdateCollections, getAllAppCodesForAdmin, deleteCollection } from '../services/apiservice';
+import { createUpdateCollections, getAllAppCodes, deleteCollection } from '../services/apiservice';
 
 import { ConfirmationModal } from './ConfirmationModal';
 import { ImportModal } from './ImportModal';
@@ -46,7 +46,7 @@ export function EditDataPanel() {
         const fetchCodes = async () => {
             if (user) {
                 try {
-                    const hierarchyData = await getAllAppCodesForAdmin(user);
+                    const hierarchyData = await getAllAppCodes(user.token);
 
                     // Logic to robustly determine assignments
                     // If user has projectIds, use those to filter hierarchy
@@ -57,7 +57,7 @@ export function EditDataPanel() {
 
                     if (userProjectIds.length > 0) {
                         filtered = hierarchyData.filter(project =>
-                            userProjectIds.includes(project.projectCode) || userProjectIds.includes(project.projectId)
+                            userProjectIds.includes(project.appCode) || userProjectIds.includes(project.projectId)
                         );
                     } else if (user.assignedAppCodes && user.assignedAppCodes.length > 0) {
                         // If projectIds not present, maybe we can trust assignedAppCodes
@@ -70,7 +70,7 @@ export function EditDataPanel() {
                         const pid = parseInt(p.projectId || p.id);
                         return {
                             ...p,
-                            projectName: p.projectCode || p.projectName,
+                            projectName: p.appCode || p.projectName,
                             moduleName: p.moduleName || 'default',
                             projectId: pid
                         };
@@ -493,7 +493,7 @@ export function EditDataPanel() {
                             className="w-full p-2 text-sm bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-md outline-none focus:border-red-500 dark:text-white"
                         >
                             <option value="">Select Project...</option>
-                            {[...new Set(assignedAppCodes.map(ac => ac.projectName || ac.projectCode))].filter(Boolean).map(pName => (
+                            {[...new Set(assignedAppCodes.map(ac => ac.projectName || ac.appCode))].filter(Boolean).map(pName => (
                                 <option key={pName} value={pName}>{pName}</option>
                             ))}
                         </select>
@@ -509,7 +509,7 @@ export function EditDataPanel() {
                                 setSelectedModule(mod);
                                 if (selectedProject && mod) {
                                     const ac = assignedAppCodes.find(item =>
-                                        (item.projectName === selectedProject || item.projectCode === selectedProject) &&
+                                        (item.projectName === selectedProject || item.appCode === selectedProject) &&
                                         item.moduleName === mod
                                     );
                                     if (ac) {
@@ -524,7 +524,7 @@ export function EditDataPanel() {
                         >
                             <option value="">Select Module...</option>
                             {selectedProject && assignedAppCodes
-                                .filter(ac => (ac.projectName === selectedProject || ac.projectCode === selectedProject))
+                                .filter(ac => (ac.projectName === selectedProject || ac.appCode === selectedProject))
                                 .map(ac => (
                                     <option key={ac.moduleName} value={ac.moduleName}>{ac.moduleName}</option>
                                 ))

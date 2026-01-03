@@ -94,7 +94,7 @@ export const getAllUsers = async (currentUser) => {
         
         const response = await axios.post('http://localhost:3001/proxy', {
             method: 'GET',
-            url: `${BASE_URL}/users/project-count`,
+            url: `${BASE_URL}/users/allusersWithProjectData`,
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
@@ -658,6 +658,106 @@ export const updateEnvDetails = async (envData, token) => {
         return response.data.data;
     } catch (error) {
         console.error('Error updating environment details:', error.message);
+        throw error;
+    }
+};
+
+/**
+ * Create or Update Project service.
+ * Calls the /projects/create endpoint.
+ * 
+ * @param {Object} projectData - The project data object
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const createUpdateProject = async (projectData, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/projects/create`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: projectData
+        });
+        
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to create/update project');
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error creating/updating project:', error.message);
+        throw error;
+    }
+};
+
+/**
+ * Delete Project service.
+ * Calls the /projects/delete endpoint.
+ * 
+ * @param {number} projectId - The ID of the project to delete
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const deleteProject = async (projectId, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/projects/delete`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: {
+                id: projectId
+            }
+        });
+        
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to delete project');
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error deleting project:', error.message);
+        throw error;
+    }
+};
+
+/**
+ * Get all app codes.
+ * Calls the /appCodes endpoint.
+ *
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const getAllAppCodes = async (token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'GET',
+            url: `${BASE_URL}/appCodes`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: [] // Empty array as body
+        });
+
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to fetch app codes');
+        }
+
+        return response.data.data;
+    } catch (error) {
+        console.error('Error fetching app codes:', error.message);
         throw error;
     }
 };

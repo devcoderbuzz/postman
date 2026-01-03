@@ -14,9 +14,9 @@ export function CollectionsPanel({
     onSaveCollection,
     onReloadCollection,
     projects,
-    activeProject,
-    onProjectSelect,
-    onRefreshProject,
+    activeAppCode,
+    onAppCodeSelect,
+    onRefreshAppCode,
     modules,
     activeModule,
     onModuleSelect,
@@ -135,8 +135,8 @@ export function CollectionsPanel({
                         <div className="flex items-center gap-2">
                             <span className="text-xs font-medium text-slate-500 w-16 text-right">App Code:</span>
                             <select
-                                value={activeProject}
-                                onChange={(e) => onProjectSelect(e.target.value)}
+                                value={activeAppCode}
+                                onChange={(e) => onAppCodeSelect(e.target.value)}
                                 className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded px-2 py-1 text-xs outline-none focus:border-blue-500"
                             >
                                 {projects.map((proj) => (
@@ -146,9 +146,9 @@ export function CollectionsPanel({
                                 ))}
                             </select>
                             <button
-                                onClick={onRefreshProject}
+                                onClick={onRefreshAppCode}
                                 className="p-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 hover:text-blue-500 transition-colors"
-                                title="Refresh Project"
+                                title="Refresh App Code"
                             >
                                 <RefreshCw className="w-3.5 h-3.5" />
                             </button>

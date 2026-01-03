@@ -20,7 +20,8 @@ vi.mock('../../components/Header', () => ({
     Header: ({ setActiveView }) => (
         <div data-testid="header">
             <button onClick={() => setActiveView('users')}>Users View</button>
-            <button onClick={() => setActiveView('appcodes')}>App Codes View</button>
+            <button onClick={() => setActiveView('manageAppCodes')}>App Codes View</button>
+            <button onClick={() => setActiveView('appcodes')}>Collection Details View</button>
             <button onClick={() => setActiveView('environments')}>Environments View</button>
         </div>
     )
@@ -42,8 +43,8 @@ describe('AdminDashboard', () => {
     ];
 
     const mockAppCodes = [
-        { id: 101, projectId: 101, projectCode: 'P1', moduleName: 'M1', collections: [] },
-        { id: 102, projectId: 102, projectCode: 'P2', moduleName: 'M2', collections: [] }
+        { id: 101, projectId: 101, appCode: 'P1', moduleName: 'M1', collections: [] },
+        { id: 102, projectId: 102, appCode: 'P2', moduleName: 'M2', collections: [] }
     ];
 
     beforeEach(() => {
@@ -55,7 +56,7 @@ describe('AdminDashboard', () => {
 
         // API Mocks
         apiService.getAllUsers.mockResolvedValue(mockUsers);
-        apiService.getAllAppCodesForAdmin.mockResolvedValue(mockAppCodes);
+        apiService.getAllAppCodes.mockResolvedValue(mockAppCodes);
         apiService.getEnvDetails.mockResolvedValue({});
         apiService.register.mockResolvedValue({ success: true, username: 'newuser' });
         apiService.deleteUser.mockResolvedValue({ success: true });
@@ -90,7 +91,7 @@ describe('AdminDashboard', () => {
 
         await waitFor(() => {
             expect(apiService.getAllUsers).toHaveBeenCalledWith(mockUser);
-            expect(apiService.getAllAppCodesForAdmin).toHaveBeenCalledWith(mockUser);
+            expect(apiService.getAllAppCodes).toHaveBeenCalledWith(mockUser.token);
             // expect(apiService.getEnvDetails).toHaveBeenCalledWith(mockUser.token); // Might be called slightly differently or later, let's focus on users first or wrap all in waitFor.
         });
 
@@ -114,8 +115,6 @@ describe('AdminDashboard', () => {
         const usernameInput = modalWithin.getByRole('textbox');
         fireEvent.change(usernameInput, { target: { value: 'newuser' } });
 
-        const passwordInput = modal.querySelector('input[type="password"]');
-        fireEvent.change(passwordInput, { target: { value: 'password123' } });
 
         const submitBtn = modalWithin.getAllByText('Create User').find(el => el.tagName === 'BUTTON');
         fireEvent.click(submitBtn);

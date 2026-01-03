@@ -3,12 +3,12 @@ import { cn } from '../lib/utils';
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 
-export function Sidebar({ activeView, setActiveView }) {
+export function Sidebar({ activeView, setActiveView, onRefresh }) {
     const { user } = useAuth();
 
     const toggleView = (view) => {
         if (activeView === view) {
-            // If clicking the same view, don't do anything (it's already active)
+            if (onRefresh) onRefresh(view);
             return;
         } else {
             setActiveView(view);
@@ -21,12 +21,20 @@ export function Sidebar({ activeView, setActiveView }) {
             <div className="flex flex-col gap-2 w-full px-2 flex-1 overflow-y-auto no-scrollbar">
                 {/* Admin specific items */}
                 {user && user.role === 'admin' && (
-                    <SidebarItem
-                        icon={Users}
-                        label="Users"
-                        active={activeView === 'users'}
-                        onClick={() => toggleView('users')}
-                    />
+                    <>
+                        <SidebarItem
+                            icon={Users}
+                            label="Users"
+                            active={activeView === 'users'}
+                            onClick={() => toggleView('users')}
+                        />
+                        <SidebarItem
+                            icon={LayoutGrid}
+                            label="App Codes"
+                            active={activeView === 'manageAppCodes'}
+                            onClick={() => toggleView('manageAppCodes')}
+                        />
+                    </>
                 )}
 
                 {(!user || user.role !== 'admin') && (
@@ -48,7 +56,7 @@ export function Sidebar({ activeView, setActiveView }) {
                 {user && user.role !== 'user' && (
                     <SidebarItem
                         icon={Database}
-                        label="My App Codes"
+                        label={user.role === 'admin' ? "Collection Details" : "My App Codes"}
                         active={activeView === 'appcodes' || activeView === 'editData'}
                         onClick={() => toggleView(user.role === 'admin' ? 'appcodes' : 'editData')}
                     />

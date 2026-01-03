@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { getCollectionsByProjectId, getAllProjects, getEnvDetails, updateEnvDetails, getAllAppCodesForAdmin } from '../services/apiservice';
+import { getCollectionsByProjectId, getAllProjects, getEnvDetails, updateEnvDetails, getAllAppCodes } from '../services/apiservice';
 import { Layout } from '../components/Layout';
 import { RequestBar } from '../components/RequestBar';
 import { Tabs } from '../components/Tabs';
@@ -294,7 +294,7 @@ export function UserWorkspace() {
     // Project state
     const placeholderProjects = [{ id: 'default', name: 'Default Project' }];
     const [projects, setProjects] = useState(placeholderProjects);
-    const [activeProject, setActiveProject] = useState('default');
+    const [activeAppCodeName, setActiveAppCodeName] = useState('default');
 
     const [rawAppCodes, setRawAppCodes] = useState([]);
     const [activeModule, setActiveModule] = useState('default');
@@ -302,27 +302,27 @@ export function UserWorkspace() {
 
     // Fetch collections when module changes
     useEffect(() => {
-        if (activeProject && activeModule && rawAppCodes.length > 0) {
+        if (activeAppCodeName && activeModule && rawAppCodes.length > 0) {
             // Find the app code object that matches the active project and module
             const selectedApp = rawAppCodes.find(app =>
-                app.projectName === activeProject && app.moduleName === activeModule
+                app.projectName === activeAppCodeName && app.moduleName === activeModule
             );
 
             if (selectedApp && selectedApp.projectId) {
                 fetchServerCollections(selectedApp.projectId);
             } else {
-                console.warn('Project ID not found for selection:', activeProject, activeModule);
+                console.warn('Project ID not found for selection:', activeAppCodeName, activeModule);
                 setServerCollections([]);
             }
         }
-    }, [activeProject, activeModule, rawAppCodes]);
+    }, [activeAppCodeName, activeModule, rawAppCodes]);
 
     const fetchServerCollections = async (projectId) => {
         try {
             let fetchedCollections = null;
 
             // Try to find in rawAppCodes first (since we loaded hierarchy for user/dev)
-            const localProject = rawAppCodes.find(app => (app.projectId === projectId || app.projectCode === projectId));
+            const localProject = rawAppCodes.find(app => (app.projectId === projectId || app.appCode === projectId));
             if (localProject && localProject.collections) {
                 console.log(`Using cached collections for Project ID: ${projectId}`);
                 fetchedCollections = localProject.collections;
@@ -395,9 +395,9 @@ export function UserWorkspace() {
     };
 
     const refreshModule = () => {
-        if (activeProject && activeModule && rawAppCodes.length > 0) {
+        if (activeAppCodeName && activeModule && rawAppCodes.length > 0) {
             const selectedApp = rawAppCodes.find(app =>
-                app.projectName === activeProject && app.moduleName === activeModule
+                app.projectName === activeAppCodeName && app.moduleName === activeModule
             );
             if (selectedApp && selectedApp.projectId) {
                 fetchServerCollections(selectedApp.projectId);
@@ -405,10 +405,10 @@ export function UserWorkspace() {
         }
     };
 
-    // Update modules when activeProject (projectName) changes
+    // Update modules when activeAppCodeName (projectName) changes
     useEffect(() => {
-        if (activeProject && rawAppCodes.length > 0) {
-            const projectAppCodes = rawAppCodes.filter(app => app.projectName === activeProject);
+        if (activeAppCodeName && rawAppCodes.length > 0) {
+            const projectAppCodes = rawAppCodes.filter(app => app.projectName === activeAppCodeName);
             const uniqueModules = [...new Set(projectAppCodes.map(app => app.moduleName))]
                 .map(name => ({ id: name, name: name }));
 
@@ -423,7 +423,7 @@ export function UserWorkspace() {
             setModules([]);
             setServerCollections([]);
         }
-    }, [activeProject, rawAppCodes]);
+    }, [activeAppCodeName, rawAppCodes]);
 
     // Collections & Environments
     const [serverCollections, setServerCollections] = useState([]);
@@ -529,18 +529,18 @@ export function UserWorkspace() {
         if (user.role === 'user' || user.role === 'developer' || user.role === 'dev') {
             try {
                 // Using imported getAllAppCodesForAdmin instead of dynamic import
-                const hierarchyData = await getAllAppCodesForAdmin(user);
+                const hierarchyData = await getAllAppCodes(user.token);
 
                 // Filter hierarchy to only include projects user is assigned to
                 const userProjectIds = user.projectIds || [];
                 const filteredProjects = hierarchyData.filter(project =>
-                    userProjectIds.includes(project.projectCode) || userProjectIds.includes(project.projectId)
+                    userProjectIds.includes(project.appCode) || userProjectIds.includes(project.projectId)
                 );
 
 
                 const formattedAppCodes = filteredProjects.map(p => ({
                     ...p,
-                    projectName: p.projectCode || p.projectName,
+                    projectName: p.appCode || p.projectName,
                     moduleName: p.moduleName || 'default'
                 }));
                 setRawAppCodes(formattedAppCodes);
@@ -573,13 +573,13 @@ export function UserWorkspace() {
                 setServerCollections(allCollections);
 
                 // Set up projects and modules dropdowns for legacy behavior if needed
-                const uniqueProjects = [...new Set(filteredProjects.map(app => app.projectCode))]
+                const uniqueProjects = [...new Set(filteredProjects.map(app => app.appCode))]
                     .map(name => ({ id: name, name: name }));
                 if (uniqueProjects.length > 0) {
                     setProjects(uniqueProjects);
                     // Only set active project if not already set, or default
-                    if (activeProject === 'default') {
-                        setActiveProject(uniqueProjects[0].id);
+                    if (activeAppCodeName === 'default') {
+                        setActiveAppCodeName(uniqueProjects[0].id);
                     }
                 }
             } catch (e) {
@@ -593,7 +593,7 @@ export function UserWorkspace() {
                     .map(name => ({ id: name, name: name }));
                 if (uniqueProjects.length > 0) {
                     setProjects(uniqueProjects);
-                    if (activeProject === 'default') setActiveProject(uniqueProjects[0].id);
+                    if (activeAppCodeName === 'default') setActiveAppCodeName(uniqueProjects[0].id);
                 }
             } else {
                 try {
@@ -604,7 +604,7 @@ export function UserWorkspace() {
                             .map(name => ({ id: name, name: name }));
                         if (uniqueProjects.length > 0) {
                             setProjects(uniqueProjects);
-                            if (activeProject === 'default') setActiveProject(uniqueProjects[0].id);
+                            if (activeAppCodeName === 'default') setActiveAppCodeName(uniqueProjects[0].id);
                         }
                     }
                 } catch (e) { console.error(e); }
@@ -846,7 +846,7 @@ export function UserWorkspace() {
         });
     };
 
-    const refreshProject = async () => {
+    const refreshAppCode = async () => {
         if (user && user.assignedAppCodes) return; // Don't refresh if hardcoded assignments
         try {
             const fetchedData = await getAllProjects();
@@ -856,8 +856,8 @@ export function UserWorkspace() {
                     .map(name => ({ id: name, name: name }));
                 if (uniqueProjects.length > 0) {
                     setProjects(uniqueProjects);
-                    if (!uniqueProjects.find(p => p.id === activeProject)) {
-                        setActiveProject(uniqueProjects[0].id);
+                    if (!uniqueProjects.find(p => p.id === activeAppCodeName)) {
+                        setActiveAppCodeName(uniqueProjects[0].id);
                     }
                 }
             }
@@ -1338,9 +1338,9 @@ export function UserWorkspace() {
                                     onSaveCollection={saveCollectionToDb}
                                     onReloadCollection={reloadCollectionFromDb}
                                     projects={projects}
-                                    activeProject={activeProject}
-                                    onProjectSelect={setActiveProject}
-                                    onRefreshProject={refreshProject}
+                                    activeAppCode={activeAppCodeName}
+                                    onAppCodeSelect={setActiveAppCodeName}
+                                    onRefreshAppCode={refreshAppCode}
                                     modules={modules}
                                     activeModule={activeModule}
                                     onModuleSelect={setActiveModule}
