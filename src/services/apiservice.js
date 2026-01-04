@@ -110,7 +110,7 @@ export const getAllUsers = async (currentUser) => {
         if (response.data.isError) {
              throw new Error(response.data.data?.message || response.data.statusText || 'Failed to fetch users');
         }
-        
+        console.log('All Users Response:', response.data.data);
         return response.data.data;
     } catch (error) {
         console.error('Error fetching users:', error.message);
@@ -299,6 +299,7 @@ export const createRequestData = async (requestData, token) => {
 export const updateProfilePic = async (userId, profileImage, token) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
+        console.log('Calling updateProfilePic for user:', userId, 'Image data length:', profileImage);
         
         const response = await axios.post('http://localhost:3001/proxy', {
             method: 'POST',
@@ -312,6 +313,8 @@ export const updateProfilePic = async (userId, profileImage, token) => {
                 profileImage: profileImage
             }
         });
+
+        console.log('updateProfilePic Response:', response.data);
         
         if (response.data.isError) {
              throw new Error(response.data.data?.message || response.data.statusText || 'Failed to update profile picture');

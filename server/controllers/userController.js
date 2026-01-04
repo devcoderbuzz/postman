@@ -85,7 +85,7 @@ export const updateProfilePic = (req, res) => {
             writeData(users);
             
             return res.status(200).json({
-                message: 'Profile picture created successfully',
+                message: 'Pic created successfully.',
                 data: { userId, profileImage }
             });
         }
@@ -96,7 +96,7 @@ export const updateProfilePic = (req, res) => {
         if (writeData(users)) {
             logToFile(`Success: Updated profile pic for user: ${userId}`);
             return res.status(200).json({
-                message: 'Profile picture updated successfully',
+                message: 'Pic updated successfully.',
                 data: {
                     userId: users[userIndex].id,
                     profileImage: profileImage

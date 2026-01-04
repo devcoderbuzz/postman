@@ -20,7 +20,7 @@ export function Sidebar({ activeView, setActiveView, onRefresh }) {
 
             <div className="flex flex-col gap-2 w-full px-2 flex-1 overflow-y-auto no-scrollbar">
                 {/* Admin specific items */}
-                {user && user.role === 'admin' && (
+                {user && user.role?.toLowerCase() === 'admin' && (
                     <>
                         <SidebarItem
                             icon={Users}
@@ -37,7 +37,7 @@ export function Sidebar({ activeView, setActiveView, onRefresh }) {
                     </>
                 )}
 
-                {(!user || user.role !== 'admin') && (
+                {(!user || user.role?.toLowerCase() !== 'admin') && (
                     <>
                         <SidebarItem
                             icon={History}
@@ -53,12 +53,12 @@ export function Sidebar({ activeView, setActiveView, onRefresh }) {
                         />
                     </>
                 )}
-                {user && user.role !== 'user' && (
+                {user && user.role?.toLowerCase() !== 'user' && (
                     <SidebarItem
                         icon={Database}
-                        label={user.role === 'admin' ? "Collection Details" : "My App Codes"}
+                        label={user.role?.toLowerCase() === 'admin' ? "Collection Details" : "My App Codes"}
                         active={activeView === 'appcodes' || activeView === 'editData'}
-                        onClick={() => toggleView(user.role === 'admin' ? 'appcodes' : 'editData')}
+                        onClick={() => toggleView(user.role?.toLowerCase() === 'admin' ? 'appcodes' : 'editData')}
                     />
                 )}
                 <SidebarItem

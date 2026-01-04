@@ -54,21 +54,31 @@ export function Settings({
     };
 
     const handleCropComplete = async (croppedImage) => {
+        console.log('handleCropComplete triggered. Image data starts with:', croppedImage?.substring(0, 50));
         try {
+            console.log('Current User object in Settings:', JSON.stringify(user));
             const sizeKB = Math.round(croppedImage.length / 1024);
             console.log(`Saving image of size: ${sizeKB}KB`);
 
-            if (user?.id) {
-                await updateProfilePic(user.id, croppedImage, user.token);
+            const userIdToUpdate = user?.id || user?.userId;
+
+            if (userIdToUpdate) {
+                console.log('Final User ID being used for update:', userIdToUpdate);
+                const response = await updateProfilePic(userIdToUpdate, croppedImage, user.token);
                 // Update local storage too so reload keeps it
                 localStorage.setItem('profilePic', croppedImage);
+
+                setProfilePic(croppedImage);
+                setTempImage(null);
+
+                // Use the message from the server if available
+                const successMsg = response?.message || `Profile picture updated successfully! (${sizeKB}KB)`;
+                alert(successMsg);
             } else {
+                console.error('Update failed: No user ID found in session', user);
                 alert(`Warning: No user ID in session (user: ${user?.username}). Please re-login.`);
                 return;
             }
-            setProfilePic(croppedImage);
-            setTempImage(null);
-            alert(`Profile picture updated successfully! (${sizeKB}KB)`);
         } catch (error) {
             console.error('Failed to update profile pic:', error);
             const sizeKB = Math.round(croppedImage.length / 1024);

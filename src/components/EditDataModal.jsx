@@ -491,7 +491,7 @@ export function EditDataPanel({ refreshTrigger }) {
         <div className="flex-1 flex overflow-hidden bg-white dark:bg-slate-900 relative">
             <div
                 className="border-r border-slate-200 dark:border-slate-800 flex flex-col bg-white dark:bg-slate-900 relative"
-                style={{ width: `${sidebarWidth} px`, flexShrink: 0 }}
+                style={{ width: `${sidebarWidth}px`, flexShrink: 0 }}
             >
                 <div className="p-4 border-b border-slate-200 dark:border-slate-800">
                     <h2 className="text-lg font-bold mb-4 text-slate-900 dark:text-white">My App Codes</h2>

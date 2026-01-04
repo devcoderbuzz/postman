@@ -759,10 +759,14 @@ export function AdminDashboard() {
                                                         <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                                             <td className="px-4 py-2">
                                                                 <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto">
-                                                                    {u.profileImage ? (
-                                                                        <img src={u.profileImage} alt="" className="w-full h-full object-cover" />
+                                                                    {(u.userProfileImage && u.userProfileImage.length > 30) || (u.profileImage && u.profileImage.length > 30) ? (
+                                                                        <img
+                                                                            src={u.userProfileImage || u.profileImage}
+                                                                            alt=""
+                                                                            className="w-full h-full object-cover"
+                                                                        />
                                                                     ) : (
-                                                                        <span className="text-[10px] font-bold text-slate-500">{u.userName?.substring(0, 2).toUpperCase()}</span>
+                                                                        <span className="text-[10px] font-bold text-slate-500">{(u.userName || u.username || 'U')?.substring(0, 2).toUpperCase()}</span>
                                                                     )}
                                                                 </div>
                                                             </td>

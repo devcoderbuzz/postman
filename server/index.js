@@ -35,13 +35,8 @@ const decodeToken = (token) => {
 };
 
 app.use(cors());
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: '50mb' }));
-
-import { updateProfilePic, getUserProfile, assignProject } from './controllers/userController.js';
-
-// Direct API routes
-app.post('/api/users/update-profile-pic', updateProfilePic);
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 
 // Proxy endpoint
 const axiosInstance = axios.create({
@@ -55,46 +50,6 @@ app.post('/proxy', async (req, res) => {
     logToFile(`PROXY REQ: ${method} ${url} | bodyDataKeys: ${data ? Object.keys(data).join(',') : 'none'}`);
     console.log(`Proxy hit: ${method} ${url}`);
 
-    // Intercept update profile pic
-    if (url && url.includes('/users/update-profile-pic') && method === 'POST') {
-       console.log('INTERCEPTED update-profile-pic');
-       const mockReq = { body: data };
-       const mockRes = {
-           status: (code) => ({
-               json: (jsonData) => res.json({ 
-                   status: code, 
-                   statusText: code === 200 ? 'OK' : 'Error',
-                   headers: { 'content-type': 'application/json' },
-                   data: jsonData,
-                   isError: code >= 400 
-               })
-           })
-       };
-       return updateProfilePic(mockReq, mockRes);
-    }
-
-    // Intercept add project
-    /* 
-    const isAddProject = url && url.includes('/users/add-project');
-    console.log(`Checking interception for add-project: ${url} -> Match? ${isAddProject}`);
-    if (isAddProject && method === 'POST') {
-       console.log('INTERCEPTED add-project');
-       const mockReq = { body: data };
-       const mockRes = {
-           status: (code) => ({
-               json: (jsonData) => res.json({ 
-                   status: code, 
-                   statusText: code === 200 ? 'OK' : 'Error',
-                   headers: { 'content-type': 'application/json' },
-                   data: jsonData,
-                   isError: code >= 400 
-               })
-           })
-       };
-       return assignProject(mockReq, mockRes);
-    }
-    */
-    
     // Forward the request
     const forwardMsg = `FORWARDING TO: ${method} ${url}`;
     logToFile(forwardMsg);
@@ -126,7 +81,6 @@ app.post('/proxy', async (req, res) => {
 
     let response;
     try {
-      console.log(`Forwarding to ${url} with headers:`, JSON.stringify(forwardHeaders));
       const authHeader = forwardHeaders['Authorization'] || forwardHeaders['authorization'] || 'MISSING';
       logToFile(`AUTH HEADER: ${authHeader}`);
       
@@ -152,29 +106,7 @@ app.post('/proxy', async (req, res) => {
     }
     
     let responseData = response.data;
-    if (url && url.includes('/projects/hierarchy')) {
-        logToFile(`HIERARCHY RESP: ${JSON.stringify(responseData)}`);
-    }
-
-    // Intercept responses to inject profile images
-    if (url && url.includes('/users/login') && method === 'POST' && responseData) {
-        // Inject profile image for login
-        const username = data.username || data.userName;
-        const storedUser = getUserProfile(responseData.id || responseData.userId, username);
-        if (storedUser && storedUser.profileImage) {
-            logToFile(`Injecting profile pic for login: ${username}`);
-            responseData.profileImage = storedUser.profileImage;
-        }
-    } else if (url && url.includes('/users/project-count') && method === 'GET' && Array.isArray(responseData)) {
-        // Inject profile images for user list
-        logToFile(`Injecting profile pics for user list (${responseData.length} users)`);
-        responseData = responseData.map(u => {
-            const username = u.username || u.userName;
-            const stored = getUserProfile(u.id || u.userId, username);
-            return stored && stored.profileImage ? { ...u, profileImage: stored.profileImage } : u;
-        });
-    }
-
+    
     res.json({
       status: response.status,
       statusText: response.statusText,
@@ -183,9 +115,7 @@ app.post('/proxy', async (req, res) => {
     });
   } catch (error) {
     if (error.response) {
-      // The request was made and the server responded with a status code
-      // that falls out of the range of 2xx
-      res.status(200).json({ // Return 200 so frontend receives the error details as data
+      res.status(200).json({ 
         status: error.response.status,
         statusText: error.response.statusText,
         headers: error.response.headers,
@@ -193,11 +123,9 @@ app.post('/proxy', async (req, res) => {
         isError: true
       });
     } else if (error.request) {
-      // The request was made but no response was received
       console.error('Proxy Error (No Response):', error.message);
       res.status(500).json({ message: 'No response received from target', error: error.message });
     } else {
-      // Something happened in setting up the request that triggered an Error
       console.error('Proxy Error (Setup):', error.message);
       res.status(500).json({ message: 'Error setting up request', error: error.message });
     }
@@ -205,5 +133,5 @@ app.post('/proxy', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Proxy server running on port ${PORT}`);
 });
