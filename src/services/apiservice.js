@@ -539,6 +539,7 @@ export const getCollectionsByProjectId = async (projectId) => {
 export const createUpdateCollections = async (collectionData, token) => {
     console.log('Creating/Updating Collection...', collectionData);
     try {
+        console.log('Creating/Updating Collection...', collectionData);
         const authToken = token || sessionStorage.getItem('authToken');
         
         const response = await axios.post('http://localhost:3001/proxy', {

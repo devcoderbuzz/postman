@@ -344,54 +344,54 @@ export function UserWorkspace() {
                 const mappedCollections = fetchedCollections.map(col => ({
                     id: col.collectionId ? col.collectionId.toString() : Date.now().toString(),
                     name: col.name,
-                    requests: col.requests ? col.requests.map(req => {
-                        return {
-                            id: req.requestId ? req.requestId.toString() : Date.now().toString(),
-                            name: req.name,
-                            method: req.method,
-                            url: req.url,
-                            params: [], // Initialize if not provided by API
-                            headers: (() => {
-                                if (!req.headers) return [];
-                                let headersObj = req.headers;
+                    requests: col.requests ? col.requests.map(req => ({
+                        ...req, // Keep all server fields including original id
+                        id: req.id || req.requestId || Date.now().toString(),
+                        requestId: req.requestId || req.id,
+                        name: req.name,
+                        method: req.method,
+                        url: req.url,
+                        params: req.params || [],
+                        headers: (() => {
+                            if (!req.headers) return [];
+                            let headersObj = req.headers;
 
-                                // If it's already an object, map it
-                                if (typeof headersObj === 'object' && headersObj !== null) {
-                                    return Object.entries(headersObj).map(([k, v]) => ({ key: k, value: String(v), active: true }));
-                                }
+                            // If it's already an object, map it
+                            if (typeof headersObj === 'object' && headersObj !== null) {
+                                return Object.entries(headersObj).map(([k, v]) => ({ key: k, value: String(v), active: true }));
+                            }
 
-                                // If it's a string, try parsing
-                                if (typeof headersObj === 'string') {
-                                    try {
-                                        const parsed = JSON.parse(headersObj);
-                                        if (parsed && typeof parsed === 'object') {
-                                            return Object.entries(parsed).map(([k, v]) => ({ key: k, value: String(v), active: true }));
-                                        }
-                                    } catch (e) { }
+                            // If it's a string, try parsing
+                            if (typeof headersObj === 'string') {
+                                try {
+                                    const parsed = JSON.parse(headersObj);
+                                    if (parsed && typeof parsed === 'object') {
+                                        return Object.entries(parsed).map(([k, v]) => ({ key: k, value: String(v), active: true }));
+                                    }
+                                } catch (e) { }
 
-                                    // Loose Parse
-                                    try {
-                                        const cleanStr = headersObj.trim().replace(/^{|}$/g, '');
-                                        const pairs = cleanStr.split(',').map(p => p.trim()).filter(p => p);
-                                        const mapped = pairs.map(pair => {
-                                            const firstColon = pair.indexOf(':');
-                                            if (firstColon === -1) return null;
-                                            const key = pair.slice(0, firstColon).trim().replace(/^['"]|['"]$/g, '');
-                                            const value = pair.slice(firstColon + 1).trim().replace(/^['"]|['"]$/g, '');
-                                            return { key, value, active: true };
-                                        }).filter(p => p);
-                                        if (mapped.length > 0) return mapped;
-                                    } catch (e) { }
-                                }
-                                return [];
-                            })(),
-                            body: req.body,
-                            bodyType: req.body ? 'raw' : 'none',
-                            rawType: 'JSON',
-                            authType: 'none',
-                            authData: {}
-                        };
-                    }) : []
+                                // Loose Parse
+                                try {
+                                    const cleanStr = headersObj.trim().replace(/^{|}$/g, '');
+                                    const pairs = cleanStr.split(',').map(p => p.trim()).filter(p => p);
+                                    const mapped = pairs.map(pair => {
+                                        const firstColon = pair.indexOf(':');
+                                        if (firstColon === -1) return null;
+                                        const key = pair.slice(0, firstColon).trim().replace(/^['"]|['"]$/g, '');
+                                        const value = pair.slice(firstColon + 1).trim().replace(/^['"]|['"]$/g, '');
+                                        return { key, value, active: true };
+                                    }).filter(p => p);
+                                    if (mapped.length > 0) return mapped;
+                                } catch (e) { }
+                            }
+                            return [];
+                        })(),
+                        body: req.body,
+                        bodyType: req.body ? 'raw' : 'none',
+                        rawType: 'JSON',
+                        authType: 'none',
+                        authData: {}
+                    })) : []
                 }));
 
                 setServerCollections(mappedCollections);
@@ -563,11 +563,13 @@ export function UserWorkspace() {
                                 id: col.collectionId ? col.collectionId.toString() : Date.now().toString() + Math.random(),
                                 name: col.name,
                                 requests: col.requests ? col.requests.map(req => ({
-                                    id: req.requestId ? req.requestId.toString() : Date.now().toString() + Math.random(),
+                                    ...req,
+                                    id: req.id || req.requestId || (Date.now().toString() + Math.random()),
+                                    requestId: req.requestId || req.id,
                                     name: req.name,
                                     method: req.method,
                                     url: req.url,
-                                    params: [],
+                                    params: req.params || [],
                                     headers: typeof req.headers === 'string' ? JSON.parse(req.headers || '[]') : (req.headers || []),
                                     body: req.body,
                                     bodyType: req.body ? 'raw' : 'none',

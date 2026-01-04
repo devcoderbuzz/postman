@@ -338,10 +338,11 @@ export function EditDataPanel({ refreshTrigger }) {
                     projectId: actualProjectId
                 },
                 requests: (collection.requests || []).map(req => {
-                    const isNewReq = isTransientId(req.requestId);
+                    const isNewReq = isTransientId(req.requestId || req.id);
+                    const actualId = isNewReq ? null : (req.id || req.requestId);
                     return {
-                        id: isNewReq ? null : req.requestId,
-                        requestId: isNewReq ? null : req.requestId,
+                        id: actualId,
+                        requestId: actualId,
                         name: req.name,
                         url: req.url,
                         method: req.method,
@@ -359,12 +360,21 @@ export function EditDataPanel({ refreshTrigger }) {
             console.log("DEBUG: Saving collection with payload:", JSON.stringify(payload, null, 2));
             const result = await createUpdateCollections(payload, authToken);
 
+            // Normalize result to ensure requests have requestId
+            const normalizedResult = {
+                ...result,
+                requests: (result.requests || []).map(req => ({
+                    ...req,
+                    requestId: req.requestId || req.id || req.requestId // Fallback to id if requestId missing
+                }))
+            };
+
             setCollections(collections.map(col =>
                 col.collectionId === collection.collectionId
                     ? {
                         ...col,
-                        ...result, // Sync all fields from backend (including collectionId and requests)
-                        originalName: result.name || col.name,
+                        ...normalizedResult,
+                        originalName: normalizedResult.name || col.name,
                         modified: false
                     }
                     : col
@@ -651,7 +661,7 @@ export function EditDataPanel({ refreshTrigger }) {
                                                 col.requests.map(req => (
                                                     <div
                                                         key={req.requestId}
-                                                        className={`flex items-center gap-2 p-1 rounded group cursor-pointer ${editingRequest?.requestId === req.requestId
+                                                        className={`flex items-center gap-2 p-1 rounded group cursor-pointer ${editingRequest && editingRequest.requestId && editingRequest.requestId === req.requestId
                                                             ? 'bg-red-50 dark:bg-red-900/20 text-red-500'
                                                             : 'hover:bg-slate-200 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400'
                                                             }`}
