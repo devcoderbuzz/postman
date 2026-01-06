@@ -154,6 +154,31 @@ export function AdminDashboard() {
         }
     };
 
+    const fetchCollectionDetailsForAdmin = async () => {
+        if (user) {
+            setIsLoadingCollections(true);
+            try {
+                const { getCollectionDetails } = await import('../services/apiservice');
+                const data = await getCollectionDetails([], user.token);
+                setAllHierarchyData(data);
+                const mappedCodes = data.map((item) => ({
+                    id: `${item.appCode}-${item.moduleName}`,
+                    projectName: item.appCode,
+                    moduleName: item.moduleName,
+                    projectId: item.projectId || item.id,
+                    appCode: item.appCode,
+                    description: item.description || '',
+                    collections: item.collections || []
+                }));
+                setAppCodes(mappedCodes);
+            } catch (error) {
+                console.error('Failed to fetch collection details for admin:', error);
+            } finally {
+                setIsLoadingCollections(false);
+            }
+        }
+    };
+
     // Initial fetch
     useEffect(() => {
         fetchUsers();
@@ -215,7 +240,9 @@ export function AdminDashboard() {
     }, [activeView]);
 
     const handleRefreshView = (view) => {
-        if (view === 'appcodes' || view === 'manageAppCodes') {
+        if (view === 'appcodes') {
+            fetchCollectionDetailsForAdmin();
+        } else if (view === 'manageAppCodes') {
             fetchAppCodes();
         } else if (view === 'users') {
             fetchUsers();
@@ -1183,15 +1210,20 @@ export function AdminDashboard() {
                                     ))
                                 }
                             </select>
-                            <div className="flex justify-center flex-col gap-3">
+                            <div className="flex items-center justify-center gap-3 mt-4">
+                                <button
+                                    onClick={() => setAssigningUser(null)}
+                                    className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-red-600 uppercase tracking-tight transition-colors"
+                                >
+                                    Cancel
+                                </button>
                                 <button
                                     onClick={handleAssignAppCode}
                                     disabled={!selectedAppCodeId}
-                                    className="w-full py-3 bg-red-600 text-white rounded-md text-sm font-black hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest shadow-lg shadow-red-500/20 active:scale-95 transition-all"
+                                    className="px-6 py-2 bg-red-600 text-white rounded-md text-sm font-black hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest shadow-lg shadow-red-500/20 active:scale-95 transition-all"
                                 >
-                                    Confirm Assignment
+                                    Confirm
                                 </button>
-                                <button onClick={() => setAssigningUser(null)} className="text-xs font-bold text-slate-500 hover:text-red-600 uppercase tracking-tight py-2 transition-colors">Cancel</button>
                             </div>
                         </div>
                     </div>
