@@ -7,7 +7,7 @@ import { Header } from '../components/Header';
 import { getEnvDetails, updateEnvDetails } from '../services/apiservice';
 import { EnvironmentManager } from '../components/EnvironmentManager';
 import { KeyValueEditor } from '../components/KeyValueEditor';
-import { Settings as SettingsIcon, LogOut, Layout as LayoutIcon, User as UserIcon, Shield, Save, Check, Globe, X, ChevronDown } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut, Layout as LayoutIcon, User as UserIcon, Shield, Save, Check, Globe, X, ChevronDown, Trash2 } from 'lucide-react';
 import { Layout } from '../components/Layout';
 
 
@@ -64,6 +64,7 @@ export function AdminDashboard() {
     const [assignModuleName, setAssignModuleName] = useState('');
     const [selectedAppCodeId, setSelectedAppCodeId] = useState(''); // For the dropdown in "Add" modal
     const [activeView, setActiveView] = useState('users'); // 'users', 'appcodes', 'settings', or 'environments'
+    const [appCodeModalTab, setAppCodeModalTab] = useState('users'); // 'users' or 'details'
 
     const fetchEnvironments = async () => {
         if (user && user.token) {
@@ -123,6 +124,20 @@ export function AdminDashboard() {
             userCount: counts[String(code.projectId)] || counts[String(code.id)] || 0
         }));
     }, [appCodes, users]);
+
+    // Calculate users assigned to the currently editing app code
+    const assignedUsers = useMemo(() => {
+        if (!editingAppCodeId) return [];
+        return users.filter(u =>
+            u.projectIds?.some(pid => {
+                const id = (typeof pid === 'object' && pid !== null) ? (pid.projectId || pid.id) : pid;
+                return String(id) === String(editingAppCodeId);
+            }) ||
+            u.assignedAppCodes?.some(ac =>
+                String(ac.projectId || ac.id) === String(editingAppCodeId)
+            )
+        );
+    }, [users, editingAppCodeId]);
 
     useEffect(() => {
         if (profilePic) {
@@ -424,6 +439,7 @@ export function AdminDashboard() {
         setNewModuleName(project.moduleName || '');
         setNewDescription(project.description || '');
         setEditingAppCodeId(project.projectId);
+        setAppCodeModalTab('users');
         setIsCreatingAppCode(true);
     };
 
@@ -462,8 +478,10 @@ export function AdminDashboard() {
             const userInState = users.find(u => u.id === userId);
 
             // Look in editing details first, then in the user state
-            const projectObj = editingUserProjectDetails.find(ac => (ac.id === appCodeId || ac.appCode === appCodeId)) ||
-                userInState?.assignedAppCodes?.find(ac => (ac.id === appCodeId || ac.appCode === appCodeId));
+            const projectObj = (editingUserProjectDetails || [])
+                .find(ac => (ac.id === appCodeId || ac.appCode === appCodeId || String(ac.projectId) === String(appCodeId))) ||
+                (userInState?.assignedAppCodes || [])
+                    .find(ac => (ac.id === appCodeId || ac.appCode === appCodeId || String(ac.projectId) === String(appCodeId)));
 
             // Extract numeric ID
             let projectIdToUnassign = null;
@@ -824,10 +842,11 @@ export function AdminDashboard() {
                                                 <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">App Codes</h2>
                                                 <button
                                                     onClick={() => {
-                                                        setEditingAppCodeId(null);
                                                         setNewAppCode('');
                                                         setNewModuleName('');
                                                         setNewDescription('');
+                                                        setEditingAppCodeId(null);
+                                                        setAppCodeModalTab('details');
                                                         setIsCreatingAppCode(true);
                                                     }}
                                                     className="bg-red-600 text-white px-3 py-1.5 rounded text-[11px] hover:bg-red-700 font-bold shadow-sm transition-all active:scale-95"
@@ -1357,57 +1376,129 @@ export function AdminDashboard() {
             {/* Create App Code Modal */}
             {isCreatingAppCode && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-md">
+                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg">
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
                             <h3 className="font-bold text-lg">{editingAppCodeId ? 'Edit App Code' : 'Create New App Code'}</h3>
                             <button onClick={() => setIsCreatingAppCode(false)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">✕</button>
                         </div>
-                        <form onSubmit={handleCreateAppCode} className="p-6">
-                            <div className="space-y-4 mb-6">
-                                <div>
-                                    <label className="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">APP Code</label>
-                                    <input
-                                        type="text"
-                                        value={newAppCode}
-                                        onChange={e => setNewAppCode(e.target.value)}
-                                        className="w-full border rounded p-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-                                        required
-                                        placeholder="e.g. GAPI-CB-SG"
-                                    />
+                        <form onSubmit={handleCreateAppCode} className="flex flex-col flex-1 min-h-0">
+                            {editingAppCodeId && (
+                                <div className="flex border-b border-slate-200 dark:border-slate-700 px-6 justify-center">
+                                    <button
+                                        type="button"
+                                        onClick={() => setAppCodeModalTab('users')}
+                                        className={`px-4 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${appCodeModalTab === 'users'
+                                            ? 'border-red-600 text-red-600'
+                                            : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                            }`}
+                                    >
+                                        Users ({assignedUsers.length})
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAppCodeModalTab('details')}
+                                        className={`px-4 py-3 text-xs font-bold uppercase tracking-wider transition-all border-b-2 ${appCodeModalTab === 'details'
+                                            ? 'border-red-600 text-red-600'
+                                            : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+                                            }`}
+                                    >
+                                        Details
+                                    </button>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Module Name</label>
-                                    <input
-                                        type="text"
-                                        value={newModuleName}
-                                        onChange={e => setNewModuleName(e.target.value)}
-                                        className="w-full border rounded p-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500"
-                                        required
-                                        placeholder="CASA, FD, LOAN etc"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium mb-1 text-slate-700 dark:text-slate-300">Description</label>
-                                    <textarea
-                                        value={newDescription}
-                                        onChange={e => setNewDescription(e.target.value)}
-                                        className="w-full border rounded p-2.5 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 min-h-[80px]"
-                                        placeholder="Project description..."
-                                    />
-                                </div>
+                            )}
 
+                            <div className="p-6 space-y-4 flex-1 overflow-y-auto">
+                                {(!editingAppCodeId || appCodeModalTab === 'details') ? (
+                                    <>
+                                        <div>
+                                            <label className="block text-xs font-bold mb-1.5 text-slate-500 dark:text-slate-400 uppercase tracking-tight">APP Code</label>
+                                            <input
+                                                type="text"
+                                                value={newAppCode}
+                                                onChange={e => setNewAppCode(e.target.value)}
+                                                className="w-full border rounded-lg p-3 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                                                required
+                                                placeholder="e.g. GAPI-CB-SG"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold mb-1.5 text-slate-500 dark:text-slate-400 uppercase tracking-tight">Module Name</label>
+                                            <input
+                                                type="text"
+                                                value={newModuleName}
+                                                onChange={e => setNewModuleName(e.target.value)}
+                                                className="w-full border rounded-lg p-3 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all"
+                                                required
+                                                placeholder="CASA, FD, LOAN etc"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-bold mb-1.5 text-slate-500 dark:text-slate-400 uppercase tracking-tight">Description</label>
+                                            <textarea
+                                                value={newDescription}
+                                                onChange={e => setNewDescription(e.target.value)}
+                                                className="w-full border rounded-lg p-3 text-sm dark:bg-slate-900 dark:border-slate-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all min-h-[100px]"
+                                                placeholder="Project description..."
+                                            />
+                                        </div>
+                                    </>
+                                ) : (
+                                    <div className={assignedUsers.length >= 2 ? "grid grid-cols-1 sm:grid-cols-2 gap-3 justify-items-center" : "space-y-3"}>
+                                        {assignedUsers.length > 0 ? (
+                                            assignedUsers.map(u => (
+                                                <div key={u.id} className="flex items-center justify-between p-1.5 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-100 dark:border-slate-800 transition-all group hover:border-red-100 dark:hover:border-red-900/30 w-full max-w-[200px]">
+                                                    <div className="flex items-center gap-2 overflow-hidden">
+                                                        <div className="w-8 h-8 rounded-full bg-white dark:bg-slate-800 shadow-sm border border-slate-100 dark:border-slate-700 flex items-center justify-center text-[10px] font-bold text-red-600 dark:text-red-400 shrink-0 overflow-hidden">
+                                                            {(u.userProfileImage || u.profileImage) ? (
+                                                                <img src={u.userProfileImage || u.profileImage} alt="" className="w-full h-full object-cover" />
+                                                            ) : (
+                                                                (u.userName || u.username || 'U').charAt(0).toUpperCase()
+                                                            )}
+                                                        </div>
+                                                        <div className="flex flex-col min-w-0">
+                                                            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 truncate">
+                                                                {u.userName || u.username}
+                                                            </span>
+                                                            <span className="text-[8px] text-slate-500 dark:text-slate-500 uppercase font-black tracking-widest flex items-center gap-0.5">
+                                                                <span className={`w-0.5 h-0.5 rounded-full ${u.role === 'admin' ? 'bg-amber-400' : 'bg-blue-400'}`}></span>
+                                                                {u.role || 'user'}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        type="button"
+                                                        onClick={async () => {
+                                                            await handleUnassignAppCode(u.id, editingAppCodeId);
+                                                        }}
+                                                        className="p-1.5 text-slate-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-white dark:hover:bg-slate-800 rounded-lg transition-all shadow-sm opacity-0 group-hover:opacity-100 shrink-0"
+                                                        title="Unassign user"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="col-span-full text-center py-12 bg-slate-50 dark:bg-slate-900/20 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800">
+                                                <div className="w-12 h-12 bg-white dark:bg-slate-800 rounded-full flex items-center justify-center mx-auto mb-3 shadow-sm">
+                                                    <UserIcon className="w-6 h-6 text-slate-300" />
+                                                </div>
+                                                <p className="text-xs text-slate-500 font-medium">No users assigned yet</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                            <div className="flex justify-end gap-2">
+                            <div className="flex justify-center gap-3 mb-6">
                                 <button
                                     type="button"
                                     onClick={() => setIsCreatingAppCode(false)}
-                                    className="px-4 py-2 text-slate-600 dark:text-slate-400 text-sm hover:underline"
+                                    className="px-6 py-2 text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white text-sm font-bold uppercase tracking-tight transition-all hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg"
                                 >
                                     Cancel
                                 </button>
                                 <button
                                     type="submit"
-                                    className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 font-medium shadow-sm"
+                                    className="bg-red-600 text-white px-8 py-2 rounded-lg text-sm font-black hover:bg-red-700 shadow-lg shadow-red-500/20 active:scale-95 transition-all uppercase tracking-widest"
                                 >
                                     {editingAppCodeId ? 'Save Changes' : 'Create App Code'}
                                 </button>
