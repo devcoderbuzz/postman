@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, useMemo, Fragment } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNavigate } from 'react-router-dom';
@@ -96,6 +96,33 @@ export function AdminDashboard() {
     const [profilePic, setProfilePic] = useState(localStorage.getItem('profilePic') || '');
     const [localCollectionsPath, setLocalCollectionsPath] = useState(localStorage.getItem('localCollectionsPath') || '');
     const [layout, setLayout] = useState(localStorage.getItem('layout') || 'horizontal');
+
+    // Calculate user counts for each app code
+    const appCodesWithUserCounts = useMemo(() => {
+        const counts = {};
+        users.forEach(u => {
+            const pids = new Set();
+            // Check raw projectIds
+            u.projectIds?.forEach(pid => {
+                const id = (typeof pid === 'object' && pid !== null) ? (pid.projectId || pid.id) : pid;
+                if (id) pids.add(String(id));
+            });
+            // Check hydrated assignedAppCodes
+            u.assignedAppCodes?.forEach(ac => {
+                if (ac.projectId) pids.add(String(ac.projectId));
+                if (ac.id) pids.add(String(ac.id));
+            });
+
+            pids.forEach(id => {
+                counts[id] = (counts[id] || 0) + 1;
+            });
+        });
+
+        return appCodes.map(code => ({
+            ...code,
+            userCount: counts[String(code.projectId)] || counts[String(code.id)] || 0
+        }));
+    }, [appCodes, users]);
 
     useEffect(() => {
         if (profilePic) {
@@ -813,15 +840,21 @@ export function AdminDashboard() {
                                                     <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
                                                         <tr>
                                                             <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs">App Code</th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs">Module</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs text-center">Modules</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs text-center">Users</th>
                                                             <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs text-right">Actions</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                                        {appCodes.map(code => (
+                                                        {appCodesWithUserCounts.map(code => (
                                                             <tr key={code.id || code.projectId} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                                                 <td className="px-4 py-3 font-medium text-xs break-all">{code.appCode}</td>
-                                                                <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">{code.moduleName}</td>
+                                                                <td className="px-4 py-3 text-xs text-center text-slate-500 dark:text-slate-400">{code.moduleName}</td>
+                                                                <td className="px-4 py-3 text-center">
+                                                                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
+                                                                        {code.userCount || 0}
+                                                                    </span>
+                                                                </td>
                                                                 <td className="px-4 py-3 text-right space-x-1 whitespace-nowrap">
                                                                     <button
                                                                         onClick={() => handleEditProject(code)}
@@ -833,7 +866,7 @@ export function AdminDashboard() {
                                                                         onClick={() => handleDeleteProject(code.projectId)}
                                                                         className="text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-medium text-[10px] px-2 py-1 border border-red-100 dark:border-red-900/30 rounded hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
                                                                     >
-                                                                        Del
+                                                                        Delete
                                                                     </button>
                                                                 </td>
                                                             </tr>
@@ -862,7 +895,9 @@ export function AdminDashboard() {
                                                         <tr>
                                                             <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 w-10"></th>
                                                             <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs">Username</th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs text-center">Codes</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs">Role</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs text-center">Status</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs text-center">App Codes</th>
                                                             <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs text-right">Actions</th>
                                                         </tr>
                                                     </thead>
@@ -882,9 +917,18 @@ export function AdminDashboard() {
                                                                         )}
                                                                     </div>
                                                                 </td>
-                                                                <td className="px-4 py-2 font-medium text-xs truncate max-w-[100px]">{u.userName}</td>
+                                                                <td className="px-4 py-2 font-medium text-xs truncate max-w-[80px]">{u.userName}</td>
+                                                                <td className="px-4 py-2 text-[10px] text-slate-500 dark:text-slate-400 capitalize">{u.userRole?.toLowerCase()}</td>
+                                                                <td className="px-4 py-2 text-center">
+                                                                    <span className={`inline-block px-1.5 py-0.5 rounded-full text-[9px] font-black tracking-tight ${u.userStatus === 'ACTIVE' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
+                                                                        u.userStatus === 'DISABLED' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
+                                                                            'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+                                                                        }`}>
+                                                                        {u.userStatus}
+                                                                    </span>
+                                                                </td>
                                                                 <td className="px-4 py-2 text-center text-xs">
-                                                                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
+                                                                    <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
                                                                         {u.projectCount}
                                                                     </span>
                                                                 </td>
@@ -913,7 +957,7 @@ export function AdminDashboard() {
                                                                         className="text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-medium text-[10px] px-1.5 py-0.5 border border-red-100 dark:border-red-900/30 rounded hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
                                                                         title="Delete User"
                                                                     >
-                                                                        Del
+                                                                        Delete
                                                                     </button>
                                                                 </td>
                                                             </tr>
