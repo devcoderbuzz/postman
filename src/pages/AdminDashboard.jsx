@@ -138,15 +138,27 @@ export function AdminDashboard() {
                 const { getAllAppCodes } = await import('../services/apiservice');
                 const data = await getAllAppCodes(user.token);
                 setAllHierarchyData(data);
-                const mappedCodes = data.map((item) => ({
-                    id: `${item.appCode}-${item.moduleName}`,
-                    projectName: item.appCode,
-                    moduleName: item.moduleName,
-                    projectId: item.projectId || item.id, // Use numeric projectId from API
-                    appCode: item.appCode, // Keep appCode for display
-                    description: item.description || '',
-                    collections: item.collections || []
-                }));
+                const mappedCodes = data.map((item) => {
+                    const resolvedAppCode = (String(item.appCode || item.projectName || item.name || '')).trim();
+                    return {
+                        id: item.id || `${resolvedAppCode}-${item.moduleName}`,
+                        projectName: resolvedAppCode,
+                        moduleName: (String(item.moduleName || '')).trim(),
+                        projectId: item.projectId || item.id,
+                        appCode: resolvedAppCode,
+                        description: item.description || '',
+                        collections: item.collections || []
+                    };
+                }).sort((a, b) => {
+                    const appA = a.appCode.toUpperCase();
+                    const appB = b.appCode.toUpperCase();
+                    if (appA < appB) return -1;
+                    if (appA > appB) return 1;
+
+                    const modA = a.moduleName.toUpperCase();
+                    const modB = b.moduleName.toUpperCase();
+                    return modA.localeCompare(modB);
+                });
                 setAppCodes(mappedCodes);
             } catch (error) {
                 console.error('Failed to fetch app codes:', error);
@@ -161,15 +173,27 @@ export function AdminDashboard() {
                 const { getCollectionDetails } = await import('../services/apiservice');
                 const data = await getCollectionDetails([], user.token);
                 setAllHierarchyData(data);
-                const mappedCodes = data.map((item) => ({
-                    id: `${item.appCode}-${item.moduleName}`,
-                    projectName: item.appCode,
-                    moduleName: item.moduleName,
-                    projectId: item.projectId || item.id,
-                    appCode: item.appCode,
-                    description: item.description || '',
-                    collections: item.collections || []
-                }));
+                const mappedCodes = data.map((item) => {
+                    const resolvedAppCode = (String(item.appCode || item.projectName || item.name || '')).trim();
+                    return {
+                        id: item.id || `${resolvedAppCode}-${item.moduleName}`,
+                        projectName: resolvedAppCode,
+                        moduleName: (String(item.moduleName || '')).trim(),
+                        projectId: item.projectId || item.id,
+                        appCode: resolvedAppCode,
+                        description: item.description || '',
+                        collections: item.collections || []
+                    };
+                }).sort((a, b) => {
+                    const appA = a.appCode.toUpperCase();
+                    const appB = b.appCode.toUpperCase();
+                    if (appA < appB) return -1;
+                    if (appA > appB) return 1;
+
+                    const modA = a.moduleName.toUpperCase();
+                    const modB = b.moduleName.toUpperCase();
+                    return modA.localeCompare(modB);
+                });
                 setAppCodes(mappedCodes);
             } catch (error) {
                 console.error('Failed to fetch collection details for admin:', error);
@@ -205,20 +229,28 @@ export function AdminDashboard() {
                         // Find matching code in hierarchy (loose equality for string/number match)
                         const found = allHierarchyData.find(h =>
                             h.projectId == searchId ||
-                            h.appCode == searchId ||
+                            (h.appCode && String(h.appCode).trim().toUpperCase() === String(searchId).trim().toUpperCase()) ||
+                            (h.projectName && String(h.projectName).trim().toUpperCase() === String(searchId).trim().toUpperCase()) ||
                             h.id == searchId
                         );
 
                         if (found) {
+                            const resolvedAppCode = (String(found.appCode || found.projectName || found.name || '')).trim();
                             return {
                                 ...found,
-                                id: found.id || `${found.appCode}-${found.moduleName}`,
-                                projectName: found.appCode || found.projectName,
+                                id: found.id || `${resolvedAppCode}-${found.moduleName}`,
+                                projectName: resolvedAppCode,
                                 moduleName: found.moduleName
                             };
                         }
                         return null;
-                    }).filter(Boolean);
+                    }).filter(Boolean).sort((a, b) => {
+                        const appA = (a.appCode || a.projectName || '').trim().toUpperCase();
+                        const appB = (b.appCode || b.projectName || '').trim().toUpperCase();
+                        if (appA < appB) return -1;
+                        if (appA > appB) return 1;
+                        return (a.moduleName || '').trim().toUpperCase().localeCompare((b.moduleName || '').trim().toUpperCase());
+                    });
 
                     if (hydratedCodes.length > 0) {
                         hasChanges = true;
@@ -246,6 +278,7 @@ export function AdminDashboard() {
             fetchAppCodes();
         } else if (view === 'users') {
             fetchUsers();
+            fetchAppCodes();
         } else if (view === 'environments') {
             fetchEnvironments();
         }
@@ -756,145 +789,138 @@ export function AdminDashboard() {
                         <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar">
 
                             {activeView === 'users' && (
-                                <div className="flex flex-col gap-8 h-full">
-                                    {/* User List Table */}
-                                    {/* ... User List Table Content ... */}
-                                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col flex-1 min-h-0">
-                                        <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                                            <h2 className="text-lg font-bold">Users</h2>
-                                            <button
-                                                onClick={() => setIsCreatingUser(true)}
-                                                className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 font-medium shadow-sm"
-                                            >
-                                                Create User
-                                            </button>
-                                        </div>
-                                        <div className="overflow-auto flex-1">
-                                            <table className="w-full text-left text-sm">
-                                                <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-                                                    <tr>
-                                                        <th className="px-4 py-2 font-semibold text-slate-600 dark:text-slate-300 w-12 text-center"></th>
-                                                        <th className="px-4 py-2 font-semibold text-slate-600 dark:text-slate-300 w-1/5">Username</th>
-                                                        <th className="px-4 py-2 font-semibold text-slate-600 dark:text-slate-300 w-1/5">Role</th>
-                                                        <th className="px-4 py-2 font-semibold text-slate-600 dark:text-slate-300 w-1/5 text-center">App Codes</th>
-                                                        <th className="px-4 py-2 font-semibold text-slate-600 dark:text-slate-300 w-1/5 text-center">Status</th>
-                                                        <th className="px-4 py-2 font-semibold text-slate-600 dark:text-slate-300 w-1/5 text-right">Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                                    {users.map(u => (
-                                                        <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                            <td className="px-4 py-2">
-                                                                <div className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto">
-                                                                    {(u.userProfileImage && u.userProfileImage.length > 30) || (u.profileImage && u.profileImage.length > 30) ? (
-                                                                        <img
-                                                                            src={u.userProfileImage || u.profileImage}
-                                                                            alt=""
-                                                                            className="w-full h-full object-cover"
-                                                                        />
-                                                                    ) : (
-                                                                        <span className="text-[10px] font-bold text-slate-500">{(u.userName || u.username || 'U')?.substring(0, 2).toUpperCase()}</span>
-                                                                    )}
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-4 py-2 font-medium">{u.userName}</td>
-                                                            <td className="px-4 py-2 capitalize text-slate-600 dark:text-slate-400">{u.userRole}</td>
-                                                            <td className="px-4 py-2 text-center">
-                                                                <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
-                                                                    {u.projectCount}
-                                                                </span>
-                                                            </td>
-                                                            <td className="px-4 py-2 text-center">
-                                                                <div className="capitalize text-slate-600 dark:text-slate-400">
-                                                                    {u.userStatus}
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-4 py-2 text-right space-x-2">
-                                                                <button
-                                                                    onClick={() => handleEditUser(u)}
-                                                                    className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium text-xs px-2 py-1 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-800"
-                                                                >
-                                                                    Edit
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => {
-                                                                        setAssigningUser(u);
-                                                                        setSelectedAppCodeId('');
-                                                                        setAssignAppCodeName('');
-                                                                        setAssignModuleName('');
-                                                                    }}
-                                                                    className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium text-xs px-2 py-1 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-800"
-                                                                >
-                                                                    Add
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDeleteUser(u.id)}
-                                                                    className="text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-medium text-xs px-2 py-1 border border-red-100 dark:border-red-900/30 rounded hover:bg-red-50 dark:hover:bg-red-900/10"
-                                                                >
-                                                                    Delete
-                                                                </button>
-                                                            </td>
+                                <div className="flex flex-col lg:flex-row gap-6 h-full overflow-hidden">
+                                    {/* Left Side: App Codes */}
+                                    <div className="flex-1 flex flex-col min-h-0 min-w-0">
+                                        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col flex-1">
+                                            <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                                                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">App Codes</h2>
+                                                <button
+                                                    onClick={() => {
+                                                        setEditingAppCodeId(null);
+                                                        setNewAppCode('');
+                                                        setNewModuleName('');
+                                                        setNewDescription('');
+                                                        setIsCreatingAppCode(true);
+                                                    }}
+                                                    className="bg-red-600 text-white px-3 py-1.5 rounded text-[11px] hover:bg-red-700 font-bold shadow-sm transition-all active:scale-95"
+                                                >
+                                                    CREATE
+                                                </button>
+                                            </div>
+                                            <div className="overflow-auto flex-1">
+                                                <table className="w-full text-left text-sm">
+                                                    <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
+                                                        <tr>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs">App Code</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs">Module</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs text-right">Actions</th>
                                                         </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                                                        {appCodes.map(code => (
+                                                            <tr key={code.id || code.projectId} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                                                <td className="px-4 py-3 font-medium text-xs break-all">{code.appCode}</td>
+                                                                <td className="px-4 py-3 text-xs text-slate-500 dark:text-slate-400">{code.moduleName}</td>
+                                                                <td className="px-4 py-3 text-right space-x-1 whitespace-nowrap">
+                                                                    <button
+                                                                        onClick={() => handleEditProject(code)}
+                                                                        className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium text-[10px] px-2 py-1 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                                                    >
+                                                                        Edit
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeleteProject(code.projectId)}
+                                                                        className="text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-medium text-[10px] px-2 py-1 border border-red-100 dark:border-red-900/30 rounded hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                                                                    >
+                                                                        Del
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     </div>
-                                </div>
-                            )}
 
-                            {activeView === 'manageAppCodes' && (
-                                <div className="flex flex-col gap-8 h-full">
-                                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col flex-1 min-h-0">
-                                        <div className="p-6 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                                            <h2 className="text-lg font-bold">App Codes</h2>
-                                            <button
-                                                onClick={() => {
-                                                    setEditingAppCodeId(null);
-                                                    setNewAppCode('');
-                                                    setNewModuleName('');
-                                                    setNewDescription('');
-                                                    setIsCreatingAppCode(true);
-                                                }}
-                                                className="bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700 font-medium shadow-sm"
-                                            >
-                                                Create App Code
-                                            </button>
-                                        </div>
-                                        <div className="overflow-auto flex-1">
-                                            <table className="w-full text-left text-sm">
-                                                <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-                                                    <tr>
-                                                        <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300">App Code</th>
-                                                        <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300">Module Name</th>
-                                                        <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300">Description</th>
-                                                        <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 text-right">Actions</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                                    {appCodes.map(code => (
-                                                        <tr key={code.id || code.projectId} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                            <td className="px-6 py-3 font-medium">{code.appCode}</td>
-                                                            <td className="px-6 py-3">{code.moduleName}</td>
-                                                            <td className="px-6 py-3 text-slate-500 dark:text-slate-400 truncate max-w-xs">{code.description}</td>
-                                                            <td className="px-6 py-3 text-right space-x-2">
-                                                                <button
-                                                                    onClick={() => handleEditProject(code)}
-                                                                    className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium text-xs px-2 py-1 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-800"
-                                                                >
-                                                                    Edit
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDeleteProject(code.projectId)}
-                                                                    className="text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-medium text-xs px-2 py-1 border border-red-100 dark:border-red-900/30 rounded hover:bg-red-50 dark:hover:bg-red-900/10"
-                                                                >
-                                                                    Delete
-                                                                </button>
-                                                            </td>
+                                    {/* Right Side: Users */}
+                                    <div className="flex-1 flex flex-col min-h-0 min-w-0">
+                                        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col flex-1">
+                                            <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                                                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Users</h2>
+                                                <button
+                                                    onClick={() => setIsCreatingUser(true)}
+                                                    className="bg-red-600 text-white px-3 py-1.5 rounded text-[11px] hover:bg-red-700 font-bold shadow-sm transition-all active:scale-95"
+                                                >
+                                                    CREATE
+                                                </button>
+                                            </div>
+                                            <div className="overflow-auto flex-1">
+                                                <table className="w-full text-left text-sm">
+                                                    <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
+                                                        <tr>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 w-10"></th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs">Username</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs text-center">Codes</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs text-right">Actions</th>
                                                         </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                                    </thead>
+                                                    <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
+                                                        {users.map(u => (
+                                                            <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
+                                                                <td className="px-4 py-2 text-center">
+                                                                    <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto">
+                                                                        {(u.userProfileImage && u.userProfileImage.length > 30) || (u.profileImage && u.profileImage.length > 30) ? (
+                                                                            <img
+                                                                                src={u.userProfileImage || u.profileImage}
+                                                                                alt=""
+                                                                                className="w-full h-full object-cover"
+                                                                            />
+                                                                        ) : (
+                                                                            <span className="text-[10px] font-bold text-slate-500">{(u.userName || u.username || 'U')?.substring(0, 2).toUpperCase()}</span>
+                                                                        )}
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-4 py-2 font-medium text-xs truncate max-w-[100px]">{u.userName}</td>
+                                                                <td className="px-4 py-2 text-center text-xs">
+                                                                    <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
+                                                                        {u.projectCount}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-4 py-2 text-right space-x-1 whitespace-nowrap">
+                                                                    <button
+                                                                        onClick={() => handleEditUser(u)}
+                                                                        className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium text-[10px] px-1.5 py-0.5 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                                                        title="Edit Access"
+                                                                    >
+                                                                        Edit
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setAssigningUser(u);
+                                                                            setSelectedAppCodeId('');
+                                                                            setAssignAppCodeName('');
+                                                                            setAssignModuleName('');
+                                                                        }}
+                                                                        className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium text-[10px] px-1.5 py-0.5 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                                                        title="Add App Code"
+                                                                    >
+                                                                        Add
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeleteUser(u.id)}
+                                                                        className="text-red-400 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 font-medium text-[10px] px-1.5 py-0.5 border border-red-100 dark:border-red-900/30 rounded hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                                                                        title="Delete User"
+                                                                    >
+                                                                        Del
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -1130,20 +1156,28 @@ export function AdminDashboard() {
                             ) : (editingUserProjectDetails.length > 0 || (users.find(u => u.id === editingUser.id)?.assignedAppCodes.length > 0)) ? (
                                 <ul className="space-y-2 max-h-60 overflow-y-auto">
                                     {/* Show fetched details if available, otherwise fallback to existing assignedAppCodes */}
-                                    {(editingUserProjectDetails.length > 0 ? editingUserProjectDetails : users.find(u => u.id === editingUser.id)?.assignedAppCodes || []).map((ac, index) => (
-                                        <li key={ac.id ? `id-${ac.id}` : `pc-${ac.appCode}-${ac.moduleName || index}`} className="flex justify-between items-center p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-700 text-sm">
-                                            <div>
-                                                <div className="font-medium">{ac.projectName || ac.appCode}</div>
-                                                <div className="text-xs text-slate-500">{ac.moduleName || ac.description}</div>
-                                            </div>
-                                            <button
-                                                onClick={() => handleUnassignAppCode(editingUser.id, ac.id || ac.appCode)}
-                                                className="text-red-500 hover:text-red-700 text-xs px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
-                                            >
-                                                Delete
-                                            </button>
-                                        </li>
-                                    ))}
+                                    {(editingUserProjectDetails.length > 0 ? editingUserProjectDetails : users.find(u => u.id === editingUser.id)?.assignedAppCodes || [])
+                                        .sort((a, b) => {
+                                            const appA = (a.projectName || a.appCode || '').trim().toUpperCase();
+                                            const appB = (b.projectName || b.appCode || '').trim().toUpperCase();
+                                            if (appA < appB) return -1;
+                                            if (appA > appB) return 1;
+                                            return (a.moduleName || '').trim().toUpperCase().localeCompare((b.moduleName || '').trim().toUpperCase());
+                                        })
+                                        .map((ac, index) => (
+                                            <li key={ac.id ? `id-${ac.id}` : `pc-${ac.appCode}-${ac.moduleName || index}`} className="flex justify-between items-center p-2 bg-slate-50 dark:bg-slate-900 rounded border border-slate-100 dark:border-slate-700 text-sm">
+                                                <div>
+                                                    <div className="font-medium">{ac.projectName || ac.appCode}</div>
+                                                    <div className="text-xs text-slate-500">{ac.moduleName || ac.description}</div>
+                                                </div>
+                                                <button
+                                                    onClick={() => handleUnassignAppCode(editingUser.id, ac.id || ac.appCode)}
+                                                    className="text-red-500 hover:text-red-700 text-xs px-2 py-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </li>
+                                        ))}
                                 </ul>
                             ) : (
                                 <p className="text-sm text-slate-500 italic">No app codes assigned.</p>
