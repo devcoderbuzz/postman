@@ -1459,10 +1459,6 @@ export function AdminDashboard() {
                                                             <span className="text-[11px] font-bold text-slate-700 dark:text-slate-200 truncate">
                                                                 {u.userName || u.username}
                                                             </span>
-                                                            <span className="text-[8px] text-slate-500 dark:text-slate-500 uppercase font-black tracking-widest flex items-center gap-0.5">
-                                                                <span className={`w-0.5 h-0.5 rounded-full ${u.role === 'admin' ? 'bg-amber-400' : 'bg-blue-400'}`}></span>
-                                                                {u.role || 'user'}
-                                                            </span>
                                                         </div>
                                                     </div>
                                                     <button
