@@ -855,26 +855,26 @@ export function AdminDashboard() {
                                                 </button>
                                             </div>
                                             <div className="overflow-auto flex-1">
-                                                <table className="w-full text-left text-sm">
+                                                <table className="w-full text-left text-sm table-fixed">
                                                     <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
                                                         <tr>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs">App Code</th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs text-center">Modules</th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs text-center">Users</th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs text-right">Actions</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[25%] text-center">App Code</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[25%] text-center">Modules</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[25%] text-center">Users</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[25%] text-center">Actions</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                                         {appCodesWithUserCounts.map(code => (
                                                             <tr key={code.id || code.projectId} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                                <td className="px-4 py-3 font-medium text-xs break-all">{code.appCode}</td>
-                                                                <td className="px-4 py-3 text-xs text-center text-slate-500 dark:text-slate-400">{code.moduleName}</td>
+                                                                <td className="px-4 py-3 font-medium text-xs truncate text-center" title={code.appCode}>{code.appCode}</td>
+                                                                <td className="px-4 py-3 text-xs text-center text-slate-500 dark:text-slate-400 truncate" title={code.moduleName}>{code.moduleName}</td>
                                                                 <td className="px-4 py-3 text-center">
                                                                     <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
                                                                         {code.userCount || 0}
                                                                     </span>
                                                                 </td>
-                                                                <td className="px-4 py-3 text-right space-x-1 whitespace-nowrap">
+                                                                <td className="px-4 py-3 text-center space-x-1 whitespace-nowrap">
                                                                     <button
                                                                         onClick={() => handleEditProject(code)}
                                                                         className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium text-[10px] px-2 py-1 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -909,35 +909,36 @@ export function AdminDashboard() {
                                                 </button>
                                             </div>
                                             <div className="overflow-auto flex-1">
-                                                <table className="w-full text-left text-sm">
+                                                <table className="w-full text-left text-sm table-fixed">
                                                     <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
                                                         <tr>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 w-10"></th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs">Username</th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs">Role</th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs text-center">Status</th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs text-center">App Codes</th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs text-right">Actions</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[20%] text-center">User Name</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[20%] text-center">Role</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[20%] text-center">Status</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[20%] text-center">Codes</th>
+                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[20%] text-center">Actions</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                                         {users.map(u => (
                                                             <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                                <td className="px-4 py-2 text-center">
-                                                                    <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center mx-auto">
-                                                                        {(u.userProfileImage && u.userProfileImage.length > 30) || (u.profileImage && u.profileImage.length > 30) ? (
-                                                                            <img
-                                                                                src={u.userProfileImage || u.profileImage}
-                                                                                alt=""
-                                                                                className="w-full h-full object-cover"
-                                                                            />
-                                                                        ) : (
-                                                                            <span className="text-[10px] font-bold text-slate-500">{(u.userName || u.username || 'U')?.substring(0, 2).toUpperCase()}</span>
-                                                                        )}
+                                                                <td className="px-4 py-2">
+                                                                    <div className="flex items-center justify-center gap-3">
+                                                                        <div className="w-7 h-7 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                                                                            {(u.userProfileImage && u.userProfileImage.length > 30) || (u.profileImage && u.profileImage.length > 30) ? (
+                                                                                <img
+                                                                                    src={u.userProfileImage || u.profileImage}
+                                                                                    alt=""
+                                                                                    className="w-full h-full object-cover"
+                                                                                />
+                                                                            ) : (
+                                                                                <span className="text-[10px] font-bold text-slate-500">{(u.userName || u.username || 'U')?.substring(0, 1).toUpperCase()}</span>
+                                                                            )}
+                                                                        </div>
+                                                                        <span className="font-medium text-xs truncate" title={u.userName}>{u.userName}</span>
                                                                     </div>
                                                                 </td>
-                                                                <td className="px-4 py-2 font-medium text-xs truncate max-w-[80px]">{u.userName}</td>
-                                                                <td className="px-4 py-2 text-[10px] text-slate-500 dark:text-slate-400 capitalize">{u.userRole?.toLowerCase()}</td>
+                                                                <td className="px-4 py-2 text-[10px] text-slate-500 dark:text-slate-400 capitalize text-center truncate">{u.userRole?.toLowerCase()}</td>
                                                                 <td className="px-4 py-2 text-center">
                                                                     <span className={`inline-block px-1.5 py-0.5 rounded-full text-[9px] font-black tracking-tight ${u.userStatus === 'ACTIVE' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                                                                         u.userStatus === 'DISABLED' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
@@ -946,12 +947,12 @@ export function AdminDashboard() {
                                                                         {u.userStatus}
                                                                     </span>
                                                                 </td>
-                                                                <td className="px-4 py-2 text-center text-xs">
+                                                                <td className="px-4 py-2 text-center">
                                                                     <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
                                                                         {u.projectCount}
                                                                     </span>
                                                                 </td>
-                                                                <td className="px-4 py-2 text-right space-x-1 whitespace-nowrap">
+                                                                <td className="px-4 py-2 text-center space-x-1 whitespace-nowrap">
                                                                     <button
                                                                         onClick={() => handleEditUser(u)}
                                                                         className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium text-[10px] px-1.5 py-0.5 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
