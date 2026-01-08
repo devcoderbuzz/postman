@@ -56,12 +56,12 @@
 
   /* Tighter border radius globally */
   --radius-sm: 0.1rem;    /* 1.6px - Sharper small */
-  --radius: 0.2rem;       /* 3.2px - Default */
-  --radius-md: 0.3rem;    /* 4.8px - Medium */
-  --radius-lg: 0.4rem;    /* 6.4px - Large (was 8px) */
-  --radius-xl: 0.6rem;    /* 9.6px - XL (was 12px) */
-  --radius-2xl: 0.8rem;   /* 12.8px - 2XL (was 16px) */
-  --radius-3xl: 1.25rem;  /* 20px - 3XL (was 24px) */
+  --radius: 0.15rem;      /* 2.4px - Default */
+  --radius-md: 0.25rem;   /* 4px - Medium */
+  --radius-lg: 0.35rem;   /* 5.6px - Large */
+  --radius-xl: 0.5rem;    /* 8px - XL */
+  --radius-2xl: 0.7rem;   /* 11.2px - 2XL */
+  --radius-3xl: 1rem;     /* 16px - 3XL */
 }
 
 :root {

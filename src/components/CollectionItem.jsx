@@ -35,7 +35,7 @@ export function CollectionItem({
                         <ChevronRight className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                     )}
                 </button>
-                <Folder className="w-4 h-4 text-yellow-600" />
+                <Folder className="w-3.5 h-3.5 text-yellow-600" />
 
                 {editingCollection === collection.id ? (
                     <>
@@ -66,7 +66,7 @@ export function CollectionItem({
                 ) : (
                     <>
                         <span className={cn(
-                            "flex-1 text-xs",
+                            "flex-1 text-[11px]",
                             activeCollectionId === collection.id
                                 ? "text-red-400 font-semibold"
                                 : "text-slate-700 dark:text-slate-300"
@@ -95,16 +95,16 @@ export function CollectionItem({
 
             {
                 expandedFolders.has(collection.id) && (
-                    <div className="ml-4 space-y-0.5">
+                    <div className="ml-3 space-y-0.5">
                         {collection.requests.map(request => (
                             <div
                                 key={request.id}
-                                className="flex items-center gap-2 p-1 hover:bg-slate-200 dark:hover:bg-white/5 rounded group cursor-pointer"
+                                className="flex items-center gap-1.5 p-1 hover:bg-slate-200 dark:hover:bg-white/5 rounded group cursor-pointer"
                                 onClick={() => onLoadRequest(request)}
                             >
                                 <FileText className="w-3 h-3 text-slate-500 dark:text-slate-400" />
                                 <span className={cn(
-                                    "text-[10px] font-bold uppercase w-12",
+                                    "text-[9px] font-bold uppercase w-10",
                                     request.method === 'GET' && "text-green-500",
                                     request.method === 'POST' && "text-yellow-500",
                                     request.method === 'PUT' && "text-blue-500",
@@ -112,7 +112,7 @@ export function CollectionItem({
                                 )}>
                                     {request.method}
                                 </span>
-                                <span className="flex-1 text-xs text-slate-600 dark:text-slate-400 truncate">{request.name}</span>
+                                <span className="flex-1 text-[11px] text-slate-600 dark:text-slate-400 truncate">{request.name}</span>
                                 {!readOnly && (
                                     <button
                                         onClick={(e) => {

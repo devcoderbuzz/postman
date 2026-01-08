@@ -4,20 +4,25 @@ import { cn } from '../lib/utils';
 
 export function RequestTabs({ requests, activeRequestId, onActivate, onClose, onAdd }) {
     return (
-        <div className="flex items-center bg-slate-100 dark:bg-[var(--bg-secondary)] overflow-x-auto no-scrollbar rounded-t-xl">
-            {requests.map((req) => (
+        <div className="flex items-center bg-slate-100 dark:bg-[var(--bg-secondary)] overflow-x-auto no-scrollbar">
+            {requests.map((req, index) => (
                 <div
                     key={req.id}
                     className={cn(
-                        "group flex items-center gap-2 px-4 py-2.5 min-w-[120px] max-w-[220px] text-xs cursor-pointer border-r border-slate-200 dark:border-[var(--border-color)] select-none rounded-t-xl transition-colors duration-200",
+                        "group flex items-center gap-2 px-3 py-1.5 min-w-[80px] max-w-[180px] text-[11px] cursor-pointer select-none transition-all relative",
                         req.id === activeRequestId
-                            ? "bg-white dark:bg-[var(--bg-primary)] text-slate-900 dark:text-[var(--text-primary)] border-t-2 border-t-red-500"
-                            : "bg-slate-100 dark:bg-[var(--bg-secondary)] text-slate-500 dark:text-[var(--text-secondary)] hover:bg-slate-200 dark:hover:bg-white/5"
+                            ? "bg-white dark:bg-[var(--bg-primary)] text-slate-900 dark:text-[var(--text-primary)] z-10 border-t-2 border-t-red-500 shadow-sm"
+                            : "text-slate-500 hover:bg-slate-300/30 dark:hover:bg-white/5"
                     )}
                     onClick={() => onActivate(req.id)}
                 >
+                    {/* Middle line separator */}
+                    {index < requests.length - 1 && req.id !== activeRequestId && requests[index + 1]?.id !== activeRequestId && (
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-[1px] h-3 bg-slate-400/30 dark:bg-slate-600/50" />
+                    )}
+
                     <span className={cn(
-                        "font-bold text-[10px]",
+                        "font-bold text-[10px] shrink-0",
                         req.method === 'GET' && "text-green-500",
                         req.method === 'POST' && "text-yellow-500",
                         req.method === 'PUT' && "text-blue-500",
@@ -33,7 +38,7 @@ export function RequestTabs({ requests, activeRequestId, onActivate, onClose, on
                         }}
                         className="opacity-0 group-hover:opacity-100 p-0.5 rounded-full hover:bg-slate-300 dark:hover:bg-slate-700 transition-all text-slate-500"
                     >
-                        <X className="w-3 h-3" />
+                        <X className="w-2.5 h-2.5" />
                     </button>
                 </div>
             ))}

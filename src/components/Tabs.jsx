@@ -2,13 +2,13 @@ import { cn } from '../lib/utils';
 
 export function Tabs({ tabs, activeTab, onTabChange }) {
     return (
-        <div className="flex border-b border-slate-200 dark:border-slate-800 mb-4 items-center overflow-x-auto no-scrollbar">
+        <div className="flex border-b border-slate-200 dark:border-slate-800 mb-2 items-center overflow-x-auto no-scrollbar">
             {tabs.map(tab => (
                 <button
                     key={tab.id}
                     onClick={() => onTabChange(tab.id)}
                     className={cn(
-                        "px-4 py-2 text-sm font-medium transition-colors whitespace-nowrap relative flex items-center gap-1.5",
+                        "px-3 py-1.5 text-xs font-medium transition-colors whitespace-nowrap relative flex items-center gap-1.5",
                         activeTab === tab.id
                             ? 'text-slate-900 dark:text-white'
                             : 'text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200'

@@ -1,0 +1,13 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Use a solid red background for the icon container to eliminate white -->
+  <rect width="512" height="512" rx="112" fill="#ef4444"/>
+  <!-- The rocket itself is slightly lighter or different shade to be visible, or solid white if preferred. 
+       Actually, user said "red icon", so maybe a red rocket on a darker red? 
+       Let's try a white rocket on a red background - it's a "red icon" overall.
+       Wait, "Just have the red icon" -> maybe they want a transparent icon but the OS is adding white.
+       If I make the icon a solid red square with a rocket path cut out, it will be "red only".
+  -->
+  <path d="M256 80C256 80 160 180 160 320C160 373.01 202.99 416 256 416C309.01 416 352 373.01 352 320C352 180 256 80 256 80Z" fill="white"/>
+  <path d="M190 390L160 440H220L210 390H190Z" fill="white"/>
+  <path d="M322 390L352 440H292L302 390H322Z" fill="white"/>
+</svg>

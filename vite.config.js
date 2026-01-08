@@ -11,24 +11,25 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['vite.svg'],
+      includeAssets: ['app-icon.svg', 'maskable-icon.svg', 'vite.svg'],
       manifest: {
         name: 'Postman Studio',
         short_name: 'PostmanStudio',
         description: 'A Curved Postman-like API client',
-        theme_color: '#ffffff',
+        theme_color: '#ef4444',
+        background_color: '#ef4444',
         icons: [
           {
-            src: 'pwa-192x192.png?v=3',
-            sizes: '192x192',
-            type: 'image/png',
-            purpose: 'any maskable'
+            src: 'app-icon.svg?v=6',
+            sizes: '512x512',
+            type: 'image/svg+xml',
+            purpose: 'any'
           },
           {
-            src: 'pwa-512x512.png?v=3',
+            src: 'maskable-icon.svg?v=6',
             sizes: '512x512',
-            type: 'image/png',
-            purpose: 'any maskable'
+            type: 'image/svg+xml',
+            purpose: 'maskable'
           }
         ]
       },

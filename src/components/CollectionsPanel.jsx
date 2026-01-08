@@ -30,6 +30,7 @@ export function CollectionsPanel({
     const [editName, setEditName] = useState('');
     const [isResizing, setIsResizing] = useState(false);
     const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, collectionId: null });
+    const [activeCollectionsTab, setActiveCollectionsTab] = useState('server');
 
     const addCollection = () => {
         const newCollection = {
@@ -124,13 +125,13 @@ export function CollectionsPanel({
             <div className="flex-1 flex flex-col overflow-hidden">
 
                 {projects && projects.length > 0 && projects[0].id !== 'default' && (
-                    <div className="p-2 border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-100 dark:bg-[var(--bg-secondary)] space-y-1">
-                        <div className="flex items-center gap-2">
-                            <span className="text-xs font-medium text-slate-500 w-16 text-right">App Code:</span>
+                    <div className="p-1.5 border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-100 dark:bg-[var(--bg-secondary)] space-y-1">
+                        <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-medium text-slate-500 w-16 text-right whitespace-nowrap">App Code:</span>
                             <select
                                 value={activeAppCode}
                                 onChange={(e) => onAppCodeSelect(e.target.value)}
-                                className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded px-2 py-1 text-xs outline-none focus:border-blue-500"
+                                className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded px-1.5 py-0.5 text-[10px] outline-none focus:border-blue-500"
                             >
                                 {projects.map((proj) => (
                                     <option key={proj.id} value={proj.id}>
@@ -140,19 +141,19 @@ export function CollectionsPanel({
                             </select>
                             <button
                                 onClick={onRefreshAppCode}
-                                className="p-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 hover:text-blue-500 transition-colors"
+                                className="p-0.5 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 hover:text-blue-500 transition-colors"
                                 title="Refresh App Code"
                             >
-                                <RefreshCw className="w-3.5 h-3.5" />
+                                <RefreshCw className="w-3 h-3" />
                             </button>
                         </div>
                         {modules && (
-                            <div className="flex items-center gap-2">
-                                <span className="text-xs font-medium text-slate-500 w-16 text-right">Module:</span>
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[10px] font-medium text-slate-500 w-16 text-right whitespace-nowrap">Module:</span>
                                 <select
                                     value={activeModule}
                                     onChange={(e) => onModuleSelect(e.target.value)}
-                                    className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded px-2 py-1 text-xs outline-none focus:border-blue-500"
+                                    className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded px-1.5 py-0.5 text-[10px] outline-none focus:border-blue-500"
                                 >
                                     {modules.map((mod) => (
                                         <option key={mod.id} value={mod.id}>
@@ -160,98 +161,134 @@ export function CollectionsPanel({
                                         </option>
                                     ))}
                                 </select>
-                                <div className="w-[26px]" />
+                                <div className="w-4" />
                             </div>
                         )}
                     </div>
                 )}
 
-                <div className="flex-1 overflow-auto p-2">
+                {/* Collections View Tabs */}
+                <div className="flex border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-100/50 dark:bg-[var(--bg-secondary)]/50">
+                    <button
+                        onClick={() => setActiveCollectionsTab('server')}
+                        className={cn(
+                            "flex-1 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all relative",
+                            activeCollectionsTab === 'server'
+                                ? "text-red-500 bg-white dark:bg-slate-800"
+                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                        )}
+                    >
+                        Server
+                        {activeCollectionsTab === 'server' && (
+                            <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-red-500" />
+                        )}
+                    </button>
+                    <button
+                        onClick={() => setActiveCollectionsTab('local')}
+                        className={cn(
+                            "flex-1 py-1.5 text-[10px] font-bold uppercase tracking-wider transition-all relative",
+                            activeCollectionsTab === 'local'
+                                ? "text-red-500 bg-white dark:bg-slate-800"
+                                : "text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                        )}
+                    >
+                        Local
+                        {activeCollectionsTab === 'local' && (
+                            <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-red-500" />
+                        )}
+                    </button>
+                </div>
+
+                <div className="flex-1 overflow-auto p-1.5 custom-scrollbar">
                     {/* Server Collections Section */}
-                    {serverCollections && serverCollections.length > 0 && (
-                        <div className="mb-4">
-                            <div className="px-2 py-1.5 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                Server Collections
-                            </div>
-                            <div className="space-y-1">
-                                {serverCollections.map(collection => (
-                                    <CollectionItem
-                                        key={collection.id}
-                                        collection={collection}
-                                        activeCollectionId={activeCollectionId}
-                                        expandedFolders={expandedFolders}
-                                        toggleFolder={toggleFolder}
-                                        onLoadRequest={onLoadRequest}
-                                        readOnly={true} // Server collections usually strictly managed
-                                    />
-                                ))}
-                            </div>
+                    {activeCollectionsTab === 'server' && (
+                        <div>
+                            {serverCollections && serverCollections.length > 0 ? (
+                                <div className="space-y-1">
+                                    {serverCollections.map(collection => (
+                                        <CollectionItem
+                                            key={collection.id}
+                                            collection={collection}
+                                            activeCollectionId={activeCollectionId}
+                                            expandedFolders={expandedFolders}
+                                            toggleFolder={toggleFolder}
+                                            onLoadRequest={onLoadRequest}
+                                            readOnly={true}
+                                        />
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className="px-2 py-8 text-center">
+                                    <Folder className="w-8 h-8 mx-auto mb-2 text-slate-200 dark:text-slate-700" />
+                                    <p className="text-xs text-slate-400 dark:text-slate-600 italic">No server collections found for this module.</p>
+                                </div>
+                            )}
                         </div>
                     )}
 
                     {/* Local Collections Section */}
-                    <div className="mb-4">
-                        <div className="flex items-center justify-between px-2 py-1.5">
-                            <div className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                                Local Collections
-                            </div>
-                            <div className="flex items-center gap-1">
-                                <button
-                                    onClick={addCollection}
-                                    className="p-0.5 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
-                                    title="New Collection"
-                                >
-                                    <Plus className="w-3.5 h-3.5" />
-                                </button>
-                                <button
-                                    onClick={onImportCurl}
-                                    className="px-1.5 py-0.5 text-[9px] font-bold text-red-500 dark:text-red-400 border border-red-500/20 dark:border-red-400/20 hover:bg-red-50 dark:hover:bg-red-500/10 rounded transition-colors uppercase"
-                                >
-                                    Import
-                                </button>
-                            </div>
-                        </div>
-                        <div className="space-y-1">
-                            {localCollections && localCollections.length > 0 ? (
-                                localCollections.map(collection => (
-                                    <CollectionItem
-                                        key={collection.id}
-                                        collection={collection}
-                                        activeCollectionId={activeCollectionId}
-                                        expandedFolders={expandedFolders}
-                                        toggleFolder={toggleFolder}
-                                        onLoadRequest={onLoadRequest}
-                                        editingCollection={editingCollection}
-                                        editName={editName}
-                                        setEditName={setEditName}
-                                        saveRename={saveRename}
-                                        cancelRename={cancelRename}
-                                        startRename={startRename}
-                                        deleteCollection={deleteCollection}
-                                        deleteRequest={deleteRequest}
-                                        onSaveCollection={onSaveCollection}
-                                        onReloadCollection={onReloadCollection}
-                                    />
-                                ))
-                            ) : (
-                                <div className="px-2 py-4 text-center text-slate-400 dark:text-slate-600 text-xs italic">
-                                    No local collections
+                    {activeCollectionsTab === 'local' && (
+                        <div>
+                            <div className="flex items-center justify-between px-1 mb-2">
+                                <div className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                    My Collections
                                 </div>
-                            )}
+                                <div className="flex items-center gap-1">
+                                    <button
+                                        onClick={addCollection}
+                                        className="p-1 hover:bg-slate-200 dark:hover:bg-slate-800 rounded text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors"
+                                        title="New Collection"
+                                    >
+                                        <Plus className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                        onClick={onImportCurl}
+                                        className="px-1.5 py-0.5 text-[8px] font-bold text-red-500 dark:text-red-400 border border-red-500/20 dark:border-red-400/20 hover:bg-red-50 dark:hover:bg-red-500/10 rounded transition-colors uppercase"
+                                    >
+                                        Import
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                {localCollections && localCollections.length > 0 ? (
+                                    localCollections.map(collection => (
+                                        <CollectionItem
+                                            key={collection.id}
+                                            collection={collection}
+                                            activeCollectionId={activeCollectionId}
+                                            expandedFolders={expandedFolders}
+                                            toggleFolder={toggleFolder}
+                                            onLoadRequest={onLoadRequest}
+                                            editingCollection={editingCollection}
+                                            editName={editName}
+                                            setEditName={setEditName}
+                                            saveRename={saveRename}
+                                            cancelRename={cancelRename}
+                                            startRename={startRename}
+                                            deleteCollection={deleteCollection}
+                                            deleteRequest={deleteRequest}
+                                            onSaveCollection={onSaveCollection}
+                                            onReloadCollection={onReloadCollection}
+                                        />
+                                    ))
+                                ) : (
+                                    <div className="px-2 py-8 text-center">
+                                        <Folder className="w-8 h-8 mx-auto mb-2 text-slate-200 dark:text-slate-700" />
+                                        <p className="text-xs text-slate-400 dark:text-slate-600 italic">Your local collections will appear here.</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-                    </div>
+                    )}
                 </div>
             </div >
 
             {/* Resize Handle */}
-            < div
-                className="w-1 hover:w-1.5 bg-transparent hover:bg-blue-500 cursor-col-resize transition-all flex items-center justify-center group"
+            <div
+                className="w-px hover:w-1 bg-slate-200 dark:bg-[var(--border-color)] hover:bg-red-500 cursor-col-resize transition-all flex items-center justify-center group z-50"
                 onMouseDown={handleMouseDown}
             >
-                <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <GripVertical className="w-3 h-3 text-blue-500" />
-                </div>
-            </div >
+            </div>
 
             <ConfirmationModal
                 isOpen={deleteConfirmation.isOpen}

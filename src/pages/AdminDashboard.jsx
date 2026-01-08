@@ -831,15 +831,15 @@ export function AdminDashboard() {
                     <div className="flex-1 flex flex-col h-full overflow-hidden">
 
                         {/* Scrollable Content Area */}
-                        <div className="flex-1 overflow-y-auto px-6 py-6 custom-scrollbar">
+                        <div className="flex-1 overflow-y-auto px-4 py-4 custom-scrollbar">
 
                             {activeView === 'users' && (
-                                <div className="flex flex-col lg:flex-row gap-6 h-full overflow-hidden">
+                                <div className="flex flex-col lg:flex-row gap-4 h-full overflow-hidden">
                                     {/* Left Side: App Codes */}
                                     <div className="flex-1 flex flex-col min-h-0 min-w-0">
                                         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col flex-1">
-                                            <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-                                                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">App Codes</h2>
+                                            <div className="p-2 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                                                <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">App Codes</h2>
                                                 <button
                                                     onClick={() => {
                                                         setNewAppCode('');
@@ -858,23 +858,23 @@ export function AdminDashboard() {
                                                 <table className="w-full text-left text-sm table-fixed">
                                                     <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
                                                         <tr>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[25%] text-center">App Code</th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[25%] text-center">Modules</th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[25%] text-center">Users</th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[25%] text-center">Actions</th>
+                                                            <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 text-[11px] w-[25%] text-center">App Code</th>
+                                                            <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 text-[11px] w-[25%] text-center">Modules</th>
+                                                            <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 text-[11px] w-[25%] text-center">Users</th>
+                                                            <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 text-[11px] w-[25%] text-center">Actions</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                                         {appCodesWithUserCounts.map(code => (
                                                             <tr key={code.id || code.projectId} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                                <td className="px-4 py-3 font-medium text-xs truncate text-center" title={code.appCode}>{code.appCode}</td>
-                                                                <td className="px-4 py-3 text-xs text-center text-slate-500 dark:text-slate-400 truncate" title={code.moduleName}>{code.moduleName}</td>
-                                                                <td className="px-4 py-3 text-center">
+                                                                <td className="px-3 py-2 font-medium text-[11px] truncate text-center" title={code.appCode}>{code.appCode}</td>
+                                                                <td className="px-3 py-2 text-[11px] text-center text-slate-500 dark:text-slate-400 truncate" title={code.moduleName}>{code.moduleName}</td>
+                                                                <td className="px-3 py-2 text-center">
                                                                     <span className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
                                                                         {code.userCount || 0}
                                                                     </span>
                                                                 </td>
-                                                                <td className="px-4 py-3 text-center space-x-1 whitespace-nowrap">
+                                                                <td className="px-3 py-2 text-center space-x-1 whitespace-nowrap">
                                                                     <button
                                                                         onClick={() => handleEditProject(code)}
                                                                         className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium text-[10px] px-2 py-1 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -899,8 +899,8 @@ export function AdminDashboard() {
                                     {/* Right Side: Users */}
                                     <div className="flex-1 flex flex-col min-h-0 min-w-0">
                                         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col flex-1">
-                                            <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-                                                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Users</h2>
+                                            <div className="p-2 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
+                                                <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Users</h2>
                                                 <button
                                                     onClick={() => setIsCreatingUser(true)}
                                                     className="bg-red-600 text-white px-3 py-1.5 rounded text-[11px] hover:bg-red-700 font-bold shadow-sm transition-all active:scale-95"
@@ -912,19 +912,19 @@ export function AdminDashboard() {
                                                 <table className="w-full text-left text-sm table-fixed">
                                                     <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
                                                         <tr>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[20%] text-center">User Name</th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[20%] text-center">Role</th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[20%] text-center">Status</th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[20%] text-center">Codes</th>
-                                                            <th className="px-4 py-2.5 font-semibold text-slate-600 dark:text-slate-300 text-xs w-[20%] text-center">Actions</th>
+                                                            <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 text-[11px] w-[20%] text-center">User Name</th>
+                                                            <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 text-[11px] w-[20%] text-center">Role</th>
+                                                            <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 text-[11px] w-[20%] text-center">Status</th>
+                                                            <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 text-[11px] w-[20%] text-center">Codes</th>
+                                                            <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 text-[11px] w-[20%] text-center">Actions</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
                                                         {users.map(u => (
                                                             <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
-                                                                <td className="px-4 py-2">
-                                                                    <div className="flex items-center justify-center gap-3">
-                                                                        <div className="w-7 h-7 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                                                                <td className="px-3 py-1.5">
+                                                                    <div className="flex items-center justify-center gap-2">
+                                                                        <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
                                                                             {(u.userProfileImage && u.userProfileImage.length > 30) || (u.profileImage && u.profileImage.length > 30) ? (
                                                                                 <img
                                                                                     src={u.userProfileImage || u.profileImage}
@@ -935,11 +935,11 @@ export function AdminDashboard() {
                                                                                 <span className="text-[10px] font-bold text-slate-500">{(u.userName || u.username || 'U')?.substring(0, 1).toUpperCase()}</span>
                                                                             )}
                                                                         </div>
-                                                                        <span className="font-medium text-xs truncate" title={u.userName}>{u.userName}</span>
+                                                                        <span className="font-medium text-[11px] truncate" title={u.userName}>{u.userName}</span>
                                                                     </div>
                                                                 </td>
-                                                                <td className="px-4 py-2 text-[10px] text-slate-500 dark:text-slate-400 capitalize text-center truncate">{u.userRole?.toLowerCase()}</td>
-                                                                <td className="px-4 py-2 text-center">
+                                                                <td className="px-3 py-1.5 text-[10px] text-slate-500 dark:text-slate-400 capitalize text-center truncate">{u.userRole?.toLowerCase()}</td>
+                                                                <td className="px-3 py-1.5 text-center">
                                                                     <span className={`inline-block px-1.5 py-0.5 rounded-full text-[9px] font-black tracking-tight ${u.userStatus === 'ACTIVE' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
                                                                         u.userStatus === 'DISABLED' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
                                                                             'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
@@ -947,12 +947,12 @@ export function AdminDashboard() {
                                                                         {u.userStatus}
                                                                     </span>
                                                                 </td>
-                                                                <td className="px-4 py-2 text-center">
+                                                                <td className="px-3 py-1.5 text-center">
                                                                     <span className="inline-flex items-center justify-center px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-300">
                                                                         {u.projectCount}
                                                                     </span>
                                                                 </td>
-                                                                <td className="px-4 py-2 text-center space-x-1 whitespace-nowrap">
+                                                                <td className="px-3 py-1.5 text-center space-x-1 whitespace-nowrap">
                                                                     <button
                                                                         onClick={() => handleEditUser(u)}
                                                                         className="text-slate-600 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white font-medium text-[10px] px-1.5 py-0.5 border border-slate-200 dark:border-slate-700 rounded hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -993,7 +993,7 @@ export function AdminDashboard() {
                             {activeView === 'appcodes' && (
                                 <div className="flex flex-col gap-4 h-full">
                                     {/* App Code Selector */}
-                                    <div className="bg-white dark:bg-slate-800 p-6 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex-shrink-0">
+                                    <div className="bg-white dark:bg-slate-800 p-3 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex-shrink-0">
                                         <div className="flex items-center justify-between">
                                             <div className="flex items-center gap-4">
 
@@ -1010,7 +1010,7 @@ export function AdminDashboard() {
                                                                 setSelectedModuleName(''); // Reset module
                                                                 setSelectedAppCode(''); // Reset final selection
                                                             }}
-                                                            className="w-48 appearance-none border rounded-md p-2 pr-8 text-sm dark:bg-slate-900 dark:border-slate-700 focus:border-red-500 outline-none cursor-pointer"
+                                                            className="w-48 appearance-none border rounded-md px-1.5 py-1 text-sm dark:bg-slate-900 dark:border-slate-700 focus:border-red-500 outline-none cursor-pointer"
                                                         >
                                                             <option value="">-- Select Project --</option>
                                                             {[...new Set(appCodes.map(ac => ac.projectName))].map(projName => (
@@ -1043,7 +1043,7 @@ export function AdminDashboard() {
                                                                     setSelectedAppCode('');
                                                                 }
                                                             }}
-                                                            className="w-48 appearance-none border rounded-md p-2 pr-8 text-sm dark:bg-slate-900 dark:border-slate-700 focus:border-red-500 outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                                                            className="w-48 appearance-none border rounded-md px-1.5 py-1 text-sm dark:bg-slate-900 dark:border-slate-700 focus:border-red-500 outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                                             disabled={!selectedAppCodeName}
                                                         >
                                                             <option value="">-- Select Module --</option>
@@ -1086,11 +1086,11 @@ export function AdminDashboard() {
                                                     <table className="w-full text-left text-sm table-fixed">
                                                         <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
                                                             <tr>
-                                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-12"></th>
-                                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-4/12">Collection / Request</th>
-                                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-2/12">Method</th>
-                                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-4/12">URL</th>
-                                                                <th className="px-6 py-3 font-semibold text-slate-600 dark:text-slate-300 w-2/12 text-right">Actions</th>
+                                                                <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 w-10"></th>
+                                                                <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 w-4/12">Collection / Request</th>
+                                                                <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 w-2/12">Method</th>
+                                                                <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 w-4/12">URL</th>
+                                                                <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 w-2/12 text-right">Actions</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody className="divide-y divide-slate-200 dark:divide-slate-700">

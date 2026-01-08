@@ -293,11 +293,11 @@ export function UserWorkspace() {
     }, [localCollectionsPath]);
 
     // Layout state
-    const [collectionsPanelWidth, setCollectionsPanelWidth] = useState(280);
-    const [requestPanelHeight, setRequestPanelHeight] = useState(window.innerHeight / 2 - 100); // Vertically balanced
-    const [requestPanelWidth, setRequestPanelWidth] = useState((window.innerWidth - 300) / 2); // Horizontally balanced
+    const [collectionsPanelWidth, setCollectionsPanelWidth] = useState(240);
+    const [requestPanelHeight, setRequestPanelHeight] = useState(window.innerHeight / 2 - 80); // Vertically balanced
+    const [requestPanelWidth, setRequestPanelWidth] = useState((window.innerWidth - 260) / 2); // Horizontally balanced
     const [isResizingRequest, setIsResizingRequest] = useState(false);
-    const [consoleHeight, setConsoleHeight] = useState(250);
+    const [consoleHeight, setConsoleHeight] = useState(200);
     const [isResizingConsole, setIsResizingConsole] = useState(false);
 
     // Project state
@@ -1275,36 +1275,40 @@ export function UserWorkspace() {
                     />
                 ) : (
                     <>
-                        <div className="flex items-center justify-end px-4 py-2.5 bg-slate-50/50 dark:bg-[var(--bg-secondary)]/50 backdrop-blur-sm gap-3">
-                            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 transition-all shadow-sm">
-                                <Globe className="w-3.5 h-3.5 text-red-500" />
-                                <select
-                                    value={activeEnv || ''}
-                                    onChange={(e) => setActiveEnv(e.target.value || null)}
-                                    className="bg-transparent text-xs font-bold text-slate-700 dark:text-slate-200 outline-none border-none pr-1 cursor-pointer min-w-[100px]"
-                                >
-                                    <option value="">No Env</option>
-                                    {environments.map(env => (
-                                        <option key={env.id} value={env.id}>{env.name}</option>
-                                    ))}
-                                </select>
+                        <div className="flex items-center bg-slate-100 dark:bg-[var(--bg-secondary)] border-b border-slate-200 dark:border-[var(--border-color)]">
+                            <div className="flex-1 overflow-hidden">
+                                <RequestTabs
+                                    requests={requests}
+                                    activeRequestId={activeRequestId}
+                                    onActivate={setActiveRequestId}
+                                    onClose={handleCloseTab}
+                                    onAdd={handleAddTab}
+                                />
                             </div>
-                            <button
-                                onClick={saveToCollection}
-                                className="flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-slate-700 transition-all shadow-sm active:scale-95"
-                                title="Save to collection"
-                            >
-                                <Save className="w-3.5 h-3.5" /> Save
-                            </button>
-                        </div>
 
-                        <RequestTabs
-                            requests={requests}
-                            activeRequestId={activeRequestId}
-                            onActivate={setActiveRequestId}
-                            onClose={handleCloseTab}
-                            onAdd={handleAddTab}
-                        />
+                            <div className="flex items-center px-4 gap-2">
+                                <div className="flex items-center gap-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 transition-all shadow-sm">
+                                    <Globe className="w-3.5 h-3.5 text-red-500" />
+                                    <select
+                                        value={activeEnv || ''}
+                                        onChange={(e) => setActiveEnv(e.target.value || null)}
+                                        className="bg-transparent text-[11px] font-bold text-slate-700 dark:text-slate-200 outline-none border-none pr-1 cursor-pointer min-w-[100px]"
+                                    >
+                                        <option value="">No Env</option>
+                                        {environments.map(env => (
+                                            <option key={env.id} value={env.id}>{env.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <button
+                                    onClick={saveToCollection}
+                                    className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-slate-700 transition-all shadow-sm active:scale-95"
+                                    title="Save to collection"
+                                >
+                                    <Save className="w-3 h-3" /> Save
+                                </button>
+                            </div>
+                        </div>
 
                         <RequestBar
                             method={activeRequest.method}
@@ -1354,7 +1358,7 @@ export function UserWorkspace() {
                                     className={`flex flex-col min-w-0 ${layout === 'vertical' ? 'w-full' : 'h-full'}`}
                                     style={layout === 'vertical' ? { height: requestPanelHeight } : { width: requestPanelWidth }}
                                 >
-                                    <div className="flex-1 border-r border-slate-200 dark:border-[var(--border-color)] p-4 flex flex-col min-h-0 overflow-auto">
+                                    <div className="flex-1 border-r border-slate-200 dark:border-[var(--border-color)] p-2.5 flex flex-col min-h-0 overflow-auto">
                                         <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
                                         <div className="flex-1 overflow-auto mt-2">
                                             {activeTab === 'docs' && (
@@ -1423,13 +1427,13 @@ export function UserWorkspace() {
                                 </div>
 
                                 <div
-                                    className={`${layout === 'vertical' ? 'h-1 hover:h-1.5 cursor-row-resize w-full' : 'w-1 hover:w-1.5 cursor-col-resize h-full'} bg-slate-200 dark:bg-[var(--border-color)] hover:bg-red-500 transition-all flex items-center justify-center group z-10`}
+                                    className={`${layout === 'vertical' ? 'h-px hover:h-1 cursor-row-resize w-full' : 'w-px hover:w-1 cursor-col-resize h-full'} bg-slate-200 dark:bg-[var(--border-color)] hover:bg-red-500 transition-all flex items-center justify-center group z-10`}
                                     onMouseDown={() => setIsResizingRequest(true)}
                                 >
                                 </div>
 
-                                <div className="flex-1 p-4 bg-slate-50 dark:bg-[var(--bg-primary)] flex flex-col min-w-0 min-h-0 overflow-hidden">
-                                    <h2 className="text-slate-500 font-semibold mb-4 text-sm uppercase tracking-wider">Response</h2>
+                                <div className="flex-1 p-2.5 bg-slate-50 dark:bg-[var(--bg-primary)] flex flex-col min-w-0 min-h-0 overflow-hidden">
+                                    <h2 className="text-slate-500 font-semibold mb-2 text-sm uppercase tracking-wider">Response</h2>
                                     <div className="flex-1 overflow-hidden">
                                         <ResponseViewer
                                             response={activeRequest.response}

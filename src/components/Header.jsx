@@ -1,23 +1,26 @@
 import React from 'react';
 import { cn } from '../lib/utils';
-import { LogOut } from 'lucide-react';
+import { LogOut, Rocket } from 'lucide-react';
 
 export function Header({ user, onLogout, theme, setTheme, activeView, setActiveView, profilePic }) {
     return (
-        <header className={cn('bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-6 py-4 flex justify-between items-center shadow-sm relative z-10')}>
-            <h1 className="text-xl font-bold text-slate-900 dark:text-white">Postman Studio</h1>
+        <header className={cn('bg-white dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 px-4 py-2 flex justify-between items-center shadow-sm relative z-10')}>
+            <div className="flex items-center gap-2">
+                <Rocket className="w-5 h-5 text-red-600 dark:text-red-500 fill-current" />
+                <h1 className="text-lg font-bold text-slate-900 dark:text-white">Postman Studio</h1>
+            </div>
 
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
                 {user ? (
                     <>
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                             <div className="text-right hidden sm:block">
                                 <p className="text-sm font-bold text-slate-900 dark:text-white leading-none capitalize">{user?.username}</p>
                                 <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wider">{user?.role}</p>
                             </div>
                             <button
                                 onClick={() => setActiveView('settings')}
-                                className="w-8 h-8 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 hover:ring-2 hover:ring-red-500/50 transition-all active:scale-95 focus:outline-none"
+                                className="w-7 h-7 rounded-full overflow-hidden hover:ring-2 hover:ring-red-500/50 transition-all active:scale-95 focus:outline-none"
                             >
                                 {profilePic ? (
                                     <img src={profilePic} alt="Profile" className="w-full h-full object-cover" />
