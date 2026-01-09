@@ -13,7 +13,7 @@ import { HistoryPanel } from '../components/HistoryPanel';
 import { EnvironmentManager } from '../components/EnvironmentManager';
 import { RequestTabs } from '../components/RequestTabs';
 import { Footer } from '../components/Footer';
-import { X, Save, Moon, Sun, Globe, Check, AlignLeft, Settings as SettingsIcon, Code2, ShieldCheck } from 'lucide-react';
+import { X, Save, Moon, Sun, Globe, Check, AlignLeft, Settings as SettingsIcon, Code2, ShieldCheck, Clock } from 'lucide-react';
 import { cn, replaceEnvVariables } from '../lib/utils';
 import { SaveRequestModal } from '../components/SaveRequestModal';
 import { Header } from '../components/Header';
@@ -425,6 +425,7 @@ export function UserWorkspace() {
             );
             if (selectedApp && selectedApp.projectId) {
                 fetchServerCollections(selectedApp.projectId);
+                fetchEnvironments(activeAppCodeName, activeModule);
             }
         }
     };
@@ -459,11 +460,9 @@ export function UserWorkspace() {
     // Load from localStorage
     useEffect(() => {
         const savedCollections = localStorage.getItem('collections');
-        const savedEnvironments = localStorage.getItem('environments');
         const savedHistory = localStorage.getItem('consoleHistory');
         const savedLayout = localStorage.getItem('layout');
         if (savedCollections) setLocalCollections(JSON.parse(savedCollections));
-        if (savedEnvironments) setEnvironments(JSON.parse(savedEnvironments));
         if (savedHistory) setHistory(JSON.parse(savedHistory));
         if (savedLayout) setLayout(savedLayout);
     }, []);
@@ -545,6 +544,62 @@ export function UserWorkspace() {
         }
     }, [isResizingConsole]);
 
+    const fetchEnvironments = async (appCode = activeAppCodeName, moduleName = activeModule) => {
+        if (!user) return;
+        try {
+            console.log("fetchEnvironments context:", { appCode, moduleName });
+            const envData = await getEnvDetails(user.token);
+            if (!envData) return;
+
+            // Find selected project details to get the ID
+            const selectedApp = rawAppCodes.find(app =>
+                (app.projectName === appCode || app.appCode === appCode) && app.moduleName === moduleName
+            );
+            if (!selectedApp) return;
+
+            const targetProjectId = String(selectedApp.projectId || selectedApp.appCode || selectedApp.id);
+
+            let projects = envData;
+            if (typeof envData === 'string') {
+                try { projects = JSON.parse(envData); } catch (e) { }
+            }
+
+            if (Array.isArray(projects)) {
+                // Filter by projectID as requested
+                const projectMatch = projects.find(p => String(p.projectID || p.id || p.projectId) === targetProjectId);
+
+                if (projectMatch && projectMatch.environments) {
+                    const formattedEnvs = projectMatch.environments.map(env => ({
+                        id: String(env.envID || env.id || env.envName),
+                        name: env.envName || env.name,
+                        variables: (env.variables || []).map(v => ({
+                            key: v.variableKey || v.key,
+                            value: String(v.variableValue || v.value || ''),
+                            active: true
+                        }))
+                    }));
+
+                    setEnvironments(formattedEnvs);
+
+                    if (formattedEnvs.length > 0) {
+                        if (!activeEnv || !formattedEnvs.find(e => e.id === activeEnv)) {
+                            setActiveEnv(formattedEnvs[0].id);
+                        }
+                    } else {
+                        setActiveEnv(null);
+                    }
+                } else {
+                    setEnvironments([]);
+                    setActiveEnv(null);
+                }
+            }
+        } catch (e) {
+            console.error('Failed to fetch environment details:', e);
+        }
+    };
+
+
+
     // Fetches projects/collections/env data
     const fetchWorkspaceData = async () => {
         if (!user) return;
@@ -587,26 +642,46 @@ export function UserWorkspace() {
                     .filter(Boolean)
                     .map(name => ({ id: name, name: name }));
 
+                let initialAppCode = activeAppCodeName;
                 if (uniqueProjects.length > 0) {
                     setProjects(uniqueProjects);
                     // Initialize selection if not set or invalid
                     const currentValid = uniqueProjects.find(p => p.id === activeAppCodeName);
                     if (activeAppCodeName === 'default' || !currentValid) {
-                        setActiveAppCodeName(uniqueProjects[0].id);
+                        initialAppCode = uniqueProjects[0].id;
+                        setActiveAppCodeName(initialAppCode);
                     }
                 }
+
+                // We need to determine the initial module as well to fetch envs correctly
+                let initialModule = activeModule;
+                const projectAppCodes = formattedAppCodes.filter(app => app.projectName === initialAppCode);
+                const uniqueModules = [...new Set(projectAppCodes.map(app => app.moduleName))]
+                    .map(name => ({ id: name, name: name }));
+
+                if (uniqueModules.length > 0) {
+                    initialModule = uniqueModules[0].id;
+                    // Note: setModules and setActiveModule are called in a useEffect triggered by activeAppCodeName
+                }
+
+                // Fetch initial environment data using the values we just determined
+                await fetchEnvironments(initialAppCode, initialModule);
             } catch (e) {
                 console.error('Failed to initialize server collections for user/dev:', e);
             }
         } else if (userRole === 'admin') {
-            // Admin logic (existing)
+            // Admin logic
+            let initialAppCode = activeAppCodeName;
             if (user.assignedAppCodes && user.assignedAppCodes.length > 0) {
                 setRawAppCodes(user.assignedAppCodes);
                 const uniqueProjects = [...new Set(user.assignedAppCodes.map(app => app.projectName))]
                     .map(name => ({ id: name, name: name }));
                 if (uniqueProjects.length > 0) {
                     setProjects(uniqueProjects);
-                    if (activeAppCodeName === 'default') setActiveAppCodeName(uniqueProjects[0].id);
+                    if (activeAppCodeName === 'default') {
+                        initialAppCode = uniqueProjects[0].id;
+                        setActiveAppCodeName(initialAppCode);
+                    }
                 }
             } else {
                 try {
@@ -617,35 +692,26 @@ export function UserWorkspace() {
                             .map(name => ({ id: name, name: name }));
                         if (uniqueProjects.length > 0) {
                             setProjects(uniqueProjects);
-                            if (activeAppCodeName === 'default') setActiveAppCodeName(uniqueProjects[0].id);
+                            if (activeAppCodeName === 'default') {
+                                initialAppCode = uniqueProjects[0].id;
+                                setActiveAppCodeName(initialAppCode);
+                            }
                         }
                     }
                 } catch (e) { console.error(e); }
             }
-        }
-
-        // Fetch Environment Details
-        try {
-            const envData = await getEnvDetails(user.token);
-            if (envData && typeof envData === 'object') {
-                const formattedEnvs = Object.keys(envData).map(envName => {
-                    const config = envData[envName];
-                    return {
-                        id: envName,
-                        name: envName,
-                        variables: Object.keys(config).map(key => ({
-                            key: key,
-                            value: config[key],
-                            active: true
-                        }))
-                    };
-                });
-                setEnvironments(formattedEnvs);
-            }
-        } catch (e) {
-            console.error('Failed to fetch environment details in initWorkspace:', e);
+            // For admin, we don't necessarily know the module yet here, 
+            // but we can try to fetch envs for the project
+            await fetchEnvironments(initialAppCode, activeModule);
         }
     };
+
+    // Refetch environments when app code or module changes
+    useEffect(() => {
+        if (user && activeAppCodeName && activeModule) {
+            fetchEnvironments(activeAppCodeName, activeModule);
+        }
+    }, [activeAppCodeName, activeModule, user]);
 
     // INITIALIZATION: Fetch projects for the logged-in user
     useEffect(() => {
@@ -791,9 +857,11 @@ export function UserWorkspace() {
             };
             updateActiveRequest({ isLoading: false, response: responseData });
             const historyEntry = {
+                id: Date.now().toString() + Math.random(),
                 method: request.method,
                 url: processedUrl,
                 status: res.status,
+                statusText: res.statusText,
                 timestamp: new Date().toLocaleString(),
                 params: request.params,
                 headers: request.headers,
@@ -826,9 +894,11 @@ export function UserWorkspace() {
             updateActiveRequest({ isLoading: false, error: errorData, response: responseData });
 
             const historyEntry = {
+                id: Date.now().toString() + Math.random(),
                 method: request.method,
                 url: processedUrl,
                 status: err.response ? err.response.status : (err.status || 'Error'),
+                statusText: err.response ? err.response.statusText : 'Error',
                 timestamp: new Date().toLocaleString(),
                 params: request.params,
                 headers: request.headers,
@@ -945,6 +1015,34 @@ export function UserWorkspace() {
 
     const loadRequest = (request) => {
         let reqToLoad = { ...request };
+
+        // If it's a history item (has responseData but no response object yet)
+        if (reqToLoad.responseData && !reqToLoad.response) {
+            reqToLoad.response = {
+                data: reqToLoad.responseData,
+                headers: reqToLoad.responseHeaders,
+                status: reqToLoad.status,
+                statusText: reqToLoad.statusText,
+                time: reqToLoad.time,
+                size: reqToLoad.responseData ? JSON.stringify(reqToLoad.responseData).length : 0
+            };
+        }
+
+        // Ensure it has an ID (especially for history items)
+        if (!reqToLoad.id) {
+            reqToLoad.id = Date.now().toString() + Math.random();
+        }
+
+        // Ensure it has a name
+        if (!reqToLoad.name) {
+            try {
+                const urlObj = new URL(reqToLoad.url.startsWith('http') ? reqToLoad.url : 'http://' + reqToLoad.url);
+                reqToLoad.name = urlObj.pathname === '/' ? urlObj.hostname : urlObj.pathname;
+            } catch (e) {
+                reqToLoad.name = reqToLoad.url || 'History Request';
+            }
+        }
+
         // Ensure legacy/malformed requests with body get treated as raw JSON
         if (reqToLoad.body && (reqToLoad.bodyType === 'json' || !reqToLoad.bodyType || reqToLoad.bodyType === 'none')) {
             reqToLoad.bodyType = 'raw';
@@ -1228,6 +1326,8 @@ export function UserWorkspace() {
                                                             try {
                                                                 await updateEnvDetails({
                                                                     envName: currentEnv.name,
+                                                                    appCode: activeAppCodeName,
+                                                                    moduleName: activeModule,
                                                                     variables: variablesObj
                                                                 }, user.token);
 
@@ -1281,6 +1381,24 @@ export function UserWorkspace() {
                         localCollectionsPath={localCollectionsPath}
                         setLocalCollectionsPath={setLocalCollectionsPath}
                     />
+                ) : (activeView === 'history' && history.length === 0) ? (
+                    <div className="flex-1 flex flex-col items-center justify-center bg-slate-50 dark:bg-[var(--bg-primary)] h-full overflow-hidden">
+                        <div className="flex flex-col items-center max-w-sm text-center p-12 -mt-20">
+                            <div className="w-20 h-20 bg-slate-100 dark:bg-slate-800 rounded-3xl flex items-center justify-center mb-8 rotate-12 shadow-sm">
+                                <Clock className="w-10 h-10 text-slate-400 dark:text-slate-500 -rotate-12" />
+                            </div>
+                            <h2 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-3 tracking-tight">Empty History</h2>
+                            <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed mb-8">
+                                Every request you send will be logged here for quick access later. It's looking a bit lonely right now!
+                            </p>
+                            <button
+                                onClick={() => setActiveView('collections')}
+                                className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-red-600/20 active:scale-95"
+                            >
+                                Start Sending Requests
+                            </button>
+                        </div>
+                    </div>
                 ) : (
                     <>
                         <div className="flex items-center bg-slate-100 dark:bg-[var(--bg-secondary)] border-b border-slate-200 dark:border-[var(--border-color)]">

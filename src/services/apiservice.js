@@ -608,7 +608,7 @@ export const deleteCollection = async (collectionId, token) => {
  * @param {string} token - Authorization token
  * @returns {Promise<any>} - The environment details
  */
-export const getEnvDetails = async (token) => {
+export const getEnvDetails = async (token, appCode = null, moduleName = null) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
         
@@ -619,13 +619,15 @@ export const getEnvDetails = async (token) => {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
             },
-            data: {}
+            data: {
+              
+            }
         });
         
         if (response.data.isError) {
              throw new Error(response.data.data?.message || response.data.statusText || 'Failed to fetch environment details');
         }
-        
+        console.log("Environment details:", response.data.data);
         return response.data.data;
     } catch (error) {
         console.error('Error fetching environment details:', error.message);

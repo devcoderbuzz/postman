@@ -71,21 +71,86 @@ export function AdminDashboard() {
         if (user && user.token) {
             try {
                 const envData = await getEnvDetails(user.token);
-                if (envData && typeof envData === 'object') {
-                    const formattedEnvs = Object.keys(envData).map(envName => {
-                        const config = envData[envName];
-                        return {
-                            id: envName,
-                            name: envName,
-                            variables: Object.keys(config).map(key => ({
-                                key: key,
-                                value: config[key],
-                                active: true
-                            }))
-                        };
-                    });
+                if (envData) {
+                    console.log("Admin: Raw Environment Data:", envData);
+                    let dataToParse = envData;
+                    if (!Array.isArray(envData) && typeof envData === 'object' && envData !== null) {
+                        if (envData.data && (Array.isArray(envData.data) || typeof envData.data === 'object')) {
+                            dataToParse = envData.data;
+                        } else if (envData.environments && Array.isArray(envData.environments)) {
+                            dataToParse = envData.environments;
+                        }
+                    }
+
+                    const parseVars = (source) => {
+                        if (!source) return [];
+                        if (Array.isArray(source)) return source;
+                        if (typeof source === 'object') {
+                            return Object.entries(source).map(([k, v]) => ({ key: k, value: String(v), active: true }));
+                        }
+                        if (typeof source === 'string') {
+                            try {
+                                const parsed = JSON.parse(source);
+                                if (Array.isArray(parsed)) return parsed;
+                                if (typeof parsed === 'object' && parsed !== null) {
+                                    return Object.entries(parsed).map(([k, v]) => ({ key: k, value: String(v), active: true }));
+                                }
+                            } catch (e) { }
+                        }
+                        return [];
+                    };
+
+                    let formattedEnvs = [];
+                    if (Array.isArray(dataToParse)) {
+                        const firstItem = dataToParse[0];
+                        const hasEnvKey = firstItem && (firstItem.envName || firstItem.env_name || firstItem.environmentName || firstItem.environment_name || firstItem.name);
+
+                        if (hasEnvKey) {
+                            const grouped = dataToParse.reduce((acc, item) => {
+                                const name = item.envName || item.env_name || item.environmentName || item.environment_name || item.name || 'Default';
+                                if (!acc[name]) acc[name] = [];
+
+                                if (item.key) {
+                                    acc[name].push({ key: item.key, value: String(item.value || ''), active: true });
+                                } else if (item.variables) {
+                                    acc[name].push(...parseVars(item.variables));
+                                } else if (item.config) {
+                                    acc[name].push(...parseVars(item.config));
+                                }
+                                return acc;
+                            }, {});
+
+                            formattedEnvs = Object.keys(grouped).map(name => ({
+                                id: name,
+                                name: name,
+                                variables: grouped[name]
+                            }));
+                        } else {
+                            formattedEnvs = dataToParse.map((env, index) => {
+                                const name = env.name || env.envName || env.env_name || env.environmentName || env.environment_name || env.id;
+                                const finalName = name ? String(name) : (dataToParse.length > 1 ? `Environment ${index + 1}` : "Default Environment");
+
+                                return {
+                                    id: String(env.id || finalName),
+                                    name: finalName,
+                                    variables: parseVars(env.variables || env.config || env)
+                                };
+                            }).filter(Boolean);
+                        }
+                    } else if (typeof dataToParse === 'object' && dataToParse !== null) {
+                        formattedEnvs = Object.keys(dataToParse).map(envName => {
+                            const config = dataToParse[envName];
+                            if (config === null) return null;
+                            return {
+                                id: String(envName),
+                                name: String(envName),
+                                variables: parseVars(config)
+                            };
+                        }).filter(Boolean);
+                    }
+                    console.log("Admin: Final Formatted Envs:", formattedEnvs);
                     setEnvironments(formattedEnvs);
-                    if (formattedEnvs.length > 0 && !activeEnv) {
+                    if (formattedEnvs.length > 0 && (!activeEnv || !formattedEnvs.find(e => e.id === activeEnv))) {
                         setActiveEnv(formattedEnvs[0].id);
                     }
                 }
