@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FolderPlus, FilePlus, Plus, Folder, FileText, ChevronRight, ChevronDown, Trash2, Edit2, Check, X, GripVertical, Save, RefreshCw } from 'lucide-react';
+import { FolderPlus, FilePlus, Plus, Folder, FileText, ChevronRight, ChevronDown, Trash2, Edit2, Check, X, GripVertical, Save, RefreshCw, Search, Globe } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { CollectionItem } from './CollectionItem';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -23,7 +23,10 @@ export function CollectionsPanel({
     onRefreshModule,
 
     activeCollectionId,
-    onImportCurl
+    onImportCurl,
+    environments,
+    activeEnv,
+    onEnvSelect
 }) {
     const [expandedFolders, setExpandedFolders] = useState(new Set());
     const [editingCollection, setEditingCollection] = useState(null);
@@ -31,6 +34,7 @@ export function CollectionsPanel({
     const [isResizing, setIsResizing] = useState(false);
     const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, collectionId: null });
     const [activeCollectionsTab, setActiveCollectionsTab] = useState('server');
+    const [searchQuery, setSearchQuery] = useState('');
 
     const addCollection = () => {
         const newCollection = {
@@ -127,11 +131,11 @@ export function CollectionsPanel({
                 {projects && projects.length > 0 && projects[0].id !== 'default' && (
                     <div className="p-1.5 border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-100 dark:bg-[var(--bg-secondary)] space-y-1">
                         <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-medium text-slate-500 w-16 text-right whitespace-nowrap">App Code:</span>
+                            <span className="text-[12px] font-medium text-slate-500 w-16 text-right whitespace-nowrap">App Code:</span>
                             <select
                                 value={activeAppCode}
                                 onChange={(e) => onAppCodeSelect(e.target.value)}
-                                className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded px-1.5 py-0.5 text-[10px] outline-none focus:border-blue-500"
+                                className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded px-1.5 py-0.5 text-[14px] outline-none focus:border-blue-500"
                             >
                                 {projects.map((proj) => (
                                     <option key={proj.id} value={proj.id}>
@@ -149,11 +153,11 @@ export function CollectionsPanel({
                         </div>
                         {modules && (
                             <div className="flex items-center gap-1.5">
-                                <span className="text-[10px] font-medium text-slate-500 w-16 text-right whitespace-nowrap">Module:</span>
+                                <span className="text-[12px] font-medium text-slate-500 w-16 text-right whitespace-nowrap">Module:</span>
                                 <select
                                     value={activeModule}
                                     onChange={(e) => onModuleSelect(e.target.value)}
-                                    className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded px-1.5 py-0.5 text-[10px] outline-none focus:border-blue-500"
+                                    className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded px-1.5 py-0.5 text-[14px] outline-none focus:border-blue-500"
                                 >
                                     {modules.map((mod) => (
                                         <option key={mod.id} value={mod.id}>
@@ -164,8 +168,51 @@ export function CollectionsPanel({
                                 <div className="w-4" />
                             </div>
                         )}
+                        {environments && (
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[12px] font-medium text-slate-500 w-16 text-right whitespace-nowrap">Env:</span>
+                                <div className="flex-1 flex gap-1.5">
+                                    <div className="flex-1 relative">
+                                        <Globe className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-red-500" />
+                                        <select
+                                            value={activeEnv || ''}
+                                            onChange={(e) => onEnvSelect(e.target.value || null)}
+                                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded pl-5 pr-1.5 py-0.5 text-[14px] outline-none focus:border-blue-500 appearance-none"
+                                        >
+                                            <option value="">No Env</option>
+                                            {environments.map(env => (
+                                                <option key={env.id} value={env.id}>{env.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div className="w-4" />
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
+
+                {/* Search Box */}
+                <div className="p-2 border-b border-slate-200 dark:border-[var(--border-color)]">
+                    <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Search requests..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                            className="w-full bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg pl-8 pr-8 py-1.5 text-xs outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20 transition-all"
+                        />
+                        {searchQuery && (
+                            <button
+                                onClick={() => setSearchQuery('')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                            >
+                                <X className="w-3 h-3" />
+                            </button>
+                        )}
+                    </div>
+                </div>
 
                 {/* Collections View Tabs */}
                 <div className="flex border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-100/50 dark:bg-[var(--bg-secondary)]/50">
@@ -203,26 +250,48 @@ export function CollectionsPanel({
                     {/* Server Collections Section */}
                     {activeCollectionsTab === 'server' && (
                         <div>
-                            {serverCollections && serverCollections.length > 0 ? (
-                                <div className="space-y-1">
-                                    {serverCollections.map(collection => (
-                                        <CollectionItem
-                                            key={collection.id}
-                                            collection={collection}
-                                            activeCollectionId={activeCollectionId}
-                                            expandedFolders={expandedFolders}
-                                            toggleFolder={toggleFolder}
-                                            onLoadRequest={onLoadRequest}
-                                            readOnly={true}
-                                        />
-                                    ))}
-                                </div>
-                            ) : (
-                                <div className="px-2 py-8 text-center">
-                                    <Folder className="w-8 h-8 mx-auto mb-2 text-slate-200 dark:text-slate-700" />
-                                    <p className="text-xs text-slate-400 dark:text-slate-600 italic">No server collections found for this module.</p>
-                                </div>
-                            )}
+                            {(() => {
+                                const filtered = (serverCollections || []).filter(col => {
+                                    const searchLower = searchQuery.toLowerCase();
+                                    const collectionMatch = col.name.toLowerCase().includes(searchLower);
+                                    const requestMatch = col.requests?.some(req =>
+                                        req.name.toLowerCase().includes(searchLower) ||
+                                        req.method.toLowerCase().includes(searchLower) ||
+                                        req.url?.toLowerCase().includes(searchLower)
+                                    );
+                                    return collectionMatch || requestMatch;
+                                });
+
+                                return filtered.length > 0 ? (
+                                    <div className="space-y-1">
+                                        {filtered.map(collection => (
+                                            <CollectionItem
+                                                key={collection.id}
+                                                collection={{
+                                                    ...collection,
+                                                    requests: searchQuery ? collection.requests.filter(req =>
+                                                        req.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                                        req.method.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                                        req.url?.toLowerCase().includes(searchQuery.toLowerCase())
+                                                    ) : collection.requests
+                                                }}
+                                                activeCollectionId={activeCollectionId}
+                                                expandedFolders={searchQuery ? new Set([...expandedFolders, collection.id]) : expandedFolders}
+                                                toggleFolder={toggleFolder}
+                                                onLoadRequest={onLoadRequest}
+                                                readOnly={true}
+                                            />
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div className="px-2 py-8 text-center">
+                                        <Folder className="w-8 h-8 mx-auto mb-2 text-slate-200 dark:text-slate-700" />
+                                        <p className="text-xs text-slate-400 dark:text-slate-600 italic">
+                                            {searchQuery ? "No matching requests found." : "No server collections found for this module."}
+                                        </p>
+                                    </div>
+                                );
+                            })()}
                         </div>
                     )}
 
@@ -250,33 +319,55 @@ export function CollectionsPanel({
                                 </div>
                             </div>
                             <div className="space-y-1">
-                                {localCollections && localCollections.length > 0 ? (
-                                    localCollections.map(collection => (
-                                        <CollectionItem
-                                            key={collection.id}
-                                            collection={collection}
-                                            activeCollectionId={activeCollectionId}
-                                            expandedFolders={expandedFolders}
-                                            toggleFolder={toggleFolder}
-                                            onLoadRequest={onLoadRequest}
-                                            editingCollection={editingCollection}
-                                            editName={editName}
-                                            setEditName={setEditName}
-                                            saveRename={saveRename}
-                                            cancelRename={cancelRename}
-                                            startRename={startRename}
-                                            deleteCollection={deleteCollection}
-                                            deleteRequest={deleteRequest}
-                                            onSaveCollection={onSaveCollection}
-                                            onReloadCollection={onReloadCollection}
-                                        />
-                                    ))
-                                ) : (
-                                    <div className="px-2 py-8 text-center">
-                                        <Folder className="w-8 h-8 mx-auto mb-2 text-slate-200 dark:text-slate-700" />
-                                        <p className="text-xs text-slate-400 dark:text-slate-600 italic">Your local collections will appear here.</p>
-                                    </div>
-                                )}
+                                {(() => {
+                                    const filtered = (localCollections || []).filter(col => {
+                                        const searchLower = searchQuery.toLowerCase();
+                                        const collectionMatch = col.name.toLowerCase().includes(searchLower);
+                                        const requestMatch = col.requests?.some(req =>
+                                            req.name.toLowerCase().includes(searchLower) ||
+                                            req.method.toLowerCase().includes(searchLower) ||
+                                            req.url?.toLowerCase().includes(searchLower)
+                                        );
+                                        return collectionMatch || requestMatch;
+                                    });
+
+                                    return filtered.length > 0 ? (
+                                        filtered.map(collection => (
+                                            <CollectionItem
+                                                key={collection.id}
+                                                collection={{
+                                                    ...collection,
+                                                    requests: searchQuery ? collection.requests.filter(req =>
+                                                        req.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                                        req.method.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                                        req.url?.toLowerCase().includes(searchQuery.toLowerCase())
+                                                    ) : collection.requests
+                                                }}
+                                                activeCollectionId={activeCollectionId}
+                                                expandedFolders={searchQuery ? new Set([...expandedFolders, collection.id]) : expandedFolders}
+                                                toggleFolder={toggleFolder}
+                                                onLoadRequest={onLoadRequest}
+                                                editingCollection={editingCollection}
+                                                editName={editName}
+                                                setEditName={setEditName}
+                                                saveRename={saveRename}
+                                                cancelRename={cancelRename}
+                                                startRename={startRename}
+                                                deleteCollection={deleteCollection}
+                                                deleteRequest={deleteRequest}
+                                                onSaveCollection={onSaveCollection}
+                                                onReloadCollection={onReloadCollection}
+                                            />
+                                        ))
+                                    ) : (
+                                        <div className="px-2 py-8 text-center">
+                                            <Folder className="w-8 h-8 mx-auto mb-2 text-slate-200 dark:text-slate-700" />
+                                            <p className="text-xs text-slate-400 dark:text-slate-600 italic">
+                                                {searchQuery ? "No matching local requests found." : "Your local collections will appear here."}
+                                            </p>
+                                        </div>
+                                    );
+                                })()}
                             </div>
                         </div>
                     )}

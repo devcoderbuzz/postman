@@ -865,7 +865,7 @@ export function UserWorkspace() {
 
     const saveToCollection = () => {
         if (localCollections.length === 0) {
-            setErrorMessage('Please create a collection first before saving requests.');
+            setErrorMessage('Please create a collection under local workspace first before saving requests.');
             return;
         }
         if (activeRequest.id && activeCollectionId) {
@@ -1180,6 +1180,14 @@ export function UserWorkspace() {
                                 setEnvironments={setEnvironments}
                                 activeEnv={activeEnv}
                                 setActiveEnv={setActiveEnv}
+                                projects={projects}
+                                activeAppCode={activeAppCodeName}
+                                onAppCodeSelect={setActiveAppCodeName}
+                                onRefreshAppCode={refreshAppCode}
+                                modules={modules}
+                                activeModule={activeModule}
+                                onModuleSelect={setActiveModule}
+                                onRefreshModule={refreshModule}
                             />
                         </div>
                         <div className="flex-1 p-8 overflow-auto bg-slate-50 dark:bg-[var(--bg-primary)]">
@@ -1287,19 +1295,6 @@ export function UserWorkspace() {
                             </div>
 
                             <div className="flex items-center px-4 gap-2">
-                                <div className="flex items-center gap-1.5 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-700 transition-all shadow-sm">
-                                    <Globe className="w-3.5 h-3.5 text-red-500" />
-                                    <select
-                                        value={activeEnv || ''}
-                                        onChange={(e) => setActiveEnv(e.target.value || null)}
-                                        className="bg-transparent text-[11px] font-bold text-slate-700 dark:text-slate-200 outline-none border-none pr-1 cursor-pointer min-w-[100px]"
-                                    >
-                                        <option value="">No Env</option>
-                                        {environments.map(env => (
-                                            <option key={env.id} value={env.id}>{env.name}</option>
-                                        ))}
-                                    </select>
-                                </div>
                                 <button
                                     onClick={saveToCollection}
                                     className="flex items-center gap-1.5 px-3 py-1 text-[11px] font-bold bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-lg border border-slate-200 dark:border-slate-700 transition-all shadow-sm active:scale-95"
@@ -1350,6 +1345,9 @@ export function UserWorkspace() {
                                     onRefreshModule={refreshModule}
                                     activeCollectionId={activeCollectionId}
                                     onImportCurl={() => setShowImportCurlModal(true)}
+                                    environments={environments}
+                                    activeEnv={activeEnv}
+                                    onEnvSelect={setActiveEnv}
                                 />
                             )}
 
