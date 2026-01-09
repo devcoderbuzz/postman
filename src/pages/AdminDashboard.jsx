@@ -7,7 +7,8 @@ import { Header } from '../components/Header';
 import { getEnvDetails, updateEnvDetails } from '../services/apiservice';
 import { EnvironmentManager } from '../components/EnvironmentManager';
 import { KeyValueEditor } from '../components/KeyValueEditor';
-import { Settings as SettingsIcon, LogOut, Layout as LayoutIcon, User as UserIcon, Shield, Save, Check, Globe, X, ChevronDown, Trash2 } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut, Layout as LayoutIcon, User as UserIcon, Shield, Save, Check, Globe, X, ChevronDown, Trash2, Box } from 'lucide-react';
+import { cn } from '../lib/utils';
 import { Layout } from '../components/Layout';
 
 
@@ -1067,110 +1068,204 @@ export function AdminDashboard() {
                                     </div>
 
                                     {/* Collections Table */}
+                                    {/* Split Content: Table and Details */}
                                     {selectedAppCode && (
-                                        <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col flex-1 min-h-0">
-                                            <div className="overflow-auto flex-1">
-                                                {/* ... Collections Table Content (same as before) ... */}
-                                                {isLoadingCollections ? (
-                                                    <div className="flex items-center justify-center p-12">
-                                                        <div className="flex flex-col items-center gap-3">
-                                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
-                                                            <p className="text-sm text-slate-500">Loading collections...</p>
+                                        <div className="flex flex-1 gap-4 min-h-0">
+                                            {/* LEFT SIDE: Collections Table */}
+                                            <div className="w-1/2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col min-h-0">
+                                                <div className="overflow-auto flex-1">
+                                                    {isLoadingCollections ? (
+                                                        <div className="flex items-center justify-center p-12">
+                                                            <div className="flex flex-col items-center gap-3">
+                                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-500"></div>
+                                                                <p className="text-sm text-slate-500">Loading collections...</p>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                ) : appCodeCollections.length === 0 ? (
-                                                    <div className="p-12 text-center text-slate-500">
-                                                        <p>No collections found for this app code.</p>
-                                                    </div>
-                                                ) : (
-                                                    <table className="w-full text-left text-sm table-fixed">
-                                                        <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-                                                            <tr>
-                                                                <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 w-10"></th>
-                                                                <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 w-4/12">Collection / Request</th>
-                                                                <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 w-2/12">Method</th>
-                                                                <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 w-4/12">URL</th>
-                                                                <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 w-2/12 text-right">Actions</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                                            {appCodeCollections.map(collection => (
-                                                                <Fragment key={collection.collectionId}>
-                                                                    {/* Collection Row */}
-                                                                    <tr className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors">
-                                                                        <td className="px-6 py-3">
-                                                                            <button
-                                                                                onClick={() => toggleCollection(collection.collectionId)}
-                                                                                className="text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
-                                                                            >
-                                                                                {expandedCollections.has(collection.collectionId) ? (
-                                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-                                                                                ) : (
-                                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-                                                                                )}
-                                                                            </button>
-                                                                        </td>
-                                                                        <td className="px-6 py-3 font-bold text-slate-900 dark:text-white" colSpan="3">
-                                                                            <div className="flex items-center gap-2">
-                                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg>
-                                                                                {collection.name}
-                                                                                <span className="ml-2 text-xs px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-400">
-                                                                                    {collection.requests?.length || 0} requests
-                                                                                </span>
-                                                                            </div>
-                                                                        </td>
-                                                                        <td className="px-6 py-3"></td>
-                                                                    </tr>
-
-                                                                    {/* Request Rows (if expanded) */}
-                                                                    {expandedCollections.has(collection.collectionId) && collection.requests?.map(request => (
-                                                                        <tr
-                                                                            key={request.requestId}
-                                                                            className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer"
-                                                                            onClick={() => handleRequestClick(request)}
-                                                                        >
-                                                                            <td className="px-6 py-3"></td>
-                                                                            <td className="px-6 py-4 pl-12">
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></svg>
-                                                                                    {request.name}
-                                                                                </div>
-                                                                            </td>
-                                                                            <td className="px-6 py-4">
-                                                                                <span className={`inline-block px-2 py-1 text-xs font-bold rounded ${request.method === 'GET' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                                                                    request.method === 'POST' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                                                                        request.method === 'PUT' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                                                            request.method === 'DELETE' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                                                                                request.method === 'PATCH' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                                                                                                    'bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400'
-                                                                                    }`}>
-                                                                                    {request.method}
-                                                                                </span>
-                                                                            </td>
-                                                                            <td className="px-6 py-4 font-mono text-xs text-slate-600 dark:text-slate-400 truncate">
-                                                                                {request.url}
-                                                                            </td>
-                                                                            <td className="px-6 py-4 text-right">
+                                                    ) : appCodeCollections.length === 0 ? (
+                                                        <div className="p-12 text-center text-slate-500">
+                                                            <p>No collections found for this app code.</p>
+                                                        </div>
+                                                    ) : (
+                                                        <table className="w-full text-left text-sm table-fixed">
+                                                            <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+                                                                <tr>
+                                                                    <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 w-10"></th>
+                                                                    <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 w-7/12">Name</th>
+                                                                    <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 w-3/12">Method</th>
+                                                                    <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 w-2/12 text-right"></th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                                                                {appCodeCollections.map(collection => (
+                                                                    <Fragment key={collection.collectionId}>
+                                                                        {/* Collection Row */}
+                                                                        <tr className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors">
+                                                                            <td className="px-4 py-2">
                                                                                 <button
-                                                                                    onClick={(e) => {
-                                                                                        e.stopPropagation();
-                                                                                        handleRequestClick(request);
-                                                                                    }}
-                                                                                    className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium text-xs px-3 py-1 border border-blue-200 dark:border-blue-900/30 rounded hover:bg-blue-50 dark:hover:bg-blue-900/20"
+                                                                                    onClick={() => toggleCollection(collection.collectionId)}
+                                                                                    className="text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
                                                                                 >
-                                                                                    View Details
+                                                                                    {expandedCollections.has(collection.collectionId) ? (
+                                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                                                                                    ) : (
+                                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                                                                                    )}
                                                                                 </button>
                                                                             </td>
+                                                                            <td className="px-4 py-2 font-bold text-slate-900 dark:text-white" colSpan="3">
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500/70"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg>
+                                                                                    {collection.name}
+                                                                                    <span className="ml-2 text-[10px] px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-400 font-medium">
+                                                                                        {collection.requests?.length || 0}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </td>
                                                                         </tr>
-                                                                    ))}
-                                                                </Fragment>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
+
+                                                                        {/* Request Rows (if expanded) */}
+                                                                        {expandedCollections.has(collection.collectionId) && collection.requests?.map((request, reqIdx) => {
+                                                                            const reqId = request.requestId || request.id || `req-${reqIdx}`;
+                                                                            const isSelected = selectedRequest && (selectedRequest.requestId === reqId || selectedRequest.id === reqId);
+
+                                                                            return (
+                                                                                <tr
+                                                                                    key={reqId}
+                                                                                    className={cn(
+                                                                                        "hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group",
+                                                                                        isSelected && "bg-red-50 dark:bg-red-900/10 border-l-2 border-red-500"
+                                                                                    )}
+                                                                                    onClick={() => handleRequestClick(request)}
+                                                                                >
+                                                                                    <td className="px-4 py-3"></td>
+                                                                                    <td className="px-4 py-2 pl-10">
+                                                                                        <div className="flex items-center gap-2">
+                                                                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 group-hover:text-red-500 transition-colors"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></svg>
+                                                                                            <span className={cn(
+                                                                                                "text-[13px]",
+                                                                                                isSelected ? "font-bold text-red-600" : "text-slate-600 dark:text-slate-300"
+                                                                                            )}>
+                                                                                                {request.name || 'Untitled Request'}
+                                                                                            </span>
+                                                                                        </div>
+                                                                                    </td>
+                                                                                    <td className="px-4 py-2">
+                                                                                        <span className={`inline-block px-1.5 py-0.5 text-[10px] font-black rounded border ${request.method === 'GET' ? 'bg-green-50 text-green-600 border-green-100 dark:bg-green-900/10 dark:text-green-400 dark:border-green-800/30' :
+                                                                                            request.method === 'POST' ? 'bg-yellow-50 text-yellow-600 border-yellow-100 dark:bg-yellow-900/10 dark:text-yellow-400 dark:border-yellow-800/30' :
+                                                                                                request.method === 'PUT' ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/10 dark:text-blue-400 dark:border-blue-800/30' :
+                                                                                                    request.method === 'DELETE' ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/10 dark:text-red-400 dark:border-red-800/30' :
+                                                                                                        'bg-slate-50 text-slate-600 border-slate-100 dark:bg-slate-900/30 dark:text-slate-400 dark:border-slate-800/30'
+                                                                                            }`}>
+                                                                                            {request.method || 'GET'}
+                                                                                        </span>
+                                                                                    </td>
+                                                                                    <td className="px-4 py-2 text-right">
+                                                                                        <ChevronDown className={cn("inline-block w-4 h-4 text-slate-300 transition-transform", isSelected && "-rotate-90 text-red-500")} />
+                                                                                    </td>
+                                                                                </tr>
+                                                                            );
+                                                                        })}
+                                                                    </Fragment>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* RIGHT SIDE: Request Details (View Mode) */}
+                                            <div className="w-1/2 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col">
+                                                {selectedRequest ? (
+                                                    <div className="flex flex-col h-full">
+                                                        <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50 dark:bg-slate-900/50">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className={cn(
+                                                                    "px-2 py-0.5 rounded text-[10px] font-black border",
+                                                                    selectedRequest.method === 'GET' ? 'bg-green-50 text-green-600 border-green-100 dark:bg-green-900/20' :
+                                                                        selectedRequest.method === 'POST' ? 'bg-yellow-50 text-yellow-600 border-yellow-100 dark:bg-yellow-900/20' :
+                                                                            'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/20'
+                                                                )}>
+                                                                    {selectedRequest.method || 'GET'}
+                                                                </span>
+                                                                <h3 className="font-bold text-sm text-slate-900 dark:text-white truncate max-w-[200px]">{selectedRequest.name || 'Untitled'}</h3>
+                                                            </div>
+                                                            <button onClick={() => setSelectedRequest(null)} className="p-1 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-colors group">
+                                                                <span className="text-slate-400 group-hover:text-red-500 text-lg leading-none">×</span>
+                                                            </button>
+                                                        </div>
+                                                        <div className="p-6 overflow-y-auto flex-1">
+                                                            <div className="space-y-6">
+                                                                {/* URL */}
+                                                                <div>
+                                                                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Endpoint URL</label>
+                                                                    <div className="relative">
+                                                                        <p className="text-xs font-mono bg-slate-50 dark:bg-slate-900/50 p-3 rounded-lg border border-slate-100 dark:border-slate-800 break-all text-slate-600 dark:text-slate-300">
+                                                                            {String(selectedRequest.url || 'No URL specified')}
+                                                                        </p>
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Headers */}
+                                                                {(() => {
+                                                                    let headers = selectedRequest.headers;
+                                                                    if (typeof headers === 'string') {
+                                                                        try { headers = JSON.parse(headers); } catch (e) { headers = {}; }
+                                                                    }
+                                                                    if (headers && typeof headers === 'object' && !Array.isArray(headers) && Object.keys(headers).length > 0) {
+                                                                        return (
+                                                                            <div>
+                                                                                <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Headers</label>
+                                                                                <div className="bg-white dark:bg-slate-900/30 rounded-lg border border-slate-100 dark:border-slate-800 overflow-hidden text-[11px]">
+                                                                                    <table className="w-full">
+                                                                                        <thead className="bg-slate-50 dark:bg-slate-900/50">
+                                                                                            <tr>
+                                                                                                <th className="px-3 py-2 text-left font-bold text-slate-500 uppercase tracking-tighter">Key</th>
+                                                                                                <th className="px-3 py-2 text-left font-bold text-slate-500 uppercase tracking-tighter">Value</th>
+                                                                                            </tr>
+                                                                                        </thead>
+                                                                                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                                                                                            {Object.entries(headers).filter(([k]) => k).map(([key, value]) => (
+                                                                                                <tr key={key}>
+                                                                                                    <td className="px-3 py-2 font-mono text-slate-700 dark:text-slate-400">{String(key)}</td>
+                                                                                                    <td className="px-3 py-2 font-mono text-slate-500 dark:text-slate-500">{String(value)}</td>
+                                                                                                </tr>
+                                                                                            ))}
+                                                                                        </tbody>
+                                                                                    </table>
+                                                                                </div>
+                                                                            </div>
+                                                                        );
+                                                                    }
+                                                                    return null;
+                                                                })()}
+
+                                                                {/* Body */}
+                                                                {selectedRequest.body && (
+                                                                    <div>
+                                                                        <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Request Body</label>
+                                                                        <div className="bg-slate-900 rounded-lg p-4 border border-slate-800">
+                                                                            <pre className="text-[11px] font-mono text-green-400 whitespace-pre-wrap break-words overflow-x-auto selection:bg-green-500/20">
+                                                                                {typeof selectedRequest.body === 'string' ? selectedRequest.body : JSON.stringify(selectedRequest.body, null, 2)}
+                                                                            </pre>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex flex-col items-center justify-center h-full text-slate-400 italic text-sm p-8 text-center bg-slate-50/30 dark:bg-slate-900/10">
+                                                        <div className="w-16 h-16 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center mb-4 shadow-sm border border-slate-100 dark:border-slate-700">
+                                                            <div className="w-8 h-8 rounded bg-slate-100 dark:bg-slate-700 animate-pulse opacity-20" />
+                                                        </div>
+                                                        <h4 className="text-slate-900 dark:text-white font-bold not-italic mb-1">No Request Selected</h4>
+                                                        <p className="text-xs max-w-[200px]">Select a request from the left table to view its full configuration and data.</p>
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
                                     )}
+
 
                                 </div>
                             )}
@@ -1505,105 +1600,7 @@ export function AdminDashboard() {
                 </div>
             )}
 
-            {/* Request Details Modal */}
-            {selectedRequest && (
-                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-                        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                            <h3 className="font-bold text-lg">Request Details</h3>
-                            <button onClick={() => setSelectedRequest(null)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">✕</button>
-                        </div>
-                        <div className="p-6 overflow-y-auto flex-1">
-                            <div className="space-y-6">
-                                {/* Name & Method */}
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Request Name</label>
-                                    <p className="text-base font-medium">{selectedRequest.name}</p>
-                                </div>
 
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Method</label>
-                                        <span className={`inline-block px-3 py-1 text-xs font-bold rounded ${selectedRequest.method === 'GET' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-                                            selectedRequest.method === 'POST' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400' :
-                                                selectedRequest.method === 'PUT' ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' :
-                                                    selectedRequest.method === 'DELETE' ? 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' :
-                                                        selectedRequest.method === 'PATCH' ? 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400' :
-                                                            'bg-slate-100 text-slate-700'
-                                            }`}>
-                                            {selectedRequest.method}
-                                        </span>
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Request ID</label>
-                                        <p className="text-sm font-mono text-slate-600 dark:text-slate-400">{selectedRequest.requestId}</p>
-                                    </div>
-                                </div>
-
-                                {/* URL */}
-                                <div>
-                                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">URL</label>
-                                    <p className="text-sm font-mono bg-slate-50 dark:bg-slate-900 p-3 rounded border border-slate-200 dark:border-slate-700 break-all">
-                                        {selectedRequest.url}
-                                    </p>
-                                </div>
-
-                                {/* Headers */}
-                                {(() => {
-                                    let headers = selectedRequest.headers;
-                                    if (typeof headers === 'string') {
-                                        try {
-                                            headers = JSON.parse(headers);
-                                        } catch (e) {
-                                            headers = {}; // Fallback if parsing fails
-                                        }
-                                    }
-
-                                    if (headers && Object.keys(headers).length > 0) {
-                                        return (
-                                            <div>
-                                                <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Headers</label>
-                                                <div className="bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded overflow-hidden">
-                                                    <table className="w-full text-sm">
-                                                        <thead className="bg-slate-100 dark:bg-slate-800">
-                                                            <tr>
-                                                                <th className="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Key</th>
-                                                                <th className="px-3 py-2 text-left font-semibold text-slate-600 dark:text-slate-400">Value</th>
-                                                            </tr>
-                                                        </thead>
-                                                        <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                                            {Object.entries(headers).map(([key, value]) => (
-                                                                <tr key={key}>
-                                                                    <td className="px-3 py-2 font-mono text-xs text-slate-700 dark:text-slate-300">{key}</td>
-                                                                    <td className="px-3 py-2 font-mono text-xs text-slate-600 dark:text-slate-400">{String(value)}</td>
-                                                                </tr>
-                                                            ))}
-                                                        </tbody>
-                                                    </table>
-                                                </div>
-                                            </div>
-                                        );
-                                    }
-                                    return null;
-                                })()}
-
-                                {/* Body */}
-                                {selectedRequest.body && (
-                                    <div>
-                                        <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2">Body</label>
-                                        <pre className="text-xs font-mono bg-slate-50 dark:bg-slate-900 p-4 rounded border border-slate-200 dark:border-slate-700 overflow-x-auto whitespace-pre-wrap break-words">
-                                            {typeof selectedRequest.body === 'string' ? selectedRequest.body : JSON.stringify(selectedRequest.body, null, 2)}
-                                        </pre>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-900 border-t border-slate-200 dark:border-slate-700 text-right">
-                            <button onClick={() => setSelectedRequest(null)} className="px-4 py-2 bg-slate-200 dark:bg-slate-700 rounded text-sm font-medium hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors">Close</button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }

@@ -16,7 +16,7 @@ export function Sidebar({ activeView, setActiveView, onRefresh }) {
     };
 
     return (
-        <div className="w-12 flex flex-col items-center py-2 bg-slate-50 dark:bg-[var(--bg-sidebar)] border-r border-slate-200 dark:border-[var(--border-color)] text-slate-500 dark:text-slate-400">
+        <div className="w-20 flex flex-col py-3 bg-slate-50 dark:bg-[var(--bg-sidebar)] border-r border-slate-200 dark:border-[var(--border-color)] text-slate-500 dark:text-slate-400">
 
             <div className="flex flex-col gap-2 w-full px-2 flex-1 overflow-y-auto no-scrollbar">
                 {user && user.role?.toLowerCase() === 'admin' && (
@@ -54,7 +54,7 @@ export function Sidebar({ activeView, setActiveView, onRefresh }) {
                 )}
                 <SidebarItem
                     icon={Globe}
-                    label="Environments"
+                    label="Env"
                     active={activeView === 'environments'}
                     onClick={() => toggleView('environments')}
                 />
@@ -76,12 +76,13 @@ function SidebarItem({ icon: Icon, label, active, onClick }) {
         <button
             onClick={onClick}
             className={cn(
-                "p-2 rounded-lg flex justify-center transition-all group relative",
-                active ? "bg-slate-200 dark:bg-[var(--accent-primary)] text-slate-900 dark:text-white" : "hover:bg-slate-200 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white"
+                "py-2 rounded-lg flex flex-col items-center gap-1 transition-all group relative w-full",
+                active ? "bg-slate-200 dark:bg-[var(--accent-primary)] text-slate-900 dark:text-white" : "hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white"
             )}
             title={label}
         >
-            <Icon className="w-5 h-5" />
+            <Icon className="w-5 h-5 shrink-0" />
+            <span className="text-[8px] font-bold uppercase tracking-tight text-center leading-tight px-1">{label}</span>
         </button>
     );
 }

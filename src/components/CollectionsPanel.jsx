@@ -100,7 +100,7 @@ export function CollectionsPanel({
     useEffect(() => {
         const handleMouseMove = (e) => {
             if (!isResizing) return;
-            const newWidth = e.clientX - 64; // 64px is sidebar width
+            const newWidth = e.clientX - 80; // 80px is the w-20 sidebar width
             if (newWidth >= 200 && newWidth <= 600) {
                 onWidthChange(newWidth);
             }

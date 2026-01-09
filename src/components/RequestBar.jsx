@@ -14,7 +14,7 @@ export function RequestBar({ method, setMethod, url, setUrl, onSend, isLoading }
 
     return (
         <div className="flex items-center gap-2 p-3 border-b border-slate-200 dark:border-[var(--border-color)] bg-white dark:bg-[var(--bg-primary)]">
-            <div className="flex flex-1 items-center gap-0 bg-slate-50 dark:bg-[var(--bg-surface)] border border-slate-300 dark:border-[var(--border-color)] rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-red-500/20 focus-within:border-red-500 transition-all shadow-sm">
+            <div className="flex flex-1 items-center gap-0 bg-slate-50 dark:bg-[var(--bg-surface)] border border-slate-300 dark:border-[var(--border-color)] rounded-lg overflow-hidden focus-within:ring-2 focus-within:ring-red-500/20 focus-within:border-red-500 transition-all shadow-sm">
                 <div className="relative group">
                     <select
                         value={method}
@@ -45,7 +45,7 @@ export function RequestBar({ method, setMethod, url, setUrl, onSend, isLoading }
             <button
                 onClick={onSend}
                 disabled={isLoading}
-                className={`px-8 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all active:scale-95 shadow-lg shadow-red-600/20 flex items-center gap-2 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                className={`px-8 py-2.5 bg-red-600 text-white font-bold rounded-lg hover:bg-red-700 transition-all active:scale-95 shadow-lg shadow-red-600/20 flex items-center gap-2 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
                 {isLoading ? 'Sending...' : <><Send className="w-4 h-4" /> Send</>}
             </button>
