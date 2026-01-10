@@ -55,6 +55,10 @@ export function EditDataPanel({ refreshTrigger }) {
                         hierarchyData = await getAllAppCodes(user.token);
                     }
 
+                    if (!hierarchyData || !Array.isArray(hierarchyData)) {
+                        hierarchyData = [];
+                    }
+
                     // Logic to robustly determine assignments
                     // If user has projectIds, use those to filter hierarchy
                     // Fallback to user.assignedAppCodes if projectIds is empty but assignedAppCodes exists
@@ -70,6 +74,8 @@ export function EditDataPanel({ refreshTrigger }) {
                         // If projectIds not present, maybe we can trust assignedAppCodes
                         // taking care to match structure if possible, but hierarchyData is better source of truth for full list
                         filtered = user.assignedAppCodes;
+                    } else {
+                        filtered = hierarchyData;
                     }
 
                     // Normalize the data structure

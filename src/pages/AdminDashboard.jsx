@@ -70,7 +70,7 @@ export function AdminDashboard() {
     const fetchEnvironments = async () => {
         if (user && user.token) {
             try {
-                const envData = await getEnvDetails(user.token);
+                const envData = await getEnvDetails(null, user.token);
                 if (envData) {
                     console.log("Admin: Raw Environment Data:", envData);
                     let dataToParse = envData;
@@ -245,6 +245,12 @@ export function AdminDashboard() {
             try {
                 const { getAllAppCodes } = await import('../services/apiservice');
                 const data = await getAllAppCodes(user.token);
+                if (!data || !Array.isArray(data)) {
+                    console.warn("getAllAppCodes returned non-array data:", data);
+                    setAllHierarchyData([]);
+                    setAppCodes([]);
+                    return;
+                }
                 setAllHierarchyData(data);
                 const mappedCodes = data.map((item) => {
                     const resolvedAppCode = (String(item.appCode || item.projectName || item.name || '')).trim();
@@ -280,6 +286,12 @@ export function AdminDashboard() {
             try {
                 const { getCollectionDetails } = await import('../services/apiservice');
                 const data = await getCollectionDetails([], user.token);
+                if (!data || !Array.isArray(data)) {
+                    console.warn("getCollectionDetails returned non-array data:", data);
+                    setAllHierarchyData([]);
+                    setAppCodes([]);
+                    return;
+                }
                 setAllHierarchyData(data);
                 const mappedCodes = data.map((item) => {
                     const resolvedAppCode = (String(item.appCode || item.projectName || item.name || '')).trim();
@@ -657,9 +669,9 @@ export function AdminDashboard() {
     const getUnassignedCodes = (user) => {
         if (!user || !user.assignedAppCodes) return [];
         // Map assigned project IDs (usually numeric IDs stored in 'id' property)
-        const assignedIds = user.assignedAppCodes.filter(Boolean).map(ac => String(ac.id));
+        const assignedIds = (user.assignedAppCodes || []).filter(Boolean).map(ac => String(ac.id));
         // Filter out appCodes that are already assigned by comparing against projectId (the numeric ID)
-        return appCodes.filter(ac => !assignedIds.includes(String(ac.projectId)));
+        return (appCodes || []).filter(ac => !assignedIds.includes(String(ac.projectId)));
     };
 
     const handleUpdateUserStatus = async (userId, newStatus) => {
@@ -1289,7 +1301,7 @@ export function AdminDashboard() {
                                                                                             </tr>
                                                                                         </thead>
                                                                                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                                                                                            {Object.entries(headers).filter(([k]) => k).map(([key, value]) => (
+                                                                                            {Object.entries(headers || {}).filter(([k]) => k).map(([key, value]) => (
                                                                                                 <tr key={key}>
                                                                                                     <td className="px-3 py-2 font-mono text-slate-700 dark:text-slate-400">{String(key)}</td>
                                                                                                     <td className="px-3 py-2 font-mono text-slate-500 dark:text-slate-500">{String(value)}</td>
@@ -1462,7 +1474,7 @@ export function AdminDashboard() {
                             >
                                 <option value="">-- Select Module --</option>
                                 {getUnassignedCodes(users.find(u => u.id === assigningUser.id))
-                                    .filter(ac => ac.projectName === assignAppCodeName)
+                                    .filter(ac => ac && ac.projectName === assignAppCodeName)
                                     .map(ac => (
                                         <option key={ac.moduleName} value={ac.moduleName}>{ac.moduleName}</option>
                                     ))

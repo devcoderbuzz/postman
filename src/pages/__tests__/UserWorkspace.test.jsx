@@ -95,10 +95,13 @@ describe('UserWorkspace', () => {
         useAuth.mockReturnValue({ user: mockUser, logout: mockLogout });
         useTheme.mockReturnValue({ theme: 'light', setTheme: mockSetTheme });
 
+        apiService.getAllAppCodes.mockResolvedValue([
+            { id: 'default', projectId: 'default', appCode: 'default', projectName: 'default', moduleName: 'default' }
+        ]);
         apiService.getCollectionsByProjectId.mockResolvedValue([]);
         apiService.getAllProjects.mockResolvedValue([]);
         apiService.getAllAppCodesForAdmin.mockResolvedValue([]);
-        apiService.getEnvDetails.mockResolvedValue({});
+        apiService.getEnvDetails.mockResolvedValue([]);
 
         // Axios for request sending
         axios.mockResolvedValue({

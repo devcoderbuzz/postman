@@ -172,7 +172,7 @@ describe('apiservice', () => {
         });
 
         it('getEnvDetails', async () => {
-            await expect(apiService.getEnvDetails('t')).resolves.toEqual({ success: true });
+            await expect(apiService.getEnvDetails(null, 't')).resolves.toEqual({ success: true });
         });
 
         it('updateEnvDetails', async () => {
@@ -199,7 +199,7 @@ describe('apiservice', () => {
             { name: 'assignUserToProject', fn: () => apiService.assignUserToProject(1, 1, 't') },
             { name: 'deleteUser', fn: () => apiService.deleteUser(1, 't') },
             { name: 'createUpdateCollections', fn: () => apiService.createUpdateCollections({}, 't') },
-            { name: 'getEnvDetails', fn: () => apiService.getEnvDetails('t') },
+            { name: 'getEnvDetails', fn: () => apiService.getEnvDetails(null, 't') },
             { name: 'updateEnvDetails', fn: () => apiService.updateEnvDetails({}, 't') },
             { name: 'activateUser', fn: () => apiService.activateUser(1, 'u', 'p', 'n', 't') },
             { name: 'resetPassword', fn: () => apiService.resetPassword(1, 'u', 'p', 'n', 't') }

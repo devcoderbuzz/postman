@@ -562,6 +562,7 @@ export const createUpdateCollections = async (collectionData, token) => {
         return response.data.data;
     } catch (error) {
         console.error('Error creating/updating collection:', error.message);
+        throw error;
     }
 };
 
@@ -601,72 +602,7 @@ export const deleteCollection = async (collectionId, token) => {
     }
 };
 
-/**
- * Get environment details.
- * Calls the /environments/search endpoint.
- * 
- * @param {string} token - Authorization token
- * @returns {Promise<any>} - The environment details
- */
-export const getEnvDetails = async (token, appCode = null, moduleName = null) => {
-    try {
-        const authToken = token || sessionStorage.getItem('authToken');
-        
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/environments/search`,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
-            },
-            data: {
-              
-            }
-        });
-        
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to fetch environment details');
-        }
-        console.log("Environment details:", response.data.data);
-        return response.data.data;
-    } catch (error) {
-        console.error('Error fetching environment details:', error.message);
-        throw error;
-    }
-};
 
-/**
- * Update environment details.
- * Calls the /environments/update endpoint.
- * 
- * @param {Object} envData - The environment data (envName and variables object)
- * @param {string} token - Authorization token
- * @returns {Promise<any>} - The response data
- */
-export const updateEnvDetails = async (envData, token) => {
-    try {
-        const authToken = token || sessionStorage.getItem('authToken');
-        
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/environments/update`,
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
-            },
-            data: envData
-        });
-        
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to update environment details');
-        }
-        
-        return response.data.data;
-    } catch (error) {
-        console.error('Error updating environment details:', error.message);
-        throw error;
-    }
-};
 
 /**
  * Create or Update Project service.
@@ -749,7 +685,7 @@ export const getAllAppCodes = async (token) => {
 
         const response = await axios.post('http://localhost:3001/proxy', {
             method: 'GET',
-            url: `${BASE_URL}/appCodes`,
+            url: `${BASE_URL}/projects/appCodes`,
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
@@ -797,6 +733,225 @@ export const getCollectionDetails = async (projectIds, token) => {
         return response.data.data;
     } catch (error) {
         console.error('Error fetching collection details:', error.message);
+        throw error;
+    }
+};
+
+
+/**
+ * Get environment details.
+ * Calls the /environments endpoint with projectId.
+ * 
+ * @param {number} projectId - The project ID
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The environment details
+ */
+export const getEnvDetails = async (projectId, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/environments/all`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: projectId ? {
+                projectId: projectId
+            } : {}
+        });
+        
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to fetch environment details');
+        }
+        console.log("Environment details for project", projectId, ":", response.data.data);
+        return response.data.data;
+    } catch (error) {
+        console.error('Error fetching environment details:', error.message);
+        throw error;
+    }
+};
+
+/**
+ * Update environment details.
+ * Calls the /environments/update endpoint.
+ * 
+ * @param {Object} envData - The environment data (envName and variables object)
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const updateEnvDetails = async (envData, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/environments/update`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: envData
+        });
+        
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to update environment details');
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error updating environment details:', error.message);
+        throw error;
+    }
+};
+
+/**
+ * Delete environment details.
+ * Calls the /environments/delete endpoint.
+ * 
+ * @param {number} envId - The environment ID
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const deleteEnvDetails = async (projectId, envName, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/environments/delete`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: {
+               project :{
+                projectId: projectId,
+               },
+               envName: envName
+            }
+        });
+        
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to delete environment details');
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error deleting environment details:', error.message);
+        throw error;
+    }
+};
+
+/**
+ * Delete environment variable service.
+ * Calls the /environments/variable/delete endpoint.
+ * 
+ * @param {number} variableId - The variable ID
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const deleteVariable = async (variableId, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/environments/variable/delete`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: {
+                id: variableId
+            }
+        });
+        
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to delete variable');
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error deleting variable:', error.message);
+        throw error;
+    }
+};
+
+
+
+/**
+ * Create or Update environment variable service.
+ * Calls the /environments/variable/update endpoint.
+ * 
+ * @param {Object} variableData - The variable data object (id, project, envName, variableKey, variableValue)
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const createUpdateEnvVariable = async (variableData, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        console.log("variableData", variableData);
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/environments/variable/update`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: variableData
+        });
+        
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to update variable');
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error updating variable:', error.message);
+        throw error;
+    }
+};
+
+/**
+ * Rename environment service.
+ * Calls the /environments/rename endpoint.
+ * 
+ * @param {number} projectId - The project ID
+ * @param {string} oldEnvName - The current environment name
+ * @param {string} newEnvName - The new environment name
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const renameEnv = async (projectId, oldEnvName, newEnvName, token) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        
+        // Construct query parameters
+        const queryParams = new URLSearchParams({
+            oldEnvName: oldEnvName,
+            newEnvName: newEnvName,
+            projectId: projectId
+        }).toString();
+        
+        const response = await axios.post('http://localhost:3001/proxy', {
+            method: 'POST',
+            url: `${BASE_URL}/environments/rename?${queryParams}`,
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${authToken}`
+            },
+            data: {}
+        });
+        
+        if (response.data.isError) {
+             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to rename environment');
+        }
+        
+        return response.data.data;
+    } catch (error) {
+        console.error('Error renaming environment:', error.message);
         throw error;
     }
 };

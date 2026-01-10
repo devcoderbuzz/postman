@@ -25,6 +25,9 @@ vi.mock('../../services/apiservice', () => ({
     createUpdateCollections: vi.fn(),
     createRequestData: vi.fn(),
     getAllProjects: vi.fn(),
+    getAllAppCodes: vi.fn(),
+    getCollectionDetails: vi.fn(),
+    deleteCollection: vi.fn(),
 }));
 
 const mockUser = {
@@ -53,7 +56,11 @@ vi.mock('../ImportModal', () => ({ ImportModal: ({ isOpen }) => isOpen ? <div da
 describe('EditDataPanel', () => {
     beforeEach(() => {
         vi.clearAllMocks();
-        apiService.getAllAppCodesForAdmin.mockResolvedValue([
+        apiService.getAllAppCodes.mockResolvedValue([
+            { projectId: '101', projectName: 'Project A', moduleName: 'Module A', collections: [] },
+            { projectId: '102', projectName: 'Project B', moduleName: 'Module B', collections: [] }
+        ]);
+        apiService.getCollectionDetails.mockResolvedValue([
             { projectId: '101', projectName: 'Project A', moduleName: 'Module A', collections: [] },
             { projectId: '102', projectName: 'Project B', moduleName: 'Module B', collections: [] }
         ]);
@@ -90,7 +97,7 @@ describe('EditDataPanel', () => {
             { collectionId: 'c1', name: 'Collection 1', requests: [] }
         ];
 
-        apiService.getAllAppCodesForAdmin.mockResolvedValue([
+        apiService.getAllAppCodes.mockResolvedValue([
             {
                 projectId: '101',
                 projectName: 'Project A',
@@ -117,7 +124,7 @@ describe('EditDataPanel', () => {
     });
 
     it('creates a new collection', async () => {
-        apiService.getAllAppCodesForAdmin.mockResolvedValue([
+        apiService.getAllAppCodes.mockResolvedValue([
             { projectId: '101', projectName: 'Project A', moduleName: 'Module A', collections: [] }
         ]);
 
@@ -152,7 +159,7 @@ describe('EditDataPanel', () => {
         const mockCollections = [
             { collectionId: 'c1', name: 'Collection 1', requests: [] }
         ];
-        apiService.getAllAppCodesForAdmin.mockResolvedValue([
+        apiService.getAllAppCodes.mockResolvedValue([
             {
                 projectId: '101',
                 projectName: 'Project A',
@@ -178,7 +185,7 @@ describe('EditDataPanel', () => {
     });
 
     it('opens import modal', async () => {
-        apiService.getAllAppCodesForAdmin.mockResolvedValue([
+        apiService.getAllAppCodes.mockResolvedValue([
             { projectId: '101', projectName: 'Project A', moduleName: 'Module A', collections: [] }
         ]);
         await act(async () => {
@@ -214,7 +221,7 @@ describe('EditDataPanel', () => {
             }
         ];
 
-        apiService.getAllAppCodesForAdmin.mockResolvedValue(mockResponse);
+        apiService.getAllAppCodes.mockResolvedValue(mockResponse);
         apiService.createUpdateCollections.mockResolvedValue({ collectionId: 'c1', requests: [] });
 
         await act(async () => {
@@ -278,7 +285,7 @@ describe('EditDataPanel', () => {
             }]
         }];
 
-        apiService.getAllAppCodesForAdmin.mockResolvedValue([
+        apiService.getAllAppCodes.mockResolvedValue([
             {
                 projectId: '101',
                 projectName: 'Project A',

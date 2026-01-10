@@ -15,7 +15,8 @@ export function EnvironmentManager({
     modules,
     activeModule,
     onModuleSelect,
-    onRefreshModule
+    onRefreshModule,
+    onRenameEnv
 }) {
     const [editingEnv, setEditingEnv] = useState(null);
 
@@ -135,14 +136,24 @@ export function EnvironmentManager({
                                             value={env.name}
                                             onChange={(e) => updateEnvName(env.id, e.target.value)}
                                             onKeyDown={e => {
-                                                if (e.key === 'Enter') setEditingEnv(null);
+                                                if (e.key === 'Enter') {
+                                                    if (onRenameEnv) {
+                                                        onRenameEnv(env.id, env.name);
+                                                    }
+                                                    setEditingEnv(null);
+                                                }
                                                 if (e.key === 'Escape') setEditingEnv(null);
                                             }}
                                             className="flex-1 bg-white dark:bg-[var(--bg-surface)] border border-red-400 dark:border-red-500 rounded px-2 py-1 text-sm outline-none shadow-sm dark:text-white"
                                             autoFocus
                                         />
                                         <button
-                                            onClick={() => setEditingEnv(null)}
+                                            onClick={() => {
+                                                if (onRenameEnv) {
+                                                    onRenameEnv(env.id, env.name);
+                                                }
+                                                setEditingEnv(null);
+                                            }}
                                             className="p-1 text-green-500"
                                         >
                                             <Check className="w-4 h-4" />
@@ -158,7 +169,7 @@ export function EnvironmentManager({
                                 )}
                             </div>
 
-                            {!editingEnv && (
+                            {editingEnv !== env.id && (
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button
                                         onClick={(e) => { e.stopPropagation(); setEditingEnv(env.id); }}

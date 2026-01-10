@@ -84,6 +84,7 @@ describe('AdminDashboard Extended', () => {
 
         apiService.getAllUsers.mockResolvedValue(mockUsers);
         apiService.getAllAppCodes.mockResolvedValue(mockAppCodes);
+        apiService.getCollectionDetails.mockResolvedValue(mockAppCodes);
         apiService.getEnvDetails.mockResolvedValue(mockEnvironments);
         apiService.updateEnvDetails.mockResolvedValue({ success: true });
         apiService.unassignUserFromProject.mockResolvedValue({ success: true });
@@ -99,16 +100,17 @@ describe('AdminDashboard Extended', () => {
     it('handles app code creation flow', async () => {
         render(<AdminDashboard />);
 
-        fireEvent.click(screen.getByText('App Codes View'));
+        fireEvent.click(screen.getByText('Users View'));
 
-        await waitFor(() => screen.getByText('Create App Code'));
-        fireEvent.click(screen.getByText('Create App Code'));
+        await waitFor(() => screen.getByText('App Codes'));
+        const createButtons = screen.getAllByText('CREATE');
+        fireEvent.click(createButtons[0]); // First CREATE is for App Codes
 
         const modal = screen.getByText('Create New App Code').closest('div.fixed');
         const modalWithin = within(modal);
 
-        fireEvent.change(modalWithin.getByPlaceholderText('e.g. GAPI_CB_SG'), { target: { value: 'NewP' } });
-        fireEvent.change(modalWithin.getByPlaceholderText('e.g. Auth'), { target: { value: 'NewM' } });
+        fireEvent.change(modalWithin.getByPlaceholderText('e.g. GAPI-CB-SG'), { target: { value: 'NewP' } });
+        fireEvent.change(modalWithin.getByPlaceholderText('CASA, FD, LOAN etc'), { target: { value: 'NewM' } });
 
         fireEvent.click(modalWithin.getByText('Create App Code', { selector: 'button[type="submit"]' }));
 
@@ -143,14 +145,14 @@ describe('AdminDashboard Extended', () => {
 
         await waitFor(() => {
             const headers = screen.getAllByRole('heading', { level: 3 });
-            expect(headers.map(h => h.textContent)).toContain('Request Details');
+            expect(headers.map(h => h.textContent)).toContain('Req 1');
         });
 
         // Assert URL presence (handling multiple occurrences due to list view + modal)
         expect(screen.getAllByText('http://test.com').length).toBeGreaterThan(0);
 
-        fireEvent.click(screen.getByText('Close'));
-        await waitFor(() => expect(screen.queryByText('Request Details')).not.toBeInTheDocument());
+        fireEvent.click(screen.getByText('×'));
+        await waitFor(() => expect(screen.queryByRole('heading', { level: 3, name: 'Req 1' })).not.toBeInTheDocument());
     });
 
     it('handles request details with Object headers and Body object', async () => {
@@ -161,8 +163,14 @@ describe('AdminDashboard Extended', () => {
         await waitFor(() => expect(screen.getAllByRole('option').length).toBeGreaterThan(1));
 
         fireEvent.change(screen.getByDisplayValue('-- Select Project --'), { target: { value: 'P1' } });
-        await waitFor(() => expect(screen.getByDisplayValue('-- Select Module --')).not.toBeDisabled());
-        fireEvent.change(screen.getByDisplayValue('-- Select Module --'), { target: { value: 'M1' } });
+
+        await waitFor(() => {
+            const moduleSelect = screen.getByDisplayValue('-- Select Module --');
+            expect(moduleSelect).not.toBeDisabled();
+        });
+
+        const moduleSelect = screen.getByDisplayValue('-- Select Module --');
+        fireEvent.change(moduleSelect, { target: { value: 'M1' } });
 
         await waitFor(() => screen.getByText('Collection 1'));
         const collectionRow = screen.getByText('Collection 1').closest('tr');

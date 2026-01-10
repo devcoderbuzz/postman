@@ -16,6 +16,7 @@ vi.mock('lucide-react', () => ({
     Globe: () => <span data-testid="icon-globe"></span>,
     Database: () => <span data-testid="icon-database"></span>,
     Users: () => <span data-testid="icon-users"></span>,
+    Shield: () => <span data-testid="icon-shield"></span>,
 }));
 
 describe('Sidebar', () => {
@@ -29,12 +30,12 @@ describe('Sidebar', () => {
         useAuth.mockReturnValue({ user: { role: 'admin' } });
         render(<Sidebar activeView="users" setActiveView={setActiveView} />);
 
-        expect(screen.getByTitle('Users')).toBeInTheDocument();
-        expect(screen.getByTitle('Environments')).toBeInTheDocument();
+        expect(screen.getByTitle('Management')).toBeInTheDocument();
+        expect(screen.getByTitle('Env')).toBeInTheDocument();
         expect(screen.getByTitle('Settings')).toBeInTheDocument();
 
         // Admin also sees My App Codes (mapped to 'appcodes')
-        expect(screen.getByTitle('My App Codes')).toBeInTheDocument();
+        expect(screen.getByTitle('Collection Details')).toBeInTheDocument();
 
         // Admin does NOT see History/Collections in this logic?
         // Code: (!user || user.role !== 'admin') && (History/Folder)
@@ -49,7 +50,7 @@ describe('Sidebar', () => {
         expect(screen.getByTitle('History')).toBeInTheDocument();
         expect(screen.getByTitle('Collections')).toBeInTheDocument();
         expect(screen.getByTitle('My App Codes')).toBeInTheDocument(); // role !== 'user'
-        expect(screen.queryByTitle('Users')).not.toBeInTheDocument();
+        expect(screen.queryByTitle('Management')).not.toBeInTheDocument();
     });
 
     it('renders user items', () => {

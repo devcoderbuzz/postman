@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { getCollectionsByProjectId, getAllProjects, getEnvDetails, updateEnvDetails, getAllAppCodes, getCollectionDetails } from '../services/apiservice';
+import { getCollectionsByProjectId, getAllProjects, getEnvDetails, updateEnvDetails, getAllAppCodes, getCollectionDetails, createUpdateEnvVariable, deleteVariable, renameEnv } from '../services/apiservice';
 import { Layout } from '../components/Layout';
 import { RequestBar } from '../components/RequestBar';
 import { Tabs } from '../components/Tabs';
@@ -13,7 +13,7 @@ import { HistoryPanel } from '../components/HistoryPanel';
 import { EnvironmentManager } from '../components/EnvironmentManager';
 import { RequestTabs } from '../components/RequestTabs';
 import { Footer } from '../components/Footer';
-import { X, Save, Moon, Sun, Globe, Check, AlignLeft, Settings as SettingsIcon, Code2, ShieldCheck, Clock } from 'lucide-react';
+import { X, Save, Moon, Sun, Globe, Check, AlignLeft, Settings as SettingsIcon, Code2, ShieldCheck, Clock, Trash2, Plus } from 'lucide-react';
 import { cn, replaceEnvVariables } from '../lib/utils';
 import { SaveRequestModal } from '../components/SaveRequestModal';
 import { Header } from '../components/Header';
@@ -243,7 +243,7 @@ export function UserWorkspace() {
     const [activeRequestId, setActiveRequestId] = useState('default');
 
     // Derived active request
-    const activeRequest = requests.find(r => r.id === activeRequestId) || requests[0];
+    const activeRequest = (requests.find(r => r.id === activeRequestId) || requests[0] || {});
 
     // Helper to update active request
     const updateActiveRequest = (updates) => {
@@ -544,57 +544,85 @@ export function UserWorkspace() {
         }
     }, [isResizingConsole]);
 
-    const fetchEnvironments = async (appCode = activeAppCodeName, moduleName = activeModule) => {
+    const fetchEnvironments = async (appCode = activeAppCodeName, moduleName = activeModule, appCodesData = null) => {
         if (!user) return;
         try {
             console.log("fetchEnvironments context:", { appCode, moduleName });
-            const envData = await getEnvDetails(user.token);
-            if (!envData) return;
 
             // Find selected project details to get the ID
-            const selectedApp = rawAppCodes.find(app =>
+            const source = appCodesData || rawAppCodes;
+            const selectedApp = source.find(app =>
                 (app.projectName === appCode || app.appCode === appCode) && app.moduleName === moduleName
             );
-            if (!selectedApp) return;
-
-            const targetProjectId = String(selectedApp.projectId || selectedApp.appCode || selectedApp.id);
-
-            let projects = envData;
-            if (typeof envData === 'string') {
-                try { projects = JSON.parse(envData); } catch (e) { }
+            if (!selectedApp) {
+                console.warn('Selected app not found for:', appCode, moduleName);
+                return;
             }
 
-            if (Array.isArray(projects)) {
-                // Filter by projectID as requested
-                const projectMatch = projects.find(p => String(p.projectID || p.id || p.projectId) === targetProjectId);
+            const targetProjectId = selectedApp.projectId || selectedApp.id;
+            console.log(`Fetching environments for Project ID: ${targetProjectId}`);
 
-                if (projectMatch && projectMatch.environments) {
-                    const formattedEnvs = projectMatch.environments.map(env => ({
-                        id: String(env.envID || env.id || env.envName),
-                        name: env.envName || env.name,
-                        variables: (env.variables || []).map(v => ({
-                            key: v.variableKey || v.key,
-                            value: String(v.variableValue || v.value || ''),
-                            active: true
-                        }))
-                    }));
+            const envData = await getEnvDetails(targetProjectId, user.token);
+            if (!envData) {
+                setEnvironments([]);
+                setActiveEnv(null);
+                return;
+            }
 
-                    setEnvironments(formattedEnvs);
+            let environmentsToProcess = [];
 
-                    if (formattedEnvs.length > 0) {
-                        if (!activeEnv || !formattedEnvs.find(e => e.id === activeEnv)) {
-                            setActiveEnv(formattedEnvs[0].id);
-                        }
-                    } else {
-                        setActiveEnv(null);
+            // Handle different possible response structures
+            if (Array.isArray(envData)) {
+                // Check if it's the structure [ { environments: [...] } ]
+                if (envData.length > 0 && envData[0].environments && Array.isArray(envData[0].environments)) {
+                    environmentsToProcess = envData.flatMap(p => p.environments || []);
+                } else {
+                    // If it returns an array of environments directly
+                    environmentsToProcess = envData;
+                }
+            } else if (envData.environments && Array.isArray(envData.environments)) {
+                // If it returns a project object containing environments
+                environmentsToProcess = envData.environments;
+            } else if (Array.isArray(envData.data)) {
+                // If it's wrapped in a data field
+                environmentsToProcess = envData.data;
+            }
+
+            if (environmentsToProcess.length > 0) {
+                const formattedEnvs = environmentsToProcess.map(env => ({
+                    id: String(env.envID || env.id || env.envName),
+                    name: env.envName || env.name,
+                    variables: (env.variables || []).map(v => {
+                        const k = v.variableKey || v.key || '';
+                        const val = String(v.variableValue || v.value || '');
+                        return {
+                            id: v.id,
+                            key: k,
+                            value: val,
+                            active: true,
+                            originalKey: k,
+                            originalValue: val
+                        };
+                    })
+                }));
+
+                setEnvironments(formattedEnvs);
+
+                if (formattedEnvs.length > 0) {
+                    if (!activeEnv || !formattedEnvs.find(e => e.id === activeEnv)) {
+                        setActiveEnv(formattedEnvs[0].id);
                     }
                 } else {
-                    setEnvironments([]);
                     setActiveEnv(null);
                 }
+            } else {
+                setEnvironments([]);
+                setActiveEnv(null);
             }
         } catch (e) {
             console.error('Failed to fetch environment details:', e);
+            setEnvironments([]);
+            setActiveEnv(null);
         }
     };
 
@@ -615,6 +643,10 @@ export function UserWorkspace() {
                     hierarchyData = await getCollectionDetails(userProjectIds, user.token);
                 } else {
                     hierarchyData = await getAllAppCodes(user.token);
+                }
+
+                if (!hierarchyData || !Array.isArray(hierarchyData)) {
+                    hierarchyData = [];
                 }
 
                 let filteredProjects = [];
@@ -665,16 +697,18 @@ export function UserWorkspace() {
                 }
 
                 // Fetch initial environment data using the values we just determined
-                await fetchEnvironments(initialAppCode, initialModule);
+                await fetchEnvironments(initialAppCode, initialModule, formattedAppCodes);
             } catch (e) {
                 console.error('Failed to initialize server collections for user/dev:', e);
             }
         } else if (userRole === 'admin') {
             // Admin logic
             let initialAppCode = activeAppCodeName;
+            let adminData = [];
             if (user.assignedAppCodes && user.assignedAppCodes.length > 0) {
-                setRawAppCodes(user.assignedAppCodes);
-                const uniqueProjects = [...new Set(user.assignedAppCodes.map(app => app.projectName))]
+                adminData = user.assignedAppCodes;
+                setRawAppCodes(adminData);
+                const uniqueProjects = [...new Set(adminData.map(app => app.projectName))]
                     .map(name => ({ id: name, name: name }));
                 if (uniqueProjects.length > 0) {
                     setProjects(uniqueProjects);
@@ -687,8 +721,9 @@ export function UserWorkspace() {
                 try {
                     const fetchedData = await getAllProjects();
                     if (fetchedData && Array.isArray(fetchedData)) {
-                        setRawAppCodes(fetchedData);
-                        const uniqueProjects = [...new Set(fetchedData.map(app => app.projectName))]
+                        adminData = fetchedData;
+                        setRawAppCodes(adminData);
+                        const uniqueProjects = [...new Set(adminData.map(app => app.projectName))]
                             .map(name => ({ id: name, name: name }));
                         if (uniqueProjects.length > 0) {
                             setProjects(uniqueProjects);
@@ -702,7 +737,7 @@ export function UserWorkspace() {
             }
             // For admin, we don't necessarily know the module yet here, 
             // but we can try to fetch envs for the project
-            await fetchEnvironments(initialAppCode, activeModule);
+            await fetchEnvironments(initialAppCode, activeModule, adminData);
         }
     };
 
@@ -731,8 +766,8 @@ export function UserWorkspace() {
         { id: 'docs', label: 'Docs', icon: AlignLeft },
         { id: 'params', label: 'Params' },
         { id: 'auth', label: 'Auth' },
-        { id: 'headers', label: 'Headers', suffix: `(${activeRequest.headers.filter(h => h.key && h.active).length})` },
-        { id: 'body', label: 'Body', indicator: activeRequest.body && activeRequest.body.length > 0 },
+        { id: 'headers', label: 'Headers', suffix: `(${activeRequest?.headers?.filter?.(h => h.key && h.active).length || 0})` },
+        { id: 'body', label: 'Body', indicator: activeRequest?.body && activeRequest.body.length > 0 },
         { id: 'scripts', label: 'Scripts' },
         { id: 'tests', label: 'Tests' },
         { id: 'settings', label: 'Settings' },
@@ -1028,6 +1063,15 @@ export function UserWorkspace() {
             };
         }
 
+        // Ensure all required fields exist for UI robustness
+        reqToLoad.params = reqToLoad.params || [];
+        reqToLoad.headers = reqToLoad.headers || [];
+        reqToLoad.authType = reqToLoad.authType || 'none';
+        reqToLoad.authData = reqToLoad.authData || {};
+        reqToLoad.body = reqToLoad.body || '';
+        reqToLoad.bodyType = reqToLoad.bodyType || 'none';
+        reqToLoad.rawType = reqToLoad.rawType || 'JSON';
+
         // Ensure it has an ID (especially for history items)
         if (!reqToLoad.id) {
             reqToLoad.id = Date.now().toString() + Math.random();
@@ -1218,6 +1262,160 @@ export function UserWorkspace() {
         }
     };
 
+    const handleAddEnvVariable = () => {
+        setEnvironments(prev => prev.map(env => {
+            if (env.id === activeEnv) {
+                return {
+                    ...env,
+                    variables: [...env.variables, { key: '', value: '', active: true, originalKey: null, originalValue: null }]
+                };
+            }
+            return env;
+        }));
+    };
+
+    const handleUpdateEnvVariable = (index, field, value) => {
+        setEnvironments(prev => prev.map(env => {
+            if (env.id === activeEnv) {
+                const newVariables = [...env.variables];
+                newVariables[index] = { ...newVariables[index], [field]: value };
+                return { ...env, variables: newVariables };
+            }
+            return env;
+        }));
+    };
+
+    const handleSaveEnvVariable = async (index) => {
+        const currentEnv = environments.find(e => e.id === activeEnv);
+        if (!currentEnv) return;
+
+        // Find the specific variable being saved
+        const targetVariable = currentEnv.variables[index];
+        if (!targetVariable) return;
+
+        // Find the project ID
+        let targetProjectId = null;
+        if (activeAppCodeName && activeModule && rawAppCodes.length > 0) {
+            const selectedApp = rawAppCodes.find(app =>
+                app.projectName === activeAppCodeName && app.moduleName === activeModule
+            );
+            if (selectedApp) {
+                targetProjectId = selectedApp.projectId || selectedApp.id;
+            }
+        }
+
+        if (!targetProjectId) {
+            setErrorMessage('Could not determine Project ID for this environment variable.');
+            return;
+        }
+
+        const payload = {
+            id: targetVariable.id || null, // If it's a new variable, ID might be null or undefined
+            project: {
+                id: targetProjectId
+            },
+            envName: currentEnv.name,
+            variableKey: targetVariable.key,
+            variableValue: targetVariable.value
+        };
+
+        try {
+            // Using the new API function
+            const responseData = await createUpdateEnvVariable(payload, user.token);
+
+            // On success, update the originalKey/originalValue AND the ID for THIS variable to match current
+            setEnvironments(prev => prev.map(env => {
+                if (env.id === activeEnv) {
+                    const newVariables = [...env.variables];
+                    newVariables[index] = {
+                        ...newVariables[index],
+                        id: responseData?.id || newVariables[index].id, // Update ID so it's treated as existing next time
+                        originalKey: targetVariable.key,
+                        originalValue: targetVariable.value
+                    };
+                    return { ...env, variables: newVariables };
+                }
+                return env;
+            }));
+
+            setShowEnvSaveSuccess(true);
+            setTimeout(() => setShowEnvSaveSuccess(false), 2000);
+        } catch (e) {
+            console.error('Failed to save environment variable:', e);
+            setErrorMessage('Failed to save environment variable.');
+        }
+    };
+
+    const handleDeleteEnvVariable = async (index) => {
+        const currentEnv = environments.find(e => e.id === activeEnv);
+        if (!currentEnv) return;
+
+        const variableToDelete = currentEnv.variables[index];
+        if (!variableToDelete) return;
+
+        if (!window.confirm('Are you sure you want to delete this variable? This action is immediate.')) return;
+
+        // Optimistically update UI
+        const newVariables = currentEnv.variables.filter((_, i) => i !== index);
+        setEnvironments(prev => prev.map(env =>
+            env.id === activeEnv ? { ...env, variables: newVariables } : env
+        ));
+
+        // If the variable exists on server (has ID), delete it via API
+        if (variableToDelete.id) {
+            try {
+                await deleteVariable(variableToDelete.id, user.token);
+
+                // Success notification
+                setShowEnvSaveSuccess(true);
+                setTimeout(() => setShowEnvSaveSuccess(false), 2000);
+            } catch (e) {
+                console.error('Failed to delete environment variable:', e);
+                setErrorMessage('Failed to delete environment variable. refreshing...');
+                // Revert UI if needed, or better, refresh from server
+                fetchEnvironments(activeAppCodeName, activeModule);
+            }
+        }
+    };
+
+    const handleRenameEnv = async (envId, newName) => {
+        const currentEnv = environments.find(e => e.id === envId);
+        if (!currentEnv) return;
+
+        // Find the project ID
+        let targetProjectId = null;
+        if (activeAppCodeName && activeModule && rawAppCodes.length > 0) {
+            const selectedApp = rawAppCodes.find(app =>
+                app.projectName === activeAppCodeName && app.moduleName === activeModule
+            );
+            if (selectedApp) {
+                targetProjectId = selectedApp.projectId || selectedApp.id;
+            }
+        }
+
+        if (!targetProjectId) {
+            setErrorMessage('Could not determine Project ID for renaming environment.');
+            return;
+        }
+
+        try {
+            await renameEnv(targetProjectId, currentEnv.name, newName, user.token);
+
+            // Update local state
+            setEnvironments(prev => prev.map(env =>
+                env.id === envId ? { ...env, name: newName } : env
+            ));
+
+            setShowEnvSaveSuccess(true);
+            setTimeout(() => setShowEnvSaveSuccess(false), 2000);
+        } catch (e) {
+            console.error('Failed to rename environment:', e);
+            setErrorMessage('Failed to rename environment.');
+            // Revert name in UI if needed (though we updated it optimistically via updateEnvName in child, we might want to reload)
+            fetchEnvironments(activeAppCodeName, activeModule);
+        }
+    };
+
     return (
         <div className="h-screen flex flex-col bg-white dark:bg-[var(--bg-primary)] text-slate-900 dark:text-[var(--text-primary)] font-sans overflow-hidden">
             <Header
@@ -1252,8 +1450,6 @@ export function UserWorkspace() {
                 </div>
             )}
 
-
-
             <SaveRequestModal
                 isOpen={showSaveModal}
                 onClose={() => setShowSaveModal(false)}
@@ -1286,6 +1482,7 @@ export function UserWorkspace() {
                                 activeModule={activeModule}
                                 onModuleSelect={setActiveModule}
                                 onRefreshModule={refreshModule}
+                                onRenameEnv={handleRenameEnv}
                             />
                         </div>
                         <div className="flex-1 p-8 overflow-auto bg-slate-50 dark:bg-[var(--bg-primary)]">
@@ -1305,53 +1502,69 @@ export function UserWorkspace() {
                                             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider dark:text-[var(--text-secondary)]">Variables</span>
                                         </div>
                                         <div className="p-4 space-y-4">
-                                            <KeyValueEditor
-                                                pairs={environments.find(e => e.id === activeEnv)?.variables || []}
-                                                setPairs={(newVariables) => {
-                                                    setEnvironments(prev => prev.map(env =>
-                                                        env.id === activeEnv ? { ...env, variables: newVariables } : env
-                                                    ));
-                                                }}
-                                            />
-                                            <div className="flex items-center justify-center gap-3 pt-2">
+                                            <div className="flex flex-col border border-slate-200 dark:border-[var(--border-color)] rounded-lg overflow-hidden bg-white dark:bg-[var(--bg-surface)]">
+                                                <div className="flex border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-50 dark:bg-[var(--bg-surface)] text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                                    <div className="flex-1 p-2 border-r border-slate-200 dark:border-[var(--border-color)]">Key</div>
+                                                    <div className="flex-1 p-2 border-r border-slate-200 dark:border-[var(--border-color)]">Value</div>
+                                                    <div className="w-16 p-2 text-center text-[10px] uppercase">Actions</div>
+                                                </div>
+                                                {(environments.find(e => e.id === activeEnv)?.variables || []).map((pair, index) => {
+                                                    const isModified = pair.key !== pair.originalKey || pair.value !== pair.originalValue;
+                                                    return (
+                                                        <div key={index} className="flex border-b border-slate-200 dark:border-[var(--border-color)] last:border-0 group">
+                                                            <input
+                                                                className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
+                                                                placeholder="Key"
+                                                                value={pair.key}
+                                                                onChange={(e) => handleUpdateEnvVariable(index, 'key', e.target.value)}
+                                                            />
+                                                            <input
+                                                                className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
+                                                                placeholder="Value"
+                                                                value={pair.value}
+                                                                onChange={(e) => handleUpdateEnvVariable(index, 'value', e.target.value)}
+                                                            />
+                                                            <div className="w-16 flex items-center justify-center gap-1 bg-slate-50/50 dark:bg-white/5">
+                                                                <button
+                                                                    disabled={!isModified}
+                                                                    onClick={() => handleSaveEnvVariable(index)}
+                                                                    className={cn(
+                                                                        "p-1 rounded transition-all",
+                                                                        isModified
+                                                                            ? "text-green-600 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20"
+                                                                            : "text-slate-300 dark:text-slate-700 cursor-not-allowed"
+                                                                    )}
+                                                                    title={isModified ? "Save changes" : "No changes to save"}
+                                                                >
+                                                                    <Save className="w-3.5 h-3.5" />
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteEnvVariable(index)}
+                                                                    className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                                                    title="Delete Variable"
+                                                                >
+                                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
                                                 <button
-                                                    onClick={async () => {
-                                                        const currentEnv = environments.find(e => e.id === activeEnv);
-                                                        if (currentEnv) {
-                                                            const variablesObj = currentEnv.variables.reduce((acc, v) => {
-                                                                if (v.key) acc[v.key] = v.value;
-                                                                return acc;
-                                                            }, {});
-
-                                                            try {
-                                                                await updateEnvDetails({
-                                                                    envName: currentEnv.name,
-                                                                    appCode: activeAppCodeName,
-                                                                    moduleName: activeModule,
-                                                                    variables: variablesObj
-                                                                }, user.token);
-
-                                                                localStorage.setItem('environments', JSON.stringify(environments));
-                                                                setShowEnvSaveSuccess(true);
-                                                                setTimeout(() => setShowEnvSaveSuccess(false), 2000);
-                                                            } catch (e) {
-                                                                console.error('Failed to update environment details:', e);
-                                                                setErrorMessage('Failed to save environment changes to the server.');
-                                                            }
-                                                        }
-                                                    }}
-                                                    className="flex items-center gap-2 px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-all shadow-lg shadow-red-600/20 active:scale-95"
+                                                    onClick={handleAddEnvVariable}
+                                                    className="flex items-center gap-2 p-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900/50 transition-colors"
                                                 >
-                                                    <Save className="w-4 h-4" />
-                                                    Save
+                                                    <Plus className="w-3 h-3" /> Add new variable
                                                 </button>
-                                                {showEnvSaveSuccess && (
-                                                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-medium text-sm animate-in fade-in slide-in-from-left-2 duration-200">
-                                                        <Check className="w-4 h-4" />
+                                            </div>
+
+                                            {showEnvSaveSuccess && (
+                                                <div className="flex justify-center">
+                                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full font-medium text-xs animate-in fade-in slide-in-from-bottom-2 duration-200">
+                                                        <Check className="w-3 h-3" />
                                                         Changes saved successfully
                                                     </div>
-                                                )}
-                                            </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

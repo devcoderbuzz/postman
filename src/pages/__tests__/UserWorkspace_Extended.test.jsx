@@ -113,10 +113,16 @@ describe('UserWorkspace Extended', () => {
         vi.clearAllMocks();
         useAuth.mockReturnValue({ user: mockUser, logout: vi.fn() });
         useTheme.mockReturnValue({ theme: 'light', setTheme: vi.fn() });
-        apiService.getEnvDetails.mockResolvedValue({
-            'Dev': { 'API_URL': 'http://dev.api' }
-        });
+        apiService.getAllAppCodes.mockResolvedValue([
+            { id: '1', projectId: '1', appCode: 'P1', projectName: 'P1', moduleName: 'M1' }
+        ]);
         apiService.getAllAppCodesForAdmin.mockResolvedValue([]);
+        apiService.getAllProjects.mockResolvedValue([]);
+        apiService.getCollectionDetails.mockResolvedValue([]);
+
+        apiService.getEnvDetails.mockResolvedValue([
+            { id: 'Dev', name: 'Dev', variables: [{ key: 'API_URL', value: 'http://dev.api', active: true }] }
+        ]);
 
         axios.mockResolvedValue({
             data: { isError: false, data: {} },
@@ -181,9 +187,9 @@ describe('UserWorkspace Extended', () => {
     it('replaces environment variables in URL', async () => {
         render(<UserWorkspace />);
         await waitFor(() => expect(apiService.getEnvDetails).toHaveBeenCalled());
-        const combs = screen.getAllByRole('combobox');
-        const devOption = await screen.findByText("Dev");
-        const envSelect = devOption.closest('select');
+
+        // Wait for environments to be loaded into the UI
+        const envSelect = await screen.findByRole('combobox');
         fireEvent.change(envSelect, { target: { value: 'Dev' } });
         const urlInput = screen.getByTestId('url-input');
         fireEvent.change(urlInput, { target: { value: '{{API_URL}}/users' } });
