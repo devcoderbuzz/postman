@@ -827,7 +827,7 @@ export const deleteEnvDetails = async (projectId, envName, token) => {
             },
             data: {
                project :{
-                projectId: projectId,
+                id: projectId,
                },
                envName: envName
             }

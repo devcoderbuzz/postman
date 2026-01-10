@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { getCollectionsByProjectId, getAllProjects, getEnvDetails, updateEnvDetails, getAllAppCodes, getCollectionDetails, createUpdateEnvVariable, deleteVariable, renameEnv } from '../services/apiservice';
+import { getCollectionsByProjectId, getAllProjects, getEnvDetails, updateEnvDetails, getAllAppCodes, getCollectionDetails, createUpdateEnvVariable, deleteVariable, renameEnv, deleteEnvDetails } from '../services/apiservice';
 import { Layout } from '../components/Layout';
 import { RequestBar } from '../components/RequestBar';
 import { Tabs } from '../components/Tabs';
@@ -1378,7 +1378,7 @@ export function UserWorkspace() {
         }
     };
 
-    const handleRenameEnv = async (envId, newName) => {
+    const handleRenameEnv = async (envId, newName, oldName) => {
         const currentEnv = environments.find(e => e.id === envId);
         if (!currentEnv) return;
 
@@ -1386,7 +1386,7 @@ export function UserWorkspace() {
         let targetProjectId = null;
         if (activeAppCodeName && activeModule && rawAppCodes.length > 0) {
             const selectedApp = rawAppCodes.find(app =>
-                app.projectName === activeAppCodeName && app.moduleName === activeModule
+                (app.projectName === activeAppCodeName || app.appCode === activeAppCodeName) && app.moduleName === activeModule
             );
             if (selectedApp) {
                 targetProjectId = selectedApp.projectId || selectedApp.id;
@@ -1399,7 +1399,7 @@ export function UserWorkspace() {
         }
 
         try {
-            await renameEnv(targetProjectId, currentEnv.name, newName, user.token);
+            await renameEnv(targetProjectId, oldName || currentEnv.name, newName, user.token);
 
             // Update local state
             setEnvironments(prev => prev.map(env =>
@@ -1412,6 +1412,49 @@ export function UserWorkspace() {
             console.error('Failed to rename environment:', e);
             setErrorMessage('Failed to rename environment.');
             // Revert name in UI if needed (though we updated it optimistically via updateEnvName in child, we might want to reload)
+            fetchEnvironments(activeAppCodeName, activeModule);
+        }
+    };
+
+    const handleDeleteEnv = async (envId, envName) => {
+        if (!window.confirm(`Are you sure you want to delete environment "${envName}"?`)) {
+            return;
+        }
+
+        console.log("handleDeleteEnv Debug:", { activeAppCodeName, activeModule, rawAppCodesLength: rawAppCodes.length });
+
+        // Find the project ID (reusing logic from rename)
+        let targetProjectId = null;
+        if (activeAppCodeName && activeModule && rawAppCodes.length > 0) {
+            const selectedApp = rawAppCodes.find(app =>
+                (app.projectName === activeAppCodeName || app.appCode === activeAppCodeName) && app.moduleName === activeModule
+            );
+            console.log("handleDeleteEnv selectedApp:", selectedApp);
+            if (selectedApp) {
+                targetProjectId = selectedApp.projectId || selectedApp.id;
+            }
+        }
+
+        if (!targetProjectId) {
+            setErrorMessage('Could not determine Project ID for deleting environment.');
+            return;
+        }
+
+        try {
+            console.log("Calling deleteEnvDetails with:", { targetProjectId, envName });
+            await deleteEnvDetails(targetProjectId, envName, user.token);
+
+            // Update local state
+            setEnvironments(prev => prev.filter(env => env.id !== envId));
+            if (activeEnv === envId) {
+                setActiveEnv(null);
+            }
+
+            setShowEnvSaveSuccess(true);
+            setTimeout(() => setShowEnvSaveSuccess(false), 2000);
+        } catch (e) {
+            console.error('Failed to delete environment:', e);
+            setErrorMessage('Failed to delete environment.');
             fetchEnvironments(activeAppCodeName, activeModule);
         }
     };
@@ -1483,6 +1526,7 @@ export function UserWorkspace() {
                                 onModuleSelect={setActiveModule}
                                 onRefreshModule={refreshModule}
                                 onRenameEnv={handleRenameEnv}
+                                onDeleteEnv={handleDeleteEnv}
                             />
                         </div>
                         <div className="flex-1 p-8 overflow-auto bg-slate-50 dark:bg-[var(--bg-primary)]">

@@ -16,9 +16,16 @@ export function EnvironmentManager({
     activeModule,
     onModuleSelect,
     onRefreshModule,
-    onRenameEnv
+    onRenameEnv,
+    onDeleteEnv
 }) {
     const [editingEnv, setEditingEnv] = useState(null);
+    const [editingName, setEditingName] = useState('');
+
+    const startEditing = (env) => {
+        setEditingEnv(env.id);
+        setEditingName(env.name);
+    };
 
     const addEnvironment = () => {
         const newEnv = {
@@ -27,20 +34,35 @@ export function EnvironmentManager({
             variables: [{ key: '', value: '' }]
         };
         setEnvironments([...environments, newEnv]);
-        setEditingEnv(newEnv.id);
+        startEditing(newEnv);
         setActiveEnv(newEnv.id);
     };
 
-    const updateEnvName = (id, name) => {
-        setEnvironments(environments.map(env =>
-            env.id === id ? { ...env, name } : env
-        ));
+    const saveEnvName = (envId, originalName) => {
+        if (onRenameEnv) {
+            // Pass (id, newName, oldName)
+            // editingName is the NEW name (from input)
+            // originalName (env.name) is the OLD name (from props, untouched)
+            onRenameEnv(envId, editingName, originalName);
+        } else {
+            // If no handler, just update local state (fallback behavior)
+            setEnvironments(environments.map(env =>
+                env.id === envId ? { ...env, name: editingName } : env
+            ));
+        }
+        setEditingEnv(null);
+        setEditingName('');
     };
 
     const deleteEnvironment = (id) => {
-        setEnvironments(environments.filter(env => env.id !== id));
-        if (activeEnv === id) {
-            setActiveEnv(null);
+        const envToDelete = environments.find(env => env.id === id);
+        if (onDeleteEnv && envToDelete) {
+            onDeleteEnv(id, envToDelete.name);
+        } else {
+            setEnvironments(environments.filter(env => env.id !== id));
+            if (activeEnv === id) {
+                setActiveEnv(null);
+            }
         }
     };
 
@@ -133,27 +155,17 @@ export function EnvironmentManager({
                                     <div className="flex items-center gap-1 w-full" onClick={e => e.stopPropagation()}>
                                         <input
                                             type="text"
-                                            value={env.name}
-                                            onChange={(e) => updateEnvName(env.id, e.target.value)}
+                                            value={editingName}
+                                            onChange={(e) => setEditingName(e.target.value)}
                                             onKeyDown={e => {
-                                                if (e.key === 'Enter') {
-                                                    if (onRenameEnv) {
-                                                        onRenameEnv(env.id, env.name);
-                                                    }
-                                                    setEditingEnv(null);
-                                                }
-                                                if (e.key === 'Escape') setEditingEnv(null);
+                                                if (e.key === 'Enter') saveEnvName(env.id, env.name);
+                                                if (e.key === 'Escape') { setEditingEnv(null); setEditingName(''); }
                                             }}
                                             className="flex-1 bg-white dark:bg-[var(--bg-surface)] border border-red-400 dark:border-red-500 rounded px-2 py-1 text-sm outline-none shadow-sm dark:text-white"
                                             autoFocus
                                         />
                                         <button
-                                            onClick={() => {
-                                                if (onRenameEnv) {
-                                                    onRenameEnv(env.id, env.name);
-                                                }
-                                                setEditingEnv(null);
-                                            }}
+                                            onClick={() => saveEnvName(env.id, env.name)}
                                             className="p-1 text-green-500"
                                         >
                                             <Check className="w-4 h-4" />
@@ -172,7 +184,7 @@ export function EnvironmentManager({
                             {editingEnv !== env.id && (
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); setEditingEnv(env.id); }}
+                                        onClick={(e) => { e.stopPropagation(); startEditing(env); }}
                                         className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                                         title="Rename"
                                     >
