@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical, Save, Folder, FileText, Search } from 'lucide-react';
-import { createUpdateCollections, getAllAppCodes, deleteCollection, getCollectionDetails } from '../services/apiservice';
+import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical, Save, Folder, FileText, Search, Globe } from 'lucide-react';
+import { createUpdateCollections, getAllAppCodes, deleteCollection, getCollectionDetails, getEnvDetails } from '../services/apiservice';
+import { replaceEnvVariables } from '../lib/utils';
 
 import { ConfirmationModal } from './ConfirmationModal';
 import { ImportModal } from './ImportModal';
@@ -38,19 +39,20 @@ export function EditDataPanel({ refreshTrigger }) {
     // Delete Confirmation State
     const [deleteConfirmInfo, setDeleteConfirmInfo] = useState({
         isOpen: false,
-        type: null, // 'collection' or 'request'
+        type: null,
         collectionId: null,
         requestId: null
     });
+    const [panelEnvironments, setPanelEnvironments] = useState([]);
+    const [selectedEnvId, setSelectedEnvId] = useState('');
 
     useEffect(() => {
         const fetchCodes = async () => {
             if (user) {
                 try {
                     let hierarchyData;
-                    if (user.role === 'developer' || user.role === 'dev' || user.role === 'developer') {
+                    if (user.role === 'developer' || user.role === 'dev') {
                         const projectIds = user.projectIds || [];
-                        console.log("Fetching collection details for developer projectIds:", projectIds);
                         hierarchyData = await getCollectionDetails(projectIds, user.token);
                     } else {
                         hierarchyData = await getAllAppCodes(user.token);
@@ -60,10 +62,6 @@ export function EditDataPanel({ refreshTrigger }) {
                         hierarchyData = [];
                     }
 
-                    // Logic to robustly determine assignments
-                    // If user has projectIds, use those to filter hierarchy
-                    // Fallback to user.assignedAppCodes if projectIds is empty but assignedAppCodes exists
-
                     let filtered = [];
                     const userProjectIds = user.projectIds || [];
 
@@ -72,14 +70,11 @@ export function EditDataPanel({ refreshTrigger }) {
                             userProjectIds.includes(project.appCode) || userProjectIds.includes(project.projectId)
                         );
                     } else if (user.assignedAppCodes && user.assignedAppCodes.length > 0) {
-                        // If projectIds not present, maybe we can trust assignedAppCodes
-                        // taking care to match structure if possible, but hierarchyData is better source of truth for full list
                         filtered = user.assignedAppCodes;
                     } else {
                         filtered = hierarchyData;
                     }
 
-                    // Normalize the data structure
                     const formatted = filtered.map(p => {
                         const pid = parseInt(p.projectId || p.id);
                         return {
@@ -89,13 +84,9 @@ export function EditDataPanel({ refreshTrigger }) {
                             projectId: pid
                         };
                     });
-
-                    console.log("DEBUG: Formatted app codes in EditDataPanel:", formatted);
-                    console.table(formatted.map(f => ({ name: f.projectName, mod: f.moduleName, pid: f.projectId, id: f.id })));
                     setAssignedAppCodes(formatted);
                 } catch (e) {
                     console.error("Failed to fetch app codes in EditDataPanel", e);
-                    // Fallback
                     if (user.assignedAppCodes) setAssignedAppCodes(user.assignedAppCodes);
                 }
             }
@@ -105,27 +96,71 @@ export function EditDataPanel({ refreshTrigger }) {
 
     useEffect(() => {
         if (selectedAppCodeId) {
-            // Find the app code object
             const appCode = assignedAppCodes.find(ac => (ac.projectId || ac.id) == selectedAppCodeId);
-
-            if (appCode) {
-                // Use collections from the hierarchy data if available
-                if (appCode.collections && Array.isArray(appCode.collections)) {
-                    setCollections(appCode.collections.map(c => ({
-                        ...c,
-                        originalName: c.name, // Track original name from source
-                        modified: false
-                    })));
-                } else {
-                    setCollections([]);
-                    // Optional: Try fetching if we believed there was a real API, 
-                    // but we know apiService.getCollectionsByProjectId is a mock returning []
-                }
+            if (appCode && appCode.collections && Array.isArray(appCode.collections)) {
+                setCollections(appCode.collections.map(c => ({
+                    ...c,
+                    originalName: c.name,
+                    modified: false
+                })));
+            } else {
+                setCollections([]);
             }
         } else {
             setCollections([]);
         }
     }, [selectedAppCodeId, assignedAppCodes]);
+
+    // Fetch environments for the selected project
+    useEffect(() => {
+        const fetchEnvs = async () => {
+            if (selectedAppCodeId && user?.token) {
+                try {
+                    const data = await getEnvDetails(selectedAppCodeId, user.token);
+                    if (data) {
+                        let envList = [];
+                        if (Array.isArray(data)) {
+                            if (data.length > 0 && data[0].environments) {
+                                envList = data.flatMap(p => p.environments || []);
+                            } else {
+                                envList = data;
+                            }
+                        } else if (data.environments) {
+                            envList = data.environments;
+                        }
+
+                        const formatted = envList.map(env => ({
+                            id: String(env.envID || env.id || env.envName),
+                            name: env.envName || env.name,
+                            variables: (env.variables || []).map(v => ({
+                                key: v.variableKey || v.key || '',
+                                value: String(v.variableValue || v.value || ''),
+                                active: true
+                            }))
+                        }));
+                        setPanelEnvironments(formatted);
+                        if (formatted.length > 0) {
+                            const firstEnv = formatted[0].id;
+                            setSelectedEnvId(firstEnv);
+                        } else {
+                            setSelectedEnvId('');
+                        }
+                    } else {
+                        setPanelEnvironments([]);
+                        setSelectedEnvId('');
+                    }
+                } catch (e) {
+                    console.error("Failed to fetch environments", e);
+                    setPanelEnvironments([]);
+                    setSelectedEnvId('');
+                }
+            } else {
+                setPanelEnvironments([]);
+                setSelectedEnvId('');
+            }
+        };
+        fetchEnvs();
+    }, [selectedAppCodeId, user]);
 
     // Resizing logic
     useEffect(() => {
@@ -759,6 +794,20 @@ export function EditDataPanel({ refreshTrigger }) {
                             {assignedAppCodes.find(ac => (ac.projectId || ac.id) == selectedAppCodeId)?.projectName}
                         </div>
                         <div className="flex gap-3">
+                            {panelEnvironments.length > 0 && (
+                                <div className="flex items-center gap-2 mr-2">
+                                    <Globe className="w-3.5 h-3.5 text-slate-400" />
+                                    <select
+                                        value={selectedEnvId}
+                                        onChange={(e) => setSelectedEnvId(e.target.value)}
+                                        className="text-[11px] bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-600 rounded px-2 py-1 outline-none focus:border-red-500 dark:text-white min-w-[120px]"
+                                    >
+                                        {panelEnvironments.map(env => (
+                                            <option key={env.id} value={env.id}>{env.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
                             <button
                                 onClick={() => setIsImporting(true)}
                                 className="px-3 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-300 border border-slate-300 dark:border-slate-600 rounded hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
@@ -783,6 +832,7 @@ export function EditDataPanel({ refreshTrigger }) {
                             isCreating={isCreatingRequest}
                             onClose={() => { setEditingRequest(null); setIsCreatingRequest(false); setCreatingForCollection(null); }}
                             onSave={handleSaveRequest}
+                            activeEnv={panelEnvironments.find(e => e.id === selectedEnvId)}
                         />
                     ) : (
                         <div className="flex-1 h-full flex items-center justify-center text-slate-400 dark:text-slate-600 bg-white dark:bg-slate-900">
@@ -882,7 +932,84 @@ function RenameInput({ value, onChange, onConfirm }) {
     );
 }
 
-function RequestEditorPanel({ request, isCreating, onClose, onSave }) {
+function VariableAutocomplete({ variables, filterText, onSelect, position, activeIndex, onCancel }) {
+    const filtered = (variables || []).filter(v =>
+        v.key.toLowerCase().includes(filterText.toLowerCase())
+    );
+
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (containerRef.current && !containerRef.current.contains(e.target)) {
+                onCancel();
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [onCancel]);
+
+    useEffect(() => {
+        if (containerRef.current && activeIndex >= 0) {
+            const activeElement = containerRef.current.querySelectorAll('button')[activeIndex];
+            if (activeElement) {
+                activeElement.scrollIntoView({ block: 'nearest' });
+            }
+        }
+    }, [activeIndex]);
+
+    if (filtered.length === 0) return null;
+
+    return (
+        <div
+            ref={containerRef}
+            className="absolute z-[100] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow-2xl rounded-lg overflow-hidden min-w-[240px] max-h-[250px] overflow-y-auto"
+            style={{
+                top: position.top,
+                left: position.left,
+                width: 'max-content'
+            }}
+        >
+            <div className="p-2.5 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                    <Globe className="w-3 h-3 text-red-500" />
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Environment Variables</span>
+                </div>
+                <span className="text-[9px] text-slate-400 bg-slate-200/50 dark:bg-slate-700/50 px-1.5 py-0.5 rounded">
+                    {filtered.length} matches
+                </span>
+            </div>
+            <div className="flex flex-col py-1">
+                {filtered.map((v, i) => (
+                    <button
+                        key={v.key}
+                        onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onSelect(v.key);
+                        }}
+                        className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between group transition-all border-l-2 ${i === activeIndex
+                            ? 'bg-red-50 dark:bg-red-900/30 border-red-500'
+                            : 'border-transparent hover:bg-slate-50 dark:hover:bg-slate-700/30 text-slate-600 dark:text-slate-400'
+                            }`}
+                    >
+                        <div className="flex flex-col overflow-hidden mr-4">
+                            <span className={`font-mono font-bold truncate ${i === activeIndex ? 'text-red-600 dark:text-red-400' : 'text-slate-900 dark:text-slate-200'}`}>
+                                {v.key}
+                            </span>
+                            <span className="text-[10px] text-slate-500 dark:text-slate-500 truncate mt-0.5">
+                                {v.value}
+                            </span>
+                        </div>
+                        {i === activeIndex && <span className="text-[9px] text-red-500 dark:text-red-400 font-bold opacity-60">↵</span>}
+                    </button>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv }) {
     const [editedReq, setEditedReq] = useState(() => {
         const req = { ...request };
         if (typeof req.body === 'object' && req.body !== null) {
@@ -899,6 +1026,111 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave }) {
         h = typeof h === 'object' && h !== null ? h : {};
         return Object.entries(h).map(([key, value]) => ({ key, value: String(value), id: Math.random() }));
     });
+
+    const [autocomplete, setAutocomplete] = useState({
+        show: false,
+        filterText: '',
+        position: { top: 0, left: 0 },
+        field: '', // 'url', 'body', 'header-value'
+        headerId: null,
+        selectionStart: 0,
+        activeIndex: 0
+    });
+
+    const autocompleteRef = useRef(null);
+
+    const handleInputChange = (field, value, e, headerId = null) => {
+        if (field === 'url' || field === 'body') {
+            setEditedReq(prev => ({ ...prev, [field]: value }));
+        } else if (field === 'header-key') {
+            setHeaders(headers.map(h => h.id === headerId ? { ...h, key: value } : h));
+        } else if (field === 'header-value') {
+            setHeaders(headers.map(h => h.id === headerId ? { ...h, value: value } : h));
+        }
+
+        // Check for {{
+        const target = e.target;
+        const cursorPos = target.selectionStart;
+        const textBeforeCursor = value.substring(0, cursorPos);
+        const lastOpenBraces = textBeforeCursor.lastIndexOf('{{');
+
+        if (lastOpenBraces !== -1 && lastOpenBraces >= textBeforeCursor.lastIndexOf('}}')) {
+            const filterText = textBeforeCursor.substring(lastOpenBraces + 2);
+            if (!filterText.includes(' ')) {
+                const rect = target.getBoundingClientRect();
+                // Rough estimation of position
+                setAutocomplete({
+                    show: true,
+                    filterText,
+                    position: {
+                        top: rect.bottom + window.scrollY + 5,
+                        left: rect.left + window.scrollX + (filterText.length * 5)
+                    },
+                    field: field,
+                    headerId: headerId,
+                    selectionStart: lastOpenBraces,
+                    activeIndex: 0
+                });
+                return;
+            }
+        }
+        setAutocomplete(prev => ({ ...prev, show: false }));
+    };
+
+    const handleKeyDown = (e) => {
+        if (!autocomplete.show) return;
+
+        const filtered = (activeEnv?.variables || []).filter(v =>
+            v.key.toLowerCase().includes(autocomplete.filterText.toLowerCase())
+        );
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setAutocomplete(prev => ({
+                ...prev,
+                activeIndex: (prev.activeIndex + 1) % filtered.length
+            }));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setAutocomplete(prev => ({
+                ...prev,
+                activeIndex: (prev.activeIndex - 1 + filtered.length) % filtered.length
+            }));
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            if (filtered[autocomplete.activeIndex]) {
+                e.preventDefault();
+                handleVariableSelect(filtered[autocomplete.activeIndex].key);
+            }
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            setAutocomplete(prev => ({ ...prev, show: false }));
+        }
+    };
+
+    const handleVariableSelect = (varName) => {
+        const insertText = `{{${varName}}}`;
+        let newValue = '';
+        let targetField = autocomplete.field;
+
+        if (targetField === 'url' || targetField === 'body') {
+            const current = editedReq[targetField] || '';
+            newValue = current.substring(0, autocomplete.selectionStart) + insertText + current.substring(editedReq[targetField].length); // Wait, this is wrong, need to fix
+            // Correct way:
+            const cursorPos = autocomplete.selectionStart + autocomplete.filterText.length + 2;
+            const endPart = current.substring(cursorPos);
+            newValue = current.substring(0, autocomplete.selectionStart) + insertText + endPart;
+            setEditedReq(prev => ({ ...prev, [targetField]: newValue }));
+        } else if (targetField === 'header-value') {
+            const header = headers.find(h => h.id === autocomplete.headerId);
+            const current = header.value || '';
+            const cursorPos = autocomplete.selectionStart + autocomplete.filterText.length + 2;
+            const endPart = current.substring(cursorPos);
+            newValue = current.substring(0, autocomplete.selectionStart) + insertText + endPart;
+            setHeaders(headers.map(h => h.id === autocomplete.headerId ? { ...h, value: newValue } : h));
+        }
+
+        setAutocomplete({ show: false, filterText: '', position: { top: 0, left: 0 }, field: '', headerId: null, selectionStart: 0 });
+    };
 
     const handleChange = (field, value) => {
         setEditedReq(prev => ({ ...prev, [field]: value }));
@@ -926,6 +1158,11 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave }) {
 
         onSave({ ...editedReq, headers: headersObj });
     };
+
+    const resolvedUrl = replaceEnvVariables(editedReq.url, activeEnv);
+    const resolvedBody = replaceEnvVariables(editedReq.body || '', activeEnv);
+    const hasVariablesInUrl = resolvedUrl !== editedReq.url;
+    const hasVariablesInBody = resolvedBody !== (editedReq.body || '');
 
     return (
         <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 overflow-hidden">
@@ -978,10 +1215,17 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave }) {
                         <input
                             type="text"
                             value={editedReq.url}
-                            onChange={e => handleChange('url', e.target.value)}
+                            onChange={e => handleInputChange('url', e.target.value, e)}
+                            onKeyDown={handleKeyDown}
                             className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded text-sm bg-white dark:bg-slate-800 dark:text-white font-mono focus:border-red-500 outline-none"
                             placeholder="https://api.example.com/endpoint"
                         />
+                        {hasVariablesInUrl && (
+                            <div className="mt-1 flex items-center gap-1.5 px-2 py-1 bg-slate-50 dark:bg-slate-800 rounded border border-slate-100 dark:border-slate-700">
+                                <span className="text-[10px] font-bold text-slate-400 uppercase">Preview:</span>
+                                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">{resolvedUrl}</span>
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -1008,13 +1252,21 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave }) {
                                         placeholder="Key"
                                         className="flex-1 p-2 border border-slate-300 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 dark:text-white focus:border-red-500 outline-none"
                                     />
-                                    <input
-                                        type="text"
-                                        value={header.value}
-                                        onChange={e => handleHeaderChange(header.id, 'value', e.target.value)}
-                                        placeholder="Value"
-                                        className="flex-1 p-2 border border-slate-300 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 dark:text-white focus:border-red-500 outline-none"
-                                    />
+                                    <div className="flex-1 flex flex-col">
+                                        <input
+                                            type="text"
+                                            value={header.value}
+                                            onChange={e => handleInputChange('header-value', e.target.value, e, header.id)}
+                                            onKeyDown={handleKeyDown}
+                                            placeholder="Value"
+                                            className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 dark:text-white focus:border-red-500 outline-none"
+                                        />
+                                        {header.value.includes('{{') && (
+                                            <span className="text-[9px] text-slate-400 px-1 truncate">
+                                                {replaceEnvVariables(header.value, activeEnv)}
+                                            </span>
+                                        )}
+                                    </div>
                                     <button
                                         onClick={() => handleDeleteHeader(header.id)}
                                         className="p-2 text-slate-400 hover:text-red-500 rounded"
@@ -1032,12 +1284,32 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave }) {
                     <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-400">Request Body</label>
                     <textarea
                         value={editedReq.body || ''}
-                        onChange={e => handleChange('body', e.target.value)}
+                        onChange={e => handleInputChange('body', e.target.value, e)}
+                        onKeyDown={handleKeyDown}
                         className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded text-sm font-mono h-40 bg-white dark:bg-slate-800 dark:text-white resize-none focus:border-red-500 outline-none"
                         placeholder="{}"
                     />
+                    {hasVariablesInBody && (
+                        <div className="mt-2 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-md">
+                            <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Preview (Resolved):</div>
+                            <pre className="text-[10px] text-slate-500 dark:text-slate-400 font-mono whitespace-pre-wrap">
+                                {resolvedBody}
+                            </pre>
+                        </div>
+                    )}
                 </div>
             </div>
+
+            {autocomplete.show && (
+                <VariableAutocomplete
+                    variables={activeEnv?.variables}
+                    filterText={autocomplete.filterText}
+                    onSelect={handleVariableSelect}
+                    position={autocomplete.position}
+                    activeIndex={autocomplete.activeIndex}
+                    onCancel={() => setAutocomplete(prev => ({ ...prev, show: false }))}
+                />
+            )}
         </div>
     );
 }
