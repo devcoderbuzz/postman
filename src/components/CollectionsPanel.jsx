@@ -165,54 +165,34 @@ export function CollectionsPanel({
                                         </option>
                                     ))}
                                 </select>
-                                <div className="w-4" />
-                            </div>
-                        )}
-                        {environments && (
-                            <div className="flex items-center gap-1.5">
-                                <span className="text-[12px] font-medium text-slate-500 w-16 text-right whitespace-nowrap">Env:</span>
-                                <div className="flex-1 flex gap-1.5">
-                                    <div className="flex-1 relative">
-                                        <Globe className="absolute left-1.5 top-1/2 -translate-y-1/2 w-3 h-3 text-red-500" />
-                                        <select
-                                            value={activeEnv || ''}
-                                            onChange={(e) => onEnvSelect(e.target.value || null)}
-                                            className="w-full bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded pl-5 pr-1.5 py-0.5 text-[14px] outline-none focus:border-blue-500 appearance-none"
-                                        >
-                                            <option value="">No Env</option>
-                                            {environments.map(env => (
-                                                <option key={env.id} value={env.id}>{env.name}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                    <div className="w-4" />
-                                </div>
                             </div>
                         )}
                     </div>
                 )}
 
-                {/* Search Box */}
-                <div className="p-2 border-b border-slate-200 dark:border-[var(--border-color)]">
+                {/* Always Visible Search Bar */}
+                <div className="px-2 py-1.5 border-b border-slate-200 dark:border-[var(--border-color)] bg-white/30 dark:bg-white/5">
                     <div className="relative">
-                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
                         <input
                             type="text"
                             placeholder="Search requests..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full bg-white dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg pl-8 pr-8 py-1.5 text-xs outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20 transition-all"
+                            className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded pl-8 pr-8 py-1.5 text-[11px] outline-none focus:border-red-500/50 transition-all"
                         />
                         {searchQuery && (
                             <button
                                 onClick={() => setSearchQuery('')}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                                className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-red-500 transition-colors"
                             >
                                 <X className="w-3 h-3" />
                             </button>
                         )}
                     </div>
                 </div>
+
+
 
                 {/* Collections View Tabs */}
                 <div className="flex border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-100/50 dark:bg-[var(--bg-secondary)]/50">

@@ -120,13 +120,7 @@ export function EnvironmentManager({
                                         </option>
                                     ))}
                                 </select>
-                                <button
-                                    onClick={onRefreshModule}
-                                    className="p-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 hover:text-red-500 transition-colors shadow-sm"
-                                    title="Refresh Module"
-                                >
-                                    <RefreshCw className="w-3 h-3" />
-                                </button>
+                                <div className="w-4" />
                             </div>
                         </div>
                     )}

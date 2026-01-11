@@ -7,7 +7,7 @@ import { Header } from '../components/Header';
 import { getEnvDetails, updateEnvDetails } from '../services/apiservice';
 import { EnvironmentManager } from '../components/EnvironmentManager';
 import { KeyValueEditor } from '../components/KeyValueEditor';
-import { Settings as SettingsIcon, LogOut, Layout as LayoutIcon, User as UserIcon, Shield, Save, Check, Globe, X, ChevronDown, Trash2, Box } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut, Layout as LayoutIcon, User as UserIcon, Shield, Save, Check, Globe, X, ChevronDown, Trash2, Box, Search } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Layout } from '../components/Layout';
 
@@ -66,6 +66,9 @@ export function AdminDashboard() {
     const [selectedAppCodeId, setSelectedAppCodeId] = useState(''); // For the dropdown in "Add" modal
     const [activeView, setActiveView] = useState('users'); // 'users', 'appcodes', 'settings', or 'environments'
     const [appCodeModalTab, setAppCodeModalTab] = useState('users'); // 'users' or 'details'
+    const [userSearchTerm, setUserSearchTerm] = useState('');
+    const [appCodeSearchTerm, setAppCodeSearchTerm] = useState('');
+    const [collectionSearchTerm, setCollectionSearchTerm] = useState('');
 
     const fetchEnvironments = async () => {
         if (user && user.token) {
@@ -190,6 +193,26 @@ export function AdminDashboard() {
             userCount: counts[String(code.projectId)] || counts[String(code.id)] || 0
         }));
     }, [appCodes, users]);
+
+    const filteredAppCodesWithUserCounts = useMemo(() => {
+        if (!appCodeSearchTerm) return appCodesWithUserCounts;
+        const term = appCodeSearchTerm.toLowerCase();
+        return appCodesWithUserCounts.filter(code =>
+            (code.appCode || '').toLowerCase().includes(term) ||
+            (code.moduleName || '').toLowerCase().includes(term) ||
+            (code.description || '').toLowerCase().includes(term)
+        );
+    }, [appCodesWithUserCounts, appCodeSearchTerm]);
+
+    const filteredUsers = useMemo(() => {
+        if (!userSearchTerm) return users;
+        const term = userSearchTerm.toLowerCase();
+        return users.filter(u =>
+            (u.userName || '').toLowerCase().includes(term) ||
+            (u.userRole || '').toLowerCase().includes(term) ||
+            (u.userStatus || '').toLowerCase().includes(term)
+        );
+    }, [users, userSearchTerm]);
 
     // Calculate users assigned to the currently editing app code
     const assignedUsers = useMemo(() => {
@@ -916,8 +939,28 @@ export function AdminDashboard() {
                                     {/* Left Side: App Codes */}
                                     <div className="flex-1 flex flex-col min-h-0 min-w-0">
                                         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col flex-1">
-                                            <div className="p-2 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-                                                <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">App Codes</h2>
+                                            <div className="p-2 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 gap-4">
+                                                <div className="flex items-center gap-4 flex-1">
+                                                    <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">App Codes</h2>
+                                                    <div className="relative flex-1 max-w-[200px]">
+                                                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Search codes..."
+                                                            value={appCodeSearchTerm}
+                                                            onChange={(e) => setAppCodeSearchTerm(e.target.value)}
+                                                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-7 py-1 text-[10px] outline-none focus:border-red-500/50 transition-all"
+                                                        />
+                                                        {appCodeSearchTerm && (
+                                                            <button
+                                                                onClick={() => setAppCodeSearchTerm('')}
+                                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500"
+                                                            >
+                                                                <X className="w-2.5 h-2.5" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
                                                 <button
                                                     onClick={() => {
                                                         setNewAppCode('');
@@ -927,7 +970,7 @@ export function AdminDashboard() {
                                                         setAppCodeModalTab('details');
                                                         setIsCreatingAppCode(true);
                                                     }}
-                                                    className="bg-red-600 text-white px-3 py-1.5 rounded text-[11px] hover:bg-red-700 font-bold shadow-sm transition-all active:scale-95"
+                                                    className="bg-red-600 text-white px-3 py-1.5 rounded text-[11px] hover:bg-red-700 font-bold shadow-sm transition-all active:scale-95 shrink-0"
                                                 >
                                                     CREATE
                                                 </button>
@@ -943,7 +986,7 @@ export function AdminDashboard() {
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                                        {appCodesWithUserCounts.map(code => (
+                                                        {filteredAppCodesWithUserCounts.map(code => (
                                                             <tr key={code.id || code.projectId} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                                                 <td className="px-3 py-2 font-medium text-[11px] truncate text-center" title={code.appCode}>{code.appCode}</td>
                                                                 <td className="px-3 py-2 text-[11px] text-center text-slate-500 dark:text-slate-400 truncate" title={code.moduleName}>{code.moduleName}</td>
@@ -977,11 +1020,31 @@ export function AdminDashboard() {
                                     {/* Right Side: Users */}
                                     <div className="flex-1 flex flex-col min-h-0 min-w-0">
                                         <div className="bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden flex flex-col flex-1">
-                                            <div className="p-2 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50">
-                                                <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Users</h2>
+                                            <div className="p-2 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/50 gap-4">
+                                                <div className="flex items-center gap-4 flex-1">
+                                                    <h2 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 whitespace-nowrap">Users</h2>
+                                                    <div className="relative flex-1 max-w-[200px]">
+                                                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Search users..."
+                                                            value={userSearchTerm}
+                                                            onChange={(e) => setUserSearchTerm(e.target.value)}
+                                                            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded px-7 py-1 text-[10px] outline-none focus:border-red-500/50 transition-all"
+                                                        />
+                                                        {userSearchTerm && (
+                                                            <button
+                                                                onClick={() => setUserSearchTerm('')}
+                                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500"
+                                                            >
+                                                                <X className="w-2.5 h-2.5" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
                                                 <button
                                                     onClick={() => setIsCreatingUser(true)}
-                                                    className="bg-red-600 text-white px-3 py-1.5 rounded text-[11px] hover:bg-red-700 font-bold shadow-sm transition-all active:scale-95"
+                                                    className="bg-red-600 text-white px-3 py-1.5 rounded text-[11px] hover:bg-red-700 font-bold shadow-sm transition-all active:scale-95 shrink-0"
                                                 >
                                                     CREATE
                                                 </button>
@@ -998,7 +1061,7 @@ export function AdminDashboard() {
                                                         </tr>
                                                     </thead>
                                                     <tbody className="divide-y divide-slate-100 dark:divide-slate-700">
-                                                        {users.map(u => (
+                                                        {filteredUsers.map(u => (
                                                             <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                                                 <td className="px-3 py-1.5">
                                                                     <div className="flex items-center justify-center gap-2">
@@ -1139,6 +1202,28 @@ export function AdminDashboard() {
                                                         </div>
                                                     </div>
                                                 </div>
+
+                                                {/* Search Input */}
+                                                <div className="flex items-center gap-2 ml-4">
+                                                    <div className="relative w-64">
+                                                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                                                        <input
+                                                            type="text"
+                                                            placeholder="Search collections or requests..."
+                                                            value={collectionSearchTerm}
+                                                            onChange={(e) => setCollectionSearchTerm(e.target.value)}
+                                                            className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md pl-8 pr-8 py-1 text-sm outline-none focus:border-red-500/50 transition-all dark:text-white"
+                                                        />
+                                                        {collectionSearchTerm && (
+                                                            <button
+                                                                onClick={() => setCollectionSearchTerm('')}
+                                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500"
+                                                            >
+                                                                <X className="w-3 h-3" />
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
                                             </div>
 
                                         </div>
@@ -1173,77 +1258,100 @@ export function AdminDashboard() {
                                                                 </tr>
                                                             </thead>
                                                             <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
-                                                                {appCodeCollections.map(collection => (
-                                                                    <Fragment key={collection.collectionId}>
-                                                                        {/* Collection Row */}
-                                                                        <tr className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors">
-                                                                            <td className="px-4 py-2">
-                                                                                <button
-                                                                                    onClick={() => toggleCollection(collection.collectionId)}
-                                                                                    className="text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
-                                                                                >
-                                                                                    {expandedCollections.has(collection.collectionId) ? (
-                                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
-                                                                                    ) : (
-                                                                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
-                                                                                    )}
-                                                                                </button>
-                                                                            </td>
-                                                                            <td className="px-4 py-2 font-bold text-slate-900 dark:text-white" colSpan="3">
-                                                                                <div className="flex items-center gap-2">
-                                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500/70"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg>
-                                                                                    {collection.name}
-                                                                                    <span className="ml-2 text-[10px] px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-400 font-medium">
-                                                                                        {collection.requests?.length || 0}
-                                                                                    </span>
-                                                                                </div>
-                                                                            </td>
-                                                                        </tr>
+                                                                {appCodeCollections
+                                                                    .filter(col => {
+                                                                        const term = collectionSearchTerm.toLowerCase();
+                                                                        if (!term) return true;
+                                                                        const colMatch = col.name.toLowerCase().includes(term);
+                                                                        const reqMatch = col.requests?.some(req =>
+                                                                            req.name.toLowerCase().includes(term) ||
+                                                                            req.method.toLowerCase().includes(term)
+                                                                        );
+                                                                        return colMatch || reqMatch;
+                                                                    })
+                                                                    .map(collection => {
+                                                                        const filteredRequests = collectionSearchTerm
+                                                                            ? collection.requests?.filter(req =>
+                                                                                req.name.toLowerCase().includes(collectionSearchTerm.toLowerCase()) ||
+                                                                                req.method.toLowerCase().includes(collectionSearchTerm.toLowerCase())
+                                                                            )
+                                                                            : collection.requests;
 
-                                                                        {/* Request Rows (if expanded) */}
-                                                                        {expandedCollections.has(collection.collectionId) && collection.requests?.map((request, reqIdx) => {
-                                                                            const reqId = request.requestId || request.id || `req-${reqIdx}`;
-                                                                            const isSelected = selectedRequest && (selectedRequest.requestId === reqId || selectedRequest.id === reqId);
+                                                                        const isExpanded = expandedCollections.has(collection.collectionId) || !!collectionSearchTerm;
 
-                                                                            return (
-                                                                                <tr
-                                                                                    key={reqId}
-                                                                                    className={cn(
-                                                                                        "hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group",
-                                                                                        isSelected && "bg-red-50 dark:bg-red-900/10 border-l-2 border-red-500"
-                                                                                    )}
-                                                                                    onClick={() => handleRequestClick(request)}
-                                                                                >
-                                                                                    <td className="px-4 py-3"></td>
-                                                                                    <td className="px-4 py-2 pl-10">
+                                                                        return (
+                                                                            <Fragment key={collection.collectionId}>
+                                                                                {/* Collection Row */}
+                                                                                <tr className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-100 dark:hover:bg-slate-800/70 transition-colors">
+                                                                                    <td className="px-4 py-2">
+                                                                                        <button
+                                                                                            onClick={() => toggleCollection(collection.collectionId)}
+                                                                                            className="text-slate-500 hover:text-slate-900 dark:hover:text-white transition-colors"
+                                                                                        >
+                                                                                            {isExpanded ? (
+                                                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m6 9 6 6 6-6" /></svg>
+                                                                                            ) : (
+                                                                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m9 18 6-6-6-6" /></svg>
+                                                                                            )}
+                                                                                        </button>
+                                                                                    </td>
+                                                                                    <td className="px-4 py-2 font-bold text-slate-900 dark:text-white" colSpan="3">
                                                                                         <div className="flex items-center gap-2">
-                                                                                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 group-hover:text-red-500 transition-colors"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></svg>
-                                                                                            <span className={cn(
-                                                                                                "text-[13px]",
-                                                                                                isSelected ? "font-bold text-red-600" : "text-slate-600 dark:text-slate-300"
-                                                                                            )}>
-                                                                                                {request.name || 'Untitled Request'}
+                                                                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-500/70"><path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" /></svg>
+                                                                                            {collection.name}
+                                                                                            <span className="ml-2 text-[10px] px-2 py-0.5 bg-slate-200 dark:bg-slate-700 rounded-full text-slate-600 dark:text-slate-400 font-medium">
+                                                                                                {filteredRequests?.length || 0}
                                                                                             </span>
                                                                                         </div>
                                                                                     </td>
-                                                                                    <td className="px-4 py-2">
-                                                                                        <span className={`inline-block px-1.5 py-0.5 text-[10px] font-black rounded border ${request.method === 'GET' ? 'bg-green-50 text-green-600 border-green-100 dark:bg-green-900/10 dark:text-green-400 dark:border-green-800/30' :
-                                                                                            request.method === 'POST' ? 'bg-yellow-50 text-yellow-600 border-yellow-100 dark:bg-yellow-900/10 dark:text-yellow-400 dark:border-yellow-800/30' :
-                                                                                                request.method === 'PUT' ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/10 dark:text-blue-400 dark:border-blue-800/30' :
-                                                                                                    request.method === 'DELETE' ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/10 dark:text-red-400 dark:border-red-800/30' :
-                                                                                                        'bg-slate-50 text-slate-600 border-slate-100 dark:bg-slate-900/30 dark:text-slate-400 dark:border-slate-800/30'
-                                                                                            }`}>
-                                                                                            {request.method || 'GET'}
-                                                                                        </span>
-                                                                                    </td>
-                                                                                    <td className="px-4 py-2 text-right">
-                                                                                        <ChevronDown className={cn("inline-block w-4 h-4 text-slate-300 transition-transform", isSelected && "-rotate-90 text-red-500")} />
-                                                                                    </td>
                                                                                 </tr>
-                                                                            );
-                                                                        })}
-                                                                    </Fragment>
-                                                                ))}
+
+                                                                                {/* Request Rows (if expanded) */}
+                                                                                {isExpanded && filteredRequests?.map((request, reqIdx) => {
+                                                                                    const reqId = request.requestId || request.id || `req-${reqIdx}`;
+                                                                                    const isSelected = selectedRequest && (selectedRequest.requestId === reqId || selectedRequest.id === reqId);
+
+                                                                                    return (
+                                                                                        <tr
+                                                                                            key={reqId}
+                                                                                            className={cn(
+                                                                                                "hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer group",
+                                                                                                isSelected && "bg-red-50 dark:bg-red-900/10 border-l-2 border-red-500"
+                                                                                            )}
+                                                                                            onClick={() => handleRequestClick(request)}
+                                                                                        >
+                                                                                            <td className="px-4 py-3"></td>
+                                                                                            <td className="px-4 py-2 pl-10">
+                                                                                                <div className="flex items-center gap-2">
+                                                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 group-hover:text-red-500 transition-colors"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z" /><polyline points="14 2 14 8 20 8" /></svg>
+                                                                                                    <span className={cn(
+                                                                                                        "text-[13px]",
+                                                                                                        isSelected ? "font-bold text-red-600" : "text-slate-600 dark:text-slate-300"
+                                                                                                    )}>
+                                                                                                        {request.name || 'Untitled Request'}
+                                                                                                    </span>
+                                                                                                </div>
+                                                                                            </td>
+                                                                                            <td className="px-4 py-2">
+                                                                                                <span className={`inline-block px-1.5 py-0.5 text-[10px] font-black rounded border ${request.method === 'GET' ? 'bg-green-50 text-green-600 border-green-100 dark:bg-green-900/10 dark:text-green-400 dark:border-green-800/30' :
+                                                                                                    request.method === 'POST' ? 'bg-yellow-50 text-yellow-600 border-yellow-100 dark:bg-yellow-900/10 dark:text-yellow-400 dark:border-yellow-800/30' :
+                                                                                                        request.method === 'PUT' ? 'bg-blue-50 text-blue-600 border-blue-100 dark:bg-blue-900/10 dark:text-blue-400 dark:border-blue-800/30' :
+                                                                                                            request.method === 'DELETE' ? 'bg-red-50 text-red-600 border-red-100 dark:bg-red-900/10 dark:text-red-400 dark:border-red-800/30' :
+                                                                                                                'bg-slate-50 text-slate-600 border-slate-100 dark:bg-slate-900/30 dark:text-slate-400 dark:border-slate-800/30'
+                                                                                                    }`}>
+                                                                                                    {request.method || 'GET'}
+                                                                                                </span>
+                                                                                            </td>
+                                                                                            <td className="px-4 py-2 text-right">
+                                                                                                <ChevronDown className={cn("inline-block w-4 h-4 text-slate-300 transition-transform", isSelected && "-rotate-90 text-red-500")} />
+                                                                                            </td>
+                                                                                        </tr>
+                                                                                    );
+                                                                                })}
+                                                                            </Fragment>
+                                                                        )
+                                                                    })
+                                                                }
                                                             </tbody>
                                                         </table>
                                                     )}

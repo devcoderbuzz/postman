@@ -13,7 +13,7 @@ import { HistoryPanel } from '../components/HistoryPanel';
 import { EnvironmentManager } from '../components/EnvironmentManager';
 import { RequestTabs } from '../components/RequestTabs';
 import { Footer } from '../components/Footer';
-import { X, Save, Moon, Sun, Globe, Check, AlignLeft, Settings as SettingsIcon, Code2, ShieldCheck, Clock, Trash2, Plus } from 'lucide-react';
+import { X, Save, Moon, Sun, Globe, Check, AlignLeft, Settings as SettingsIcon, Code2, ShieldCheck, Clock, Trash2, Plus, Search } from 'lucide-react';
 import { cn, replaceEnvVariables } from '../lib/utils';
 import { SaveRequestModal } from '../components/SaveRequestModal';
 import { Header } from '../components/Header';
@@ -266,6 +266,7 @@ export function UserWorkspace() {
     const [localCollectionsPath, setLocalCollectionsPath] = useState(localStorage.getItem('localCollectionsPath') || '');
     const [showEnvSaveSuccess, setShowEnvSaveSuccess] = useState(false);
     const [editDataRefreshTrigger, setEditDataRefreshTrigger] = useState(0);
+    const [envSearchTerm, setEnvSearchTerm] = useState('');
 
     const handleRefreshView = (view) => {
         if (view === 'editData') {
@@ -1542,8 +1543,26 @@ export function UserWorkspace() {
                                     </div>
 
                                     <div className="bg-white dark:bg-[var(--bg-surface)] rounded-xl border border-slate-200 dark:border-[var(--border-color)] shadow-sm overflow-hidden">
-                                        <div className="p-4 border-b border-slate-100 dark:border-[var(--border-color)] bg-slate-50/50 dark:bg-white/5">
+                                        <div className="p-4 border-b border-slate-100 dark:border-[var(--border-color)] bg-slate-50/50 dark:bg-white/5 flex items-center justify-between">
                                             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider dark:text-[var(--text-secondary)]">Variables</span>
+                                            <div className="relative w-64">
+                                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search variables..."
+                                                    value={envSearchTerm}
+                                                    onChange={(e) => setEnvSearchTerm(e.target.value)}
+                                                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-8 py-1.5 text-xs outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20 transition-all"
+                                                />
+                                                {envSearchTerm && (
+                                                    <button
+                                                        onClick={() => setEnvSearchTerm('')}
+                                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-slate-100 dark:hover:bg-red-500/10 rounded-full text-slate-400 hover:text-red-500 transition-colors"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="p-4 space-y-4">
                                             <div className="flex flex-col border border-slate-200 dark:border-[var(--border-color)] rounded-lg overflow-hidden bg-white dark:bg-[var(--bg-surface)]">
@@ -1552,47 +1571,54 @@ export function UserWorkspace() {
                                                     <div className="flex-1 p-2 border-r border-slate-200 dark:border-[var(--border-color)]">Value</div>
                                                     <div className="w-16 p-2 text-center text-[10px] uppercase">Actions</div>
                                                 </div>
-                                                {(environments.find(e => e.id === activeEnv)?.variables || []).map((pair, index) => {
-                                                    const isModified = pair.key !== pair.originalKey || pair.value !== pair.originalValue;
-                                                    return (
-                                                        <div key={index} className="flex border-b border-slate-200 dark:border-[var(--border-color)] last:border-0 group">
-                                                            <input
-                                                                className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
-                                                                placeholder="Key"
-                                                                value={pair.key}
-                                                                onChange={(e) => handleUpdateEnvVariable(index, 'key', e.target.value)}
-                                                            />
-                                                            <input
-                                                                className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
-                                                                placeholder="Value"
-                                                                value={pair.value}
-                                                                onChange={(e) => handleUpdateEnvVariable(index, 'value', e.target.value)}
-                                                            />
-                                                            <div className="w-16 flex items-center justify-center gap-1 bg-slate-50/50 dark:bg-white/5">
-                                                                <button
-                                                                    disabled={!isModified}
-                                                                    onClick={() => handleSaveEnvVariable(index)}
-                                                                    className={cn(
-                                                                        "p-1 rounded transition-all",
-                                                                        isModified
-                                                                            ? "text-green-600 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20"
-                                                                            : "text-slate-300 dark:text-slate-700 cursor-not-allowed"
-                                                                    )}
-                                                                    title={isModified ? "Save changes" : "No changes to save"}
-                                                                >
-                                                                    <Save className="w-3.5 h-3.5" />
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleDeleteEnvVariable(index)}
-                                                                    className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                                                    title="Delete Variable"
-                                                                >
-                                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                                </button>
+                                                {(environments.find(e => e.id === activeEnv)?.variables || [])
+                                                    .map((pair, originalIndex) => ({ ...pair, originalIndex }))
+                                                    .filter(pair =>
+                                                        (pair.key || '').toLowerCase().includes(envSearchTerm.toLowerCase()) ||
+                                                        (pair.value || '').toLowerCase().includes(envSearchTerm.toLowerCase())
+                                                    )
+                                                    .map((pair) => {
+                                                        const index = pair.originalIndex;
+                                                        const isModified = pair.key !== pair.originalKey || pair.value !== pair.originalValue;
+                                                        return (
+                                                            <div key={index} className="flex border-b border-slate-200 dark:border-[var(--border-color)] last:border-0 group">
+                                                                <input
+                                                                    className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
+                                                                    placeholder="Key"
+                                                                    value={pair.key}
+                                                                    onChange={(e) => handleUpdateEnvVariable(index, 'key', e.target.value)}
+                                                                />
+                                                                <input
+                                                                    className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
+                                                                    placeholder="Value"
+                                                                    value={pair.value}
+                                                                    onChange={(e) => handleUpdateEnvVariable(index, 'value', e.target.value)}
+                                                                />
+                                                                <div className="w-16 flex items-center justify-center gap-1 bg-slate-50/50 dark:bg-white/5">
+                                                                    <button
+                                                                        disabled={!isModified}
+                                                                        onClick={() => handleSaveEnvVariable(index)}
+                                                                        className={cn(
+                                                                            "p-1 rounded transition-all",
+                                                                            isModified
+                                                                                ? "text-green-600 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20"
+                                                                                : "text-slate-300 dark:text-slate-700 cursor-not-allowed"
+                                                                        )}
+                                                                        title={isModified ? "Save changes" : "No changes to save"}
+                                                                    >
+                                                                        <Save className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => handleDeleteEnvVariable(index)}
+                                                                        className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                                                        title="Delete Variable"
+                                                                    >
+                                                                        <Trash2 className="w-3.5 h-3.5" />
+                                                                    </button>
+                                                                </div>
                                                             </div>
-                                                        </div>
-                                                    );
-                                                })}
+                                                        );
+                                                    })}
                                                 <button
                                                     onClick={handleAddEnvVariable}
                                                     className="flex items-center gap-2 p-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900/50 transition-colors"
@@ -1687,6 +1713,9 @@ export function UserWorkspace() {
                             setUrl={(val) => updateActiveRequest({ url: val })}
                             onSend={handleSend}
                             isLoading={activeRequest.isLoading}
+                            environments={environments}
+                            activeEnv={activeEnv}
+                            onEnvSelect={setActiveEnv}
                         />
 
                         <div className="flex-1 flex overflow-hidden">

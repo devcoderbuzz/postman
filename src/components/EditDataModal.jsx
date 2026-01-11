@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical, Save, Folder, FileText } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical, Save, Folder, FileText, Search } from 'lucide-react';
 import { createUpdateCollections, getAllAppCodes, deleteCollection, getCollectionDetails } from '../services/apiservice';
 
 import { ConfirmationModal } from './ConfirmationModal';
@@ -15,6 +15,7 @@ export function EditDataPanel({ refreshTrigger }) {
     const [collections, setCollections] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [expandedCollections, setExpandedCollections] = useState(new Set());
+    const [collectionSearchTerm, setCollectionSearchTerm] = useState('');
 
     const [isCreatingCollection, setIsCreatingCollection] = useState(false);
     const [isImporting, setIsImporting] = useState(false);
@@ -556,6 +557,29 @@ export function EditDataPanel({ refreshTrigger }) {
                     </div>
                 </div>
 
+                {selectedAppCodeId && (
+                    <div className="px-4 py-2 border-b border-slate-200 dark:border-slate-800">
+                        <div className="relative">
+                            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder="Search collections..."
+                                value={collectionSearchTerm}
+                                onChange={(e) => setCollectionSearchTerm(e.target.value)}
+                                className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded pl-7 pr-2 py-1 text-[11px] outline-none focus:border-red-500/50 transition-all dark:text-white"
+                            />
+                            {collectionSearchTerm && (
+                                <button
+                                    onClick={() => setCollectionSearchTerm('')}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-red-500"
+                                >
+                                    <X className="w-2.5 h-2.5" />
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 <div className="flex-1 overflow-y-auto">
                     {!selectedAppCodeId ? (
                         <div className="p-4 text-center text-xs text-slate-400">
@@ -563,11 +587,14 @@ export function EditDataPanel({ refreshTrigger }) {
                         </div>
                     ) : isLoading ? (
                         <div className="p-4 text-center text-xs text-slate-400">Loading...</div>
-                    ) : collections.length === 0 ? (
-                        <div className="p-4 text-center text-xs text-slate-400">No collections found</div>
                     ) : (
                         <div className="space-y-0.5 px-2">
-                            {collections.map(col => (
+                            {collections.filter(col => {
+                                if (!collectionSearchTerm) return true;
+                                const term = collectionSearchTerm.toLowerCase();
+                                return col.name?.toLowerCase().includes(term) ||
+                                    col.requests?.some(r => r.name?.toLowerCase().includes(term) || r.method?.toLowerCase().includes(term));
+                            }).map(col => (
                                 <div key={col.collectionId}>
                                     <div
                                         className={`flex items-center gap-1 p-1 rounded group transition-colors ${expandedCollections.has(col.collectionId) ? '' : 'hover:bg-slate-200 dark:hover:bg-white/5'
@@ -659,43 +686,51 @@ export function EditDataPanel({ refreshTrigger }) {
                                         </div>
                                     </div>
 
-                                    {expandedCollections.has(col.collectionId) && (
+                                    {(expandedCollections.has(col.collectionId) || !!collectionSearchTerm) && (
                                         <div className="ml-4 space-y-0.5">
                                             {(!col.requests || col.requests.length === 0) ? (
                                                 <div className="text-xs text-slate-400 italic py-1 px-2">No requests</div>
                                             ) : (
-                                                col.requests.map(req => (
-                                                    <div
-                                                        key={req.requestId}
-                                                        className={`flex items-center gap-2 p-1 rounded group cursor-pointer ${editingRequest && editingRequest.requestId && editingRequest.requestId === req.requestId
-                                                            ? 'bg-red-50 dark:bg-red-900/20 text-red-500'
-                                                            : 'hover:bg-slate-200 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400'
-                                                            }`}
-                                                        onClick={() => { setEditingRequest({ ...req, collectionId: col.collectionId }); setIsCreatingRequest(false); }}
-                                                    >
-                                                        <FileText className="w-3 h-3 shrink-0" />
-
-                                                        <span className={`text-[10px] font-bold uppercase w-12 shrink-0 ${req.method === 'GET' ? 'text-green-500' :
-                                                            req.method === 'POST' ? 'text-yellow-500' :
-                                                                req.method === 'PUT' ? 'text-blue-500' :
-                                                                    req.method === 'DELETE' ? 'text-red-500' : 'text-purple-500'
-                                                            }`}>
-                                                            {req.method}
-                                                        </span>
-
-                                                        <span className="text-xs truncate flex-1">
-                                                            {req.name}
-                                                        </span>
-
-                                                        <button
-                                                            onClick={(e) => { e.stopPropagation(); confirmDeleteRequest(col.collectionId, req.requestId); }}
-                                                            className="p-1 opacity-0 group-hover:opacity-100 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-500 hover:text-red-500 transition-opacity"
-                                                            title="Delete"
+                                                col.requests
+                                                    .filter(req => {
+                                                        if (!collectionSearchTerm) return true;
+                                                        const term = collectionSearchTerm.toLowerCase();
+                                                        return col.name?.toLowerCase().includes(term) ||
+                                                            req.name?.toLowerCase().includes(term) ||
+                                                            req.method?.toLowerCase().includes(term);
+                                                    })
+                                                    .map(req => (
+                                                        <div
+                                                            key={req.requestId}
+                                                            className={`flex items-center gap-2 p-1 rounded group cursor-pointer ${editingRequest && editingRequest.requestId && editingRequest.requestId === req.requestId
+                                                                ? 'bg-red-50 dark:bg-red-900/20 text-red-500'
+                                                                : 'hover:bg-slate-200 dark:hover:bg-white/5 text-slate-600 dark:text-slate-400'
+                                                                }`}
+                                                            onClick={() => { setEditingRequest({ ...req, collectionId: col.collectionId }); setIsCreatingRequest(false); }}
                                                         >
-                                                            <Trash2 className="w-3 h-3" />
-                                                        </button>
-                                                    </div>
-                                                ))
+                                                            <FileText className="w-3 h-3 shrink-0" />
+
+                                                            <span className={`text-[10px] font-bold uppercase w-12 shrink-0 ${req.method === 'GET' ? 'text-green-500' :
+                                                                req.method === 'POST' ? 'text-yellow-500' :
+                                                                    req.method === 'PUT' ? 'text-blue-500' :
+                                                                        req.method === 'DELETE' ? 'text-red-500' : 'text-purple-500'
+                                                                }`}>
+                                                                {req.method}
+                                                            </span>
+
+                                                            <span className="text-xs truncate flex-1">
+                                                                {req.name}
+                                                            </span>
+
+                                                            <button
+                                                                onClick={(e) => { e.stopPropagation(); confirmDeleteRequest(col.collectionId, req.requestId); }}
+                                                                className="p-1 opacity-0 group-hover:opacity-100 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-500 hover:text-red-500 transition-opacity"
+                                                                title="Delete"
+                                                            >
+                                                                <Trash2 className="w-3 h-3" />
+                                                            </button>
+                                                        </div>
+                                                    ))
                                             )}
                                         </div>
                                     )}
