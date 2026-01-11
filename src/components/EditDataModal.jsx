@@ -388,8 +388,32 @@ export function EditDataPanel({ refreshTrigger }) {
                         name: req.name,
                         url: req.url,
                         method: req.method,
-                        body: typeof req.body === 'string' ? req.body : JSON.stringify(req.body || {}),
-                        headers: JSON.stringify(req.headers || {})
+                        body: (() => {
+                            const val = req.body;
+                            if (typeof val !== 'string') {
+                                const s = JSON.stringify(val || {});
+                                return (s === '{}' || s === '[]') ? '' : s;
+                            }
+                            try {
+                                const minified = JSON.stringify(JSON.parse(val));
+                                return (minified === '{}' || minified === '[]') ? '' : minified;
+                            } catch (e) {
+                                return (val === '{}' || val === '[]') ? '' : val;
+                            }
+                        })(),
+                        headers: (() => {
+                            const val = req.headers;
+                            if (typeof val !== 'string') {
+                                const s = JSON.stringify(val || {});
+                                return (s === '{}' || s === '[]') ? '' : s;
+                            }
+                            try {
+                                const minified = JSON.stringify(JSON.parse(val));
+                                return (minified === '{}' || minified === '[]') ? '' : minified;
+                            } catch (e) {
+                                return (val === '{}' || val === '[]') ? '' : val;
+                            }
+                        })()
                     };
                 })
             };
@@ -932,8 +956,27 @@ function RenameInput({ value, onChange, onConfirm }) {
     );
 }
 
-function VariableAutocomplete({ variables, filterText, onSelect, position, activeIndex, onCancel }) {
-    const filtered = (variables || []).filter(v =>
+const STANDARD_HEADERS = [
+    'Accept', 'Accept-Encoding', 'Accept-Language', 'Authorization', 'Cache-Control',
+    'Connection', 'Content-Length', 'Content-Type', 'Cookie', 'Host', 'Origin',
+    'Pragma', 'Referer', 'User-Agent', 'X-Requested-With', 'X-Api-Key', 'X-Auth-Token'
+];
+
+function VariableAutocomplete({ variables, standardHeaders, filterText, type, onSelect, position, activeIndex, onCancel }) {
+    let items = [];
+    let title = 'Suggestions';
+    let icon = <Globe className="w-3 h-3 text-red-500" />;
+
+    if (type === 'variable') {
+        items = (variables || []).map(v => ({ key: v.key, value: v.value, isVar: true }));
+        title = 'Environment Variables';
+    } else if (type === 'header') {
+        items = (standardHeaders || []).map(h => ({ key: h, value: 'Standard Header', isVar: false }));
+        title = 'Standard Headers';
+        icon = <FileText className="w-3 h-3 text-blue-500" />;
+    }
+
+    const filtered = items.filter(v =>
         v.key.toLowerCase().includes(filterText.toLowerCase())
     );
 
@@ -963,7 +1006,7 @@ function VariableAutocomplete({ variables, filterText, onSelect, position, activ
     return (
         <div
             ref={containerRef}
-            className="absolute z-[100] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow-2xl rounded-lg overflow-hidden min-w-[240px] max-h-[250px] overflow-y-auto"
+            className="absolute z-[100] bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 shadow-2xl rounded-lg overflow-hidden min-w-[240px] max-h-[250px] overflow-y-auto animate-in fade-in zoom-in-95 duration-100"
             style={{
                 top: position.top,
                 left: position.left,
@@ -972,8 +1015,8 @@ function VariableAutocomplete({ variables, filterText, onSelect, position, activ
         >
             <div className="p-2.5 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                    <Globe className="w-3 h-3 text-red-500" />
-                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Environment Variables</span>
+                    {icon}
+                    <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{title}</span>
                 </div>
                 <span className="text-[9px] text-slate-400 bg-slate-200/50 dark:bg-slate-700/50 px-1.5 py-0.5 rounded">
                     {filtered.length} matches
@@ -986,7 +1029,7 @@ function VariableAutocomplete({ variables, filterText, onSelect, position, activ
                         onClick={(e) => {
                             e.preventDefault();
                             e.stopPropagation();
-                            onSelect(v.key);
+                            onSelect(v.key, v.isVar);
                         }}
                         className={`w-full text-left px-3 py-2 text-xs flex items-center justify-between group transition-all border-l-2 ${i === activeIndex
                             ? 'bg-red-50 dark:bg-red-900/30 border-red-500'
@@ -1012,16 +1055,51 @@ function VariableAutocomplete({ variables, filterText, onSelect, position, activ
 function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv }) {
     const [editedReq, setEditedReq] = useState(() => {
         const req = { ...request };
-        if (typeof req.body === 'object' && req.body !== null) {
-            req.body = JSON.stringify(req.body, null, 2);
+        let b = req.body;
+        // Robustly unwrap multi-stringified body
+        while (typeof b === 'string' && b.length > 0) {
+            try {
+                const parsed = JSON.parse(b);
+                // If it's still a string or it's an object, we keep the parsed version
+                // but we only continue loop if it was a stringified string
+                if (typeof parsed === 'string') {
+                    b = parsed;
+                    continue;
+                }
+                b = parsed;
+                break;
+            } catch (e) { break; }
+        }
+
+        if (typeof b === 'object' && b !== null) {
+            req.body = JSON.stringify(b, null, 2);
+        } else if (typeof b === 'string' && b.length > 0) {
+            try {
+                // If it's a string, try to parse and re-stringify with formatting
+                const parsed = JSON.parse(b);
+                req.body = JSON.stringify(parsed, null, 2);
+            } catch (e) {
+                req.body = b;
+            }
+        } else {
+            req.body = String(b || '');
         }
         return req;
     });
 
     const [headers, setHeaders] = useState(() => {
         let h = request.headers;
-        if (typeof h === 'string') {
-            try { h = JSON.parse(h); } catch (e) { h = {}; }
+        // Robustly unwrap multi-stringified headers
+        while (typeof h === 'string' && h.length > 0) {
+            try {
+                const parsed = JSON.parse(h);
+                if (typeof parsed === 'string') {
+                    h = parsed;
+                    continue;
+                }
+                h = parsed;
+                break;
+            } catch (e) { break; }
         }
         h = typeof h === 'object' && h !== null ? h : {};
         return Object.entries(h).map(([key, value]) => ({ key, value: String(value), id: Math.random() }));
@@ -1031,10 +1109,11 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
         show: false,
         filterText: '',
         position: { top: 0, left: 0 },
-        field: '', // 'url', 'body', 'header-value'
+        field: '', // 'url', 'body', 'header-value', 'header-key'
         headerId: null,
         selectionStart: 0,
-        activeIndex: 0
+        activeIndex: 0,
+        type: 'variable' // 'variable' or 'header'
     });
 
     const autocompleteRef = useRef(null);
@@ -1048,7 +1127,6 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
             setHeaders(headers.map(h => h.id === headerId ? { ...h, value: value } : h));
         }
 
-        // Check for {{
         const target = e.target;
         const cursorPos = target.selectionStart;
         const textBeforeCursor = value.substring(0, cursorPos);
@@ -1058,48 +1136,76 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
             const filterText = textBeforeCursor.substring(lastOpenBraces + 2);
             if (!filterText.includes(' ')) {
                 const rect = target.getBoundingClientRect();
-                // Rough estimation of position
                 setAutocomplete({
                     show: true,
                     filterText,
                     position: {
                         top: rect.bottom + window.scrollY + 5,
-                        left: rect.left + window.scrollX + (filterText.length * 5)
+                        left: rect.left + window.scrollX
                     },
                     field: field,
                     headerId: headerId,
                     selectionStart: lastOpenBraces,
-                    activeIndex: 0
+                    activeIndex: 0,
+                    type: 'variable'
                 });
                 return;
             }
         }
+
+        // Special case for header-key standard suggestions
+        if (field === 'header-key' && value.length > 0) {
+            const rect = target.getBoundingClientRect();
+            setAutocomplete({
+                show: true,
+                filterText: value,
+                position: {
+                    top: rect.bottom + window.scrollY + 5,
+                    left: rect.left + window.scrollX
+                },
+                field: field,
+                headerId: headerId,
+                selectionStart: 0,
+                activeIndex: 0,
+                type: 'header'
+            });
+            return;
+        }
+
         setAutocomplete(prev => ({ ...prev, show: false }));
     };
 
     const handleKeyDown = (e) => {
         if (!autocomplete.show) return;
 
-        const filtered = (activeEnv?.variables || []).filter(v =>
-            v.key.toLowerCase().includes(autocomplete.filterText.toLowerCase())
-        );
+        let items = [];
+        if (autocomplete.type === 'variable') {
+            items = (activeEnv?.variables || []).filter(v =>
+                v.key.toLowerCase().includes(autocomplete.filterText.toLowerCase())
+            );
+        } else if (autocomplete.type === 'header') {
+            items = STANDARD_HEADERS.filter(h =>
+                h.toLowerCase().includes(autocomplete.filterText.toLowerCase())
+            );
+        }
 
         if (e.key === 'ArrowDown') {
             e.preventDefault();
             setAutocomplete(prev => ({
                 ...prev,
-                activeIndex: (prev.activeIndex + 1) % filtered.length
+                activeIndex: (prev.activeIndex + 1) % (items.length || 1)
             }));
         } else if (e.key === 'ArrowUp') {
             e.preventDefault();
             setAutocomplete(prev => ({
                 ...prev,
-                activeIndex: (prev.activeIndex - 1 + filtered.length) % filtered.length
+                activeIndex: (prev.activeIndex - 1 + items.length) % (items.length || 1)
             }));
         } else if (e.key === 'Enter' || e.key === 'Tab') {
-            if (filtered[autocomplete.activeIndex]) {
+            if (items[autocomplete.activeIndex]) {
                 e.preventDefault();
-                handleVariableSelect(filtered[autocomplete.activeIndex].key);
+                const selectedKey = items[autocomplete.activeIndex].key || items[autocomplete.activeIndex];
+                handleVariableSelect(selectedKey, autocomplete.type === 'variable');
             }
         } else if (e.key === 'Escape') {
             e.preventDefault();
@@ -1107,29 +1213,32 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
         }
     };
 
-    const handleVariableSelect = (varName) => {
-        const insertText = `{{${varName}}}`;
+    const handleVariableSelect = (varName, isVar) => {
+        const insertText = isVar ? `{{${varName}}}` : varName;
         let newValue = '';
-        let targetField = autocomplete.field;
+        const targetField = autocomplete.field;
+        const searchLength = isVar ? autocomplete.filterText.length + 2 : autocomplete.filterText.length;
 
         if (targetField === 'url' || targetField === 'body') {
             const current = editedReq[targetField] || '';
-            newValue = current.substring(0, autocomplete.selectionStart) + insertText + current.substring(editedReq[targetField].length); // Wait, this is wrong, need to fix
-            // Correct way:
-            const cursorPos = autocomplete.selectionStart + autocomplete.filterText.length + 2;
-            const endPart = current.substring(cursorPos);
-            newValue = current.substring(0, autocomplete.selectionStart) + insertText + endPart;
+            const before = current.substring(0, autocomplete.selectionStart);
+            const after = current.substring(autocomplete.selectionStart + searchLength);
+            newValue = before + insertText + after;
             setEditedReq(prev => ({ ...prev, [targetField]: newValue }));
-        } else if (targetField === 'header-value') {
-            const header = headers.find(h => h.id === autocomplete.headerId);
-            const current = header.value || '';
-            const cursorPos = autocomplete.selectionStart + autocomplete.filterText.length + 2;
-            const endPart = current.substring(cursorPos);
-            newValue = current.substring(0, autocomplete.selectionStart) + insertText + endPart;
-            setHeaders(headers.map(h => h.id === autocomplete.headerId ? { ...h, value: newValue } : h));
+        } else if (targetField === 'header-value' || targetField === 'header-key') {
+            const prop = targetField === 'header-key' ? 'key' : 'value';
+            setHeaders(headers.map(h => {
+                if (h.id === autocomplete.headerId) {
+                    const current = h[prop] || '';
+                    const before = current.substring(0, autocomplete.selectionStart);
+                    const after = current.substring(autocomplete.selectionStart + searchLength);
+                    return { ...h, [prop]: before + insertText + after };
+                }
+                return h;
+            }));
         }
 
-        setAutocomplete({ show: false, filterText: '', position: { top: 0, left: 0 }, field: '', headerId: null, selectionStart: 0 });
+        setAutocomplete(prev => ({ ...prev, show: false }));
     };
 
     const handleChange = (field, value) => {
@@ -1160,7 +1269,17 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
     };
 
     const resolvedUrl = replaceEnvVariables(editedReq.url, activeEnv);
-    const resolvedBody = replaceEnvVariables(editedReq.body || '', activeEnv);
+    let resolvedBody = replaceEnvVariables(editedReq.body || '', activeEnv);
+
+    // Format preview body if it's JSON
+    if (resolvedBody.trim().startsWith('{') || resolvedBody.trim().startsWith('[')) {
+        try {
+            resolvedBody = JSON.stringify(JSON.parse(resolvedBody), null, 2);
+        } catch (e) {
+            // Not valid JSON, leave as is
+        }
+    }
+
     const hasVariablesInUrl = resolvedUrl !== editedReq.url;
     const hasVariablesInBody = resolvedBody !== (editedReq.body || '');
 
@@ -1248,7 +1367,8 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
                                     <input
                                         type="text"
                                         value={header.key}
-                                        onChange={e => handleHeaderChange(header.id, 'key', e.target.value)}
+                                        onChange={e => handleInputChange('header-key', e.target.value, e, header.id)}
+                                        onKeyDown={handleKeyDown}
                                         placeholder="Key"
                                         className="flex-1 p-2 border border-slate-300 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 dark:text-white focus:border-red-500 outline-none"
                                     />
@@ -1303,7 +1423,9 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
             {autocomplete.show && (
                 <VariableAutocomplete
                     variables={activeEnv?.variables}
+                    standardHeaders={STANDARD_HEADERS}
                     filterText={autocomplete.filterText}
+                    type={autocomplete.type}
                     onSelect={handleVariableSelect}
                     position={autocomplete.position}
                     activeIndex={autocomplete.activeIndex}

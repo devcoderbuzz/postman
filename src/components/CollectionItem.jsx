@@ -15,15 +15,19 @@ export function CollectionItem({
     startRename,
     deleteCollection,
     deleteRequest,
+    focusedItemId,
     readOnly = false
 }) {
+    const isCollectionFocused = focusedItemId === `col-${collection.id}`;
+
     return (
-        <div>
+        <div id={`col-${collection.id}`}>
             <div className={cn(
-                "flex items-center gap-1 p-1 rounded group transition-colors",
+                "flex items-center gap-1 p-1 rounded group transition-all duration-150 relative",
                 activeCollectionId === collection.id
                     ? "bg-red-900/30 text-red-500"
-                    : "hover:bg-slate-200 dark:hover:bg-white/5"
+                    : "hover:bg-slate-200 dark:hover:bg-white/5",
+                isCollectionFocused && "ring-1 ring-red-500 bg-red-500/5 z-10"
             )}>
                 <button
                     onClick={() => toggleFolder(collection.id)}
@@ -89,46 +93,52 @@ export function CollectionItem({
                         )}
                     </>
                 )}
-
-
             </div>
 
             {
                 expandedFolders.has(collection.id) && (
                     <div className="ml-3 space-y-0.5">
-                        {collection.requests.map(request => (
-                            <div
-                                key={request.id}
-                                className="flex items-center gap-1.5 p-1 hover:bg-slate-200 dark:hover:bg-white/5 rounded group cursor-pointer"
-                                onClick={() => onLoadRequest(request)}
-                            >
-                                <FileText className="w-3 h-3 text-slate-500 dark:text-slate-400" />
-                                <span className={cn(
-                                    "text-[9px] font-bold uppercase w-10",
-                                    request.method === 'GET' && "text-green-500",
-                                    request.method === 'POST' && "text-yellow-500",
-                                    request.method === 'PUT' && "text-blue-500",
-                                    request.method === 'DELETE' && "text-red-500"
-                                )}>
-                                    {request.method}
-                                </span>
-                                <span className="flex-1 text-[11px] text-slate-600 dark:text-slate-400 truncate">{request.name}</span>
-                                {!readOnly && (
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            deleteRequest(collection.id, request.id);
-                                        }}
-                                        className="p-1 opacity-0 group-hover:opacity-100 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-500 hover:text-red-500"
-                                    >
-                                        <Trash2 className="w-3 h-3" />
-                                    </button>
-                                )}
-                            </div>
-                        ))}
+                        {collection.requests.map(request => {
+                            const isRequestFocused = focusedItemId === `req-${request.id}`;
+                            return (
+                                <div
+                                    key={request.id}
+                                    id={`req-${request.id}`}
+                                    className={cn(
+                                        "flex items-center gap-1.5 p-1 hover:bg-slate-200 dark:hover:bg-white/5 rounded group cursor-pointer transition-all duration-150 relative",
+                                        isRequestFocused && "ring-1 ring-red-500 bg-red-500/5 z-10"
+                                    )}
+                                    onClick={() => onLoadRequest(request)}
+                                >
+                                    <FileText className="w-3 h-3 text-slate-500 dark:text-slate-400" />
+                                    <span className={cn(
+                                        "text-[9px] font-bold uppercase w-10",
+                                        request.method === 'GET' && "text-green-500",
+                                        request.method === 'POST' && "text-yellow-500",
+                                        request.method === 'PUT' && "text-blue-500",
+                                        request.method === 'DELETE' && "text-red-500"
+                                    )}>
+                                        {request.method}
+                                    </span>
+                                    <span className="flex-1 text-[11px] text-slate-600 dark:text-slate-400 truncate">{request.name}</span>
+                                    {!readOnly && (
+                                        <button
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteRequest(collection.id, request.id);
+                                            }}
+                                            className="p-1 opacity-0 group-hover:opacity-100 hover:bg-slate-300 dark:hover:bg-slate-700 rounded text-slate-500 hover:text-red-500"
+                                        >
+                                            <Trash2 className="w-3 h-3" />
+                                        </button>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 )
             }
         </div>
     );
 }
+
