@@ -23,7 +23,7 @@ export function AdminDashboard() {
     // Local state for management
     const [users, setUsers] = useState([]);
     const [appCodes, setAppCodes] = useState([]);
-    const [environments, setEnvironments] = useState([]);
+    const [allRawEnvironments, setAllRawEnvironments] = useState([]);
     const [activeEnv, setActiveEnv] = useState(null);
     const [showEnvSaveSuccess, setShowEnvSaveSuccess] = useState(false);
     const [showUserStatusSuccess, setShowUserStatusSuccess] = useState(false);
@@ -69,97 +69,111 @@ export function AdminDashboard() {
     const [userSearchTerm, setUserSearchTerm] = useState('');
     const [appCodeSearchTerm, setAppCodeSearchTerm] = useState('');
     const [collectionSearchTerm, setCollectionSearchTerm] = useState('');
+    const [envSearchTerm, setEnvSearchTerm] = useState('');
 
     const fetchEnvironments = async () => {
-        if (user && user.token) {
-            try {
-                const envData = await getEnvDetails(null, user.token);
-                if (envData) {
-                    console.log("Admin: Raw Environment Data:", envData);
-                    let dataToParse = envData;
-                    if (!Array.isArray(envData) && typeof envData === 'object' && envData !== null) {
-                        if (envData.data && (Array.isArray(envData.data) || typeof envData.data === 'object')) {
-                            dataToParse = envData.data;
-                        } else if (envData.environments && Array.isArray(envData.environments)) {
-                            dataToParse = envData.environments;
-                        }
-                    }
-
-                    const parseVars = (source) => {
-                        if (!source) return [];
-                        if (Array.isArray(source)) return source;
-                        if (typeof source === 'object') {
-                            return Object.entries(source).map(([k, v]) => ({ key: k, value: String(v), active: true }));
-                        }
-                        if (typeof source === 'string') {
-                            try {
-                                const parsed = JSON.parse(source);
-                                if (Array.isArray(parsed)) return parsed;
-                                if (typeof parsed === 'object' && parsed !== null) {
-                                    return Object.entries(parsed).map(([k, v]) => ({ key: k, value: String(v), active: true }));
-                                }
-                            } catch (e) { }
-                        }
-                        return [];
-                    };
-
-                    let formattedEnvs = [];
-                    if (Array.isArray(dataToParse)) {
-                        const firstItem = dataToParse[0];
-                        const hasEnvKey = firstItem && (firstItem.envName || firstItem.env_name || firstItem.environmentName || firstItem.environment_name || firstItem.name);
-
-                        if (hasEnvKey) {
-                            const grouped = dataToParse.reduce((acc, item) => {
-                                const name = item.envName || item.env_name || item.environmentName || item.environment_name || item.name || 'Default';
-                                if (!acc[name]) acc[name] = [];
-
-                                if (item.key) {
-                                    acc[name].push({ key: item.key, value: String(item.value || ''), active: true });
-                                } else if (item.variables) {
-                                    acc[name].push(...parseVars(item.variables));
-                                } else if (item.config) {
-                                    acc[name].push(...parseVars(item.config));
-                                }
-                                return acc;
-                            }, {});
-
-                            formattedEnvs = Object.keys(grouped).map(name => ({
-                                id: name,
-                                name: name,
-                                variables: grouped[name]
-                            }));
-                        } else {
-                            formattedEnvs = dataToParse.map((env, index) => {
-                                const name = env.name || env.envName || env.env_name || env.environmentName || env.environment_name || env.id;
-                                const finalName = name ? String(name) : (dataToParse.length > 1 ? `Environment ${index + 1}` : "Default Environment");
-
-                                return {
-                                    id: String(env.id || finalName),
-                                    name: finalName,
-                                    variables: parseVars(env.variables || env.config || env)
-                                };
-                            }).filter(Boolean);
-                        }
-                    } else if (typeof dataToParse === 'object' && dataToParse !== null) {
-                        formattedEnvs = Object.keys(dataToParse).map(envName => {
-                            const config = dataToParse[envName];
-                            if (config === null) return null;
-                            return {
-                                id: String(envName),
-                                name: String(envName),
-                                variables: parseVars(config)
-                            };
-                        }).filter(Boolean);
-                    }
-                    console.log("Admin: Final Formatted Envs:", formattedEnvs);
-                    setEnvironments(formattedEnvs);
-                    if (formattedEnvs.length > 0 && (!activeEnv || !formattedEnvs.find(e => e.id === activeEnv))) {
-                        setActiveEnv(formattedEnvs[0].id);
-                    }
-                }
-            } catch (e) {
-                console.error('Failed to fetch environment details:', e);
+        if (!user || !user.token) return;
+        try {
+            console.log("Admin: Executing fetchEnvironments...");
+            const envData = await getEnvDetails(null, user.token);
+            console.log("Admin: fetchEnvironments API RAW result:", envData);
+            if (envData) {
+                setAllRawEnvironments(envData);
             }
+        } catch (e) {
+            console.error('Admin: Failed to fetch all environment details:', e);
+            setAllRawEnvironments([]);
+        }
+    };
+
+    const environments = useMemo(() => {
+        let raw = allRawEnvironments;
+        if (!raw || !appCodes.length) return [];
+
+        // 1. Find the target numeric projectId from our dropdown selection
+        const selectedProjectInfo = appCodes.find(ac =>
+            ac.projectName === selectedAppCodeName &&
+            ac.moduleName === selectedModuleName
+        );
+
+        if (!selectedProjectInfo) return [];
+
+        // Use the ID resolved from appCodes (which now correctly picks up projectID from the server)
+        const targetProjectId = selectedProjectInfo.projectId || selectedProjectInfo.id;
+
+        console.log("Admin Filtering Environments:", {
+            targetProjectId,
+            selectedAppCodeName,
+            selectedModuleName
+        });
+
+        if (raw.data && !Array.isArray(raw)) raw = raw.data;
+
+        let environmentsToProcess = [];
+
+        if (Array.isArray(raw)) {
+            // Check if it's Project-Grouped (your provided format)
+            const first = raw[0];
+            const isProjectGrouped = !!(first.environments || first.envs);
+
+            if (isProjectGrouped) {
+                // Find the project object that matches our targetProjectId
+                const match = raw.find(p => {
+                    const pid = p.projectID || p.projectId || p.id;
+                    return String(pid) === String(targetProjectId);
+                });
+
+                if (match) {
+                    environmentsToProcess = match.environments || match.envs || [];
+                } else {
+                    // Fallback: If no ID match, try matching by name as a safety net
+                    const nameMatch = raw.find(p => (p.projectName || p.projectName) === selectedAppCodeName);
+                    if (nameMatch) environmentsToProcess = nameMatch.environments || nameMatch.envs || [];
+                }
+            } else {
+                // Flat list filtering
+                environmentsToProcess = raw.filter(e => {
+                    const eid = e.projectID || e.projectId || e.id;
+                    return String(eid) === String(targetProjectId);
+                });
+            }
+        }
+
+        return environmentsToProcess.map(env => ({
+            id: String(env.envID || env.id || env.envName || Math.random()),
+            name: env.envName || env.name || 'Unnamed',
+            variables: (env.variables || []).map(v => ({
+                id: v.id,
+                key: v.variableKey || v.key || '',
+                value: String(v.variableValue || v.value || ''),
+                active: true
+            }))
+        }));
+    }, [allRawEnvironments, selectedAppCodeName, selectedModuleName, appCodes]);
+
+    // Update activeEnv when environments change
+    useEffect(() => {
+        if (environments.length > 0) {
+            if (!activeEnv || !environments.find(e => e.id === activeEnv)) {
+                setActiveEnv(environments[0].id);
+            }
+        } else {
+            if (activeEnv !== null) setActiveEnv(null);
+        }
+    }, [environments, activeEnv]);
+
+    const refreshAppCode = () => {
+        if (selectedAppCodeName) {
+            fetchAppCodes();
+            if (selectedModuleName) {
+                fetchEnvironments();
+            }
+        }
+    };
+
+    const refreshModule = () => {
+        if (selectedAppCodeName && selectedModuleName) {
+            fetchEnvironments();
         }
     };
 
@@ -228,6 +242,50 @@ export function AdminDashboard() {
         );
     }, [users, editingAppCodeId]);
 
+    const derivedProjects = useMemo(() => {
+        const uniqueNames = [...new Set(appCodes.map(ac => ac.projectName))];
+        return uniqueNames.map(name => ({ id: name, name }));
+    }, [appCodes]);
+
+    const derivedModules = useMemo(() => {
+        if (!selectedAppCodeName) return [];
+        return appCodes
+            .filter(ac => ac.projectName === selectedAppCodeName)
+            .map(ac => ({ id: ac.moduleName, name: ac.moduleName }));
+    }, [appCodes, selectedAppCodeName]);
+
+    // Auto-select first module when project changes
+    useEffect(() => {
+        if (selectedAppCodeName && derivedModules.length > 0) {
+            const isCurrentModuleValid = derivedModules.some(m => m.name === selectedModuleName);
+            if (!isCurrentModuleValid) {
+                const firstModule = derivedModules[0].name;
+                setSelectedModuleName(firstModule);
+            }
+        } else if (!selectedAppCodeName) {
+            setSelectedModuleName('');
+        }
+    }, [selectedAppCodeName, derivedModules, selectedModuleName]);
+
+    // Sync selectedAppCode (the ID) with the name/module selection
+    useEffect(() => {
+        if (selectedAppCodeName && selectedModuleName) {
+            const found = appCodes.find(ac =>
+                ac.projectName === selectedAppCodeName &&
+                ac.moduleName === selectedModuleName
+            );
+            if (found) {
+                if (selectedAppCode !== found.id) {
+                    setSelectedAppCode(found.id);
+                }
+            } else {
+                if (selectedAppCode !== '') setSelectedAppCode('');
+            }
+        } else {
+            if (selectedAppCode !== '') setSelectedAppCode('');
+        }
+    }, [selectedAppCodeName, selectedModuleName, appCodes, selectedAppCode]);
+
     useEffect(() => {
         if (profilePic) {
             localStorage.setItem('profilePic', profilePic);
@@ -281,7 +339,7 @@ export function AdminDashboard() {
                         id: item.id || `${resolvedAppCode}-${item.moduleName}`,
                         projectName: resolvedAppCode,
                         moduleName: (String(item.moduleName || '')).trim(),
-                        projectId: item.projectId || item.id,
+                        projectId: item.projectID || item.projectId || item.id,
                         appCode: resolvedAppCode,
                         description: item.description || '',
                         collections: item.collections || []
@@ -423,9 +481,32 @@ export function AdminDashboard() {
             fetchUsers();
             fetchAppCodes();
         } else if (view === 'environments') {
+            if (appCodes.length === 0) {
+                fetchAppCodes();
+            }
             fetchEnvironments();
         }
     };
+
+    // Auto-fetch environments when selection changes
+    useEffect(() => {
+        if (activeView === 'environments' && selectedAppCodeName && selectedModuleName) {
+            fetchEnvironments();
+        }
+    }, [selectedAppCodeName, selectedModuleName, activeView, appCodes]);
+
+    // Auto-select first project/module if empty
+    useEffect(() => {
+        if (activeView === 'environments' && derivedProjects.length > 0 && !selectedAppCodeName) {
+            setSelectedAppCodeName(derivedProjects[0].id);
+        }
+    }, [activeView, derivedProjects, selectedAppCodeName]);
+
+    useEffect(() => {
+        if (activeView === 'environments' && selectedAppCodeName && derivedModules.length > 0 && !selectedModuleName) {
+            setSelectedModuleName(derivedModules[0].id);
+        }
+    }, [activeView, selectedAppCodeName, derivedModules, selectedModuleName]);
 
     // Helper to generate profile image
     const generateProfileImage = (username) => {
@@ -845,9 +926,17 @@ export function AdminDashboard() {
                         <div className="w-80 border-r border-slate-200 dark:border-[var(--border-color)] p-6 overflow-auto bg-white dark:bg-[var(--bg-secondary)]">
                             <EnvironmentManager
                                 environments={environments}
-                                setEnvironments={setEnvironments}
                                 activeEnv={activeEnv}
                                 setActiveEnv={setActiveEnv}
+                                readOnly={true}
+                                projects={derivedProjects}
+                                activeAppCode={selectedAppCodeName}
+                                onAppCodeSelect={setSelectedAppCodeName}
+                                onRefreshAppCode={refreshAppCode}
+                                modules={derivedModules}
+                                activeModule={selectedModuleName}
+                                onModuleSelect={setSelectedModuleName}
+                                onRefreshModule={refreshModule}
                             />
                         </div>
                         <div className="flex-1 p-8 overflow-auto bg-slate-50 dark:bg-[var(--bg-primary)]">
@@ -858,57 +947,56 @@ export function AdminDashboard() {
                                             <h2 className="text-xl font-bold text-slate-900 dark:text-[var(--text-primary)]">
                                                 {environments.find(e => e.id === activeEnv)?.name}
                                             </h2>
-                                            <p className="text-sm text-slate-500 dark:text-[var(--text-secondary)]">Environment variables are used to store and reuse values in your requests.</p>
+                                            <p className="text-sm text-slate-500 dark:text-[var(--text-secondary)]">Review environment variables for this project. Admins have read-only access.</p>
                                         </div>
                                     </div>
 
                                     <div className="bg-white dark:bg-[var(--bg-surface)] rounded-xl border border-slate-200 dark:border-[var(--border-color)] shadow-sm overflow-hidden">
-                                        <div className="p-4 border-b border-slate-100 dark:border-[var(--border-color)] bg-slate-50/50 dark:bg-white/5">
+                                        <div className="p-4 border-b border-slate-100 dark:border-[var(--border-color)] bg-slate-50/50 dark:bg-white/5 flex items-center justify-between">
                                             <span className="text-xs font-bold text-slate-500 uppercase tracking-wider dark:text-[var(--text-secondary)]">Variables</span>
+                                            <div className="relative w-64">
+                                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                                                <input
+                                                    type="text"
+                                                    placeholder="Search variables..."
+                                                    value={envSearchTerm}
+                                                    onChange={(e) => setEnvSearchTerm(e.target.value)}
+                                                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-8 py-1.5 text-xs outline-none focus:border-red-500/50 transition-all dark:text-white"
+                                                />
+                                                {envSearchTerm && (
+                                                    <button
+                                                        onClick={() => setEnvSearchTerm('')}
+                                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-red-500 transition-colors"
+                                                    >
+                                                        <X className="w-3 h-3" />
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="p-4 space-y-4">
-                                            <KeyValueEditor
-                                                pairs={environments.find(e => e.id === activeEnv)?.variables || []}
-                                                setPairs={(newVariables) => {
-                                                    setEnvironments(prev => prev.map(env =>
-                                                        env.id === activeEnv ? { ...env, variables: newVariables } : env
-                                                    ));
-                                                }}
-                                            />
-                                            <div className="flex items-center justify-center gap-3 pt-2">
-                                                <button
-                                                    onClick={async () => {
-                                                        const currentEnv = environments.find(e => e.id === activeEnv);
-                                                        if (currentEnv) {
-                                                            const variablesObj = currentEnv.variables.reduce((acc, v) => {
-                                                                if (v.key) acc[v.key] = v.value;
-                                                                return acc;
-                                                            }, {});
-
-                                                            try {
-                                                                await updateEnvDetails({
-                                                                    envName: currentEnv.name,
-                                                                    variables: variablesObj
-                                                                }, user.token);
-
-                                                                localStorage.setItem('environments', JSON.stringify(environments));
-                                                                setShowEnvSaveSuccess(true);
-                                                                setTimeout(() => setShowEnvSaveSuccess(false), 2000);
-                                                            } catch (e) {
-                                                                console.error('Failed to update environment details:', e);
-                                                                setErrorMessage('Failed to save environment changes to the server.');
-                                                            }
-                                                        }
-                                                    }}
-                                                    className="flex items-center gap-2 px-6 py-2 bg-red-600 hover:bg-red-500 text-white font-bold rounded-lg transition-all shadow-lg shadow-red-600/20 active:scale-95"
-                                                >
-                                                    <Save className="w-4 h-4" />
-                                                    Save
-                                                </button>
-                                                {showEnvSaveSuccess && (
-                                                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400 font-medium text-sm animate-in fade-in slide-in-from-left-2 duration-200">
-                                                        <Check className="w-4 h-4" />
-                                                        Changes saved successfully
+                                            <div className="flex flex-col border border-slate-200 dark:border-[var(--border-color)] rounded-lg overflow-hidden bg-white dark:bg-[var(--bg-surface)]">
+                                                <div className="flex border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-50 dark:bg-[var(--bg-surface)] text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                                    <div className="flex-1 p-2 border-r border-slate-200 dark:border-[var(--border-color)]">Key</div>
+                                                    <div className="flex-1 p-2">Value</div>
+                                                </div>
+                                                {(environments.find(e => e.id === activeEnv)?.variables || [])
+                                                    .filter(pair =>
+                                                        (pair.key || '').toLowerCase().includes(envSearchTerm.toLowerCase()) ||
+                                                        (pair.value || '').toLowerCase().includes(envSearchTerm.toLowerCase())
+                                                    )
+                                                    .map((pair, idx) => (
+                                                        <div key={idx} className="flex border-b border-slate-200 dark:border-[var(--border-color)] last:border-0 group">
+                                                            <div className="flex-1 p-2 text-sm border-r border-slate-200 dark:border-[var(--border-color)] font-mono text-slate-500 dark:text-slate-400 select-all">
+                                                                {pair.key || <span className="italic opacity-50">Empty key</span>}
+                                                            </div>
+                                                            <div className="flex-1 p-2 text-sm font-mono text-slate-900 dark:text-[var(--text-primary)] select-all">
+                                                                {pair.value || <span className="italic opacity-50">Empty value</span>}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                {((environments.find(e => e.id === activeEnv)?.variables || []).length === 0) && (
+                                                    <div className="p-8 text-center text-slate-400 italic text-sm">
+                                                        No variables defined in this environment.
                                                     </div>
                                                 )}
                                             </div>
@@ -917,12 +1005,12 @@ export function AdminDashboard() {
                                 </div>
                             ) : (
                                 <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                                    <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-400">
+                                    <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-400 text-red-500/20">
                                         <Globe className="w-8 h-8" />
                                     </div>
                                     <div>
                                         <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Environment Selected</h3>
-                                        <p className="text-sm text-slate-500 max-w-xs mx-auto">Select an environment from the sidebar or create a new one to manage variables.</p>
+                                        <p className="text-sm text-slate-500 max-w-xs mx-auto">Select an environment from the sidebar to view its configuration.</p>
                                     </div>
                                 </div>
                             )}
@@ -1145,12 +1233,7 @@ export function AdminDashboard() {
                                                     <div className="relative">
                                                         <select
                                                             value={selectedAppCodeName}
-                                                            onChange={(e) => {
-                                                                const val = e.target.value;
-                                                                setSelectedAppCodeName(val);
-                                                                setSelectedModuleName(''); // Reset module
-                                                                setSelectedAppCode(''); // Reset final selection
-                                                            }}
+                                                            onChange={(e) => setSelectedAppCodeName(e.target.value)}
                                                             className="w-48 appearance-none border rounded-md px-1.5 py-1 text-sm dark:bg-slate-900 dark:border-slate-700 focus:border-red-500 outline-none cursor-pointer"
                                                         >
                                                             <option value="">-- Select Project --</option>
@@ -1172,18 +1255,7 @@ export function AdminDashboard() {
                                                     <div className="relative">
                                                         <select
                                                             value={selectedModuleName}
-                                                            onChange={(e) => {
-                                                                const val = e.target.value;
-                                                                setSelectedModuleName(val);
-                                                                if (selectedAppCodeName && val) {
-                                                                    const found = appCodes.find(ac => ac.projectName === selectedAppCodeName && ac.moduleName === val);
-                                                                    if (found) {
-                                                                        setSelectedAppCode(found.id);
-                                                                    }
-                                                                } else {
-                                                                    setSelectedAppCode('');
-                                                                }
-                                                            }}
+                                                            onChange={(e) => setSelectedModuleName(e.target.value)}
                                                             className="w-48 appearance-none border rounded-md px-1.5 py-1 text-sm dark:bg-slate-900 dark:border-slate-700 focus:border-red-500 outline-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                                                             disabled={!selectedAppCodeName}
                                                         >

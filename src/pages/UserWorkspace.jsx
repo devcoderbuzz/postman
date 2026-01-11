@@ -1528,6 +1528,7 @@ export function UserWorkspace() {
                                 onRefreshModule={refreshModule}
                                 onRenameEnv={handleRenameEnv}
                                 onDeleteEnv={handleDeleteEnv}
+                                readOnly={user?.role?.toLowerCase() !== 'developer' && user?.role?.toLowerCase() !== 'dev'}
                             />
                         </div>
                         <div className="flex-1 p-8 overflow-auto bg-slate-50 dark:bg-[var(--bg-primary)]">
@@ -1580,6 +1581,7 @@ export function UserWorkspace() {
                                                     .map((pair) => {
                                                         const index = pair.originalIndex;
                                                         const isModified = pair.key !== pair.originalKey || pair.value !== pair.originalValue;
+                                                        const isDeveloper = user?.role?.toLowerCase() === 'developer' || user?.role?.toLowerCase() === 'dev';
                                                         return (
                                                             <div key={index} className="flex border-b border-slate-200 dark:border-[var(--border-color)] last:border-0 group">
                                                                 <input
@@ -1587,44 +1589,50 @@ export function UserWorkspace() {
                                                                     placeholder="Key"
                                                                     value={pair.key}
                                                                     onChange={(e) => handleUpdateEnvVariable(index, 'key', e.target.value)}
+                                                                    readOnly={!isDeveloper}
                                                                 />
                                                                 <input
                                                                     className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
                                                                     placeholder="Value"
                                                                     value={pair.value}
                                                                     onChange={(e) => handleUpdateEnvVariable(index, 'value', e.target.value)}
+                                                                    readOnly={!isDeveloper}
                                                                 />
-                                                                <div className="w-16 flex items-center justify-center gap-1 bg-slate-50/50 dark:bg-white/5">
-                                                                    <button
-                                                                        disabled={!isModified}
-                                                                        onClick={() => handleSaveEnvVariable(index)}
-                                                                        className={cn(
-                                                                            "p-1 rounded transition-all",
-                                                                            isModified
-                                                                                ? "text-green-600 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20"
-                                                                                : "text-slate-300 dark:text-slate-700 cursor-not-allowed"
-                                                                        )}
-                                                                        title={isModified ? "Save changes" : "No changes to save"}
-                                                                    >
-                                                                        <Save className="w-3.5 h-3.5" />
-                                                                    </button>
-                                                                    <button
-                                                                        onClick={() => handleDeleteEnvVariable(index)}
-                                                                        className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
-                                                                        title="Delete Variable"
-                                                                    >
-                                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                                    </button>
-                                                                </div>
+                                                                {isDeveloper && (
+                                                                    <div className="w-16 flex items-center justify-center gap-1 bg-slate-50/50 dark:bg-white/5">
+                                                                        <button
+                                                                            disabled={!isModified}
+                                                                            onClick={() => handleSaveEnvVariable(index)}
+                                                                            className={cn(
+                                                                                "p-1 rounded transition-all",
+                                                                                isModified
+                                                                                    ? "text-green-600 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20"
+                                                                                    : "text-slate-300 dark:text-slate-700 cursor-not-allowed"
+                                                                            )}
+                                                                            title={isModified ? "Save changes" : "No changes to save"}
+                                                                        >
+                                                                            <Save className="w-3.5 h-3.5" />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleDeleteEnvVariable(index)}
+                                                                            className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                                                            title="Delete Variable"
+                                                                        >
+                                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         );
                                                     })}
-                                                <button
-                                                    onClick={handleAddEnvVariable}
-                                                    className="flex items-center gap-2 p-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900/50 transition-colors"
-                                                >
-                                                    <Plus className="w-3 h-3" /> Add new variable
-                                                </button>
+                                                {(user?.role?.toLowerCase() === 'developer' || user?.role?.toLowerCase() === 'dev') && (
+                                                    <button
+                                                        onClick={handleAddEnvVariable}
+                                                        className="flex items-center gap-2 p-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900/50 transition-colors"
+                                                    >
+                                                        <Plus className="w-3 h-3" /> Add new variable
+                                                    </button>
+                                                )}
                                             </div>
 
                                             {showEnvSaveSuccess && (

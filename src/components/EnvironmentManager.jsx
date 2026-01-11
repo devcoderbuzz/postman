@@ -17,7 +17,8 @@ export function EnvironmentManager({
     onModuleSelect,
     onRefreshModule,
     onRenameEnv,
-    onDeleteEnv
+    onDeleteEnv,
+    readOnly = false
 }) {
     const [editingEnv, setEditingEnv] = useState(null);
     const [editingName, setEditingName] = useState('');
@@ -73,59 +74,69 @@ export function EnvironmentManager({
                     <Globe className="w-4 h-4 text-red-500" />
                     Environments
                 </h3>
-                <button
-                    onClick={addEnvironment}
-                    className="p-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-all shadow-lg shadow-red-600/20 active:scale-95"
-                    title="Add Environment"
-                >
-                    <Plus className="w-4 h-4" />
-                </button>
+                {!readOnly && (
+                    <button
+                        onClick={addEnvironment}
+                        className="p-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg transition-all shadow-lg shadow-red-600/20 active:scale-95"
+                        title="Add Environment"
+                    >
+                        <Plus className="w-4 h-4" />
+                    </button>
+                )}
             </div>
 
-            {projects && projects.length > 0 && projects[0].id !== 'default' && (
-                <div className="p-2 bg-slate-100 dark:bg-[var(--bg-surface)] rounded-xl border border-slate-200 dark:border-[var(--border-color)] space-y-2">
-                    <div className="flex items-center gap-1.5">
-                        <span className="text-[12px] font-medium text-slate-500 w-16 text-right whitespace-nowrap">App Code:</span>
-                        <select
-                            value={activeAppCode}
-                            onChange={(e) => onAppCodeSelect(e.target.value)}
-                            className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded px-1.5 py-0.5 text-[14px] outline-none focus:border-red-500/50"
-                        >
-                            {projects.map((proj) => (
-                                <option key={proj.id} value={proj.id}>
-                                    {proj.name}
-                                </option>
-                            ))}
-                        </select>
-                        <button
-                            onClick={onRefreshAppCode}
-                            className="p-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 hover:text-red-500 transition-colors shadow-sm"
-                            title="Refresh App Code"
-                        >
-                            <RefreshCw className="w-3 h-3" />
-                        </button>
-                    </div>
-                    {modules && (
+            {
+                projects && projects.length > 0 && projects[0].id !== 'default' && (
+                    <div className="p-2 bg-slate-100 dark:bg-[var(--bg-surface)] rounded-xl border border-slate-200 dark:border-[var(--border-color)] space-y-2">
                         <div className="flex items-center gap-1.5">
-                            <span className="text-[12px] font-medium text-slate-500 w-16 text-right whitespace-nowrap">Module:</span>
-                            <div className="flex-1 flex gap-1.5">
-                                <select
-                                    value={activeModule}
-                                    onChange={(e) => onModuleSelect(e.target.value)}
-                                    className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded px-1.5 py-0.5 text-[14px] outline-none focus:border-red-500/50 appearance-none"
-                                >
-                                    {modules.map((mod) => (
-                                        <option key={mod.id} value={mod.id}>
-                                            {mod.name}
-                                        </option>
-                                    ))}
-                                </select>
-                                <div className="w-4" />
-                            </div>
+                            <span className="text-[12px] font-medium text-slate-500 w-16 text-right whitespace-nowrap">App Code:</span>
+                            <select
+                                value={activeAppCode}
+                                onChange={(e) => onAppCodeSelect(e.target.value)}
+                                className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded px-1.5 py-0.5 text-[14px] outline-none focus:border-red-500/50"
+                            >
+                                {projects.map((proj) => (
+                                    <option key={proj.id} value={proj.id}>
+                                        {proj.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <button
+                                onClick={onRefreshAppCode}
+                                className="p-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 hover:text-red-500 transition-colors shadow-sm"
+                                title="Refresh App Code"
+                            >
+                                <RefreshCw className="w-3 h-3" />
+                            </button>
                         </div>
-                    )}
-                </div>
-            )}
+                        {modules && (
+                            <div className="flex items-center gap-1.5">
+                                <span className="text-[12px] font-medium text-slate-500 w-16 text-right whitespace-nowrap">Module:</span>
+                                <div className="flex-1 flex gap-1.5">
+                                    <select
+                                        value={activeModule}
+                                        onChange={(e) => onModuleSelect(e.target.value)}
+                                        className="flex-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white rounded px-1.5 py-0.5 text-[14px] outline-none focus:border-red-500/50"
+                                    >
+                                        {modules.map((mod) => (
+                                            <option key={mod.id} value={mod.id}>
+                                                {mod.name}
+                                            </option>
+                                        ))}
+                                    </select>
+                                    <button
+                                        onClick={onRefreshModule}
+                                        className="p-1 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 hover:text-red-500 transition-colors shadow-sm"
+                                        title="Refresh Module"
+                                    >
+                                        <RefreshCw className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+                    </div>
+                )
+            }
 
             <div className="flex-1 overflow-auto space-y-1">
                 {environments.length === 0 ? (
@@ -175,7 +186,7 @@ export function EnvironmentManager({
                                 )}
                             </div>
 
-                            {editingEnv !== env.id && (
+                            {editingEnv !== env.id && !readOnly && (
                                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                     <button
                                         onClick={(e) => { e.stopPropagation(); startEditing(env); }}
@@ -197,6 +208,6 @@ export function EnvironmentManager({
                     ))
                 )}
             </div>
-        </div>
+        </div >
     );
 }

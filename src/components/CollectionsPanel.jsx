@@ -165,6 +165,8 @@ export function CollectionsPanel({
                                         </option>
                                     ))}
                                 </select>
+                                {/* Invisible spacer to maintain alignment with the App Code row's refresh button */}
+                                <div className="w-[22px]" />
                             </div>
                         )}
                     </div>
