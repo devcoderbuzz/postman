@@ -35,6 +35,86 @@ export function CollectionsPanel({
     const [deleteConfirmation, setDeleteConfirmation] = useState({ isOpen: false, collectionId: null });
     const [activeCollectionsTab, setActiveCollectionsTab] = useState('server');
     const [searchQuery, setSearchQuery] = useState('');
+    const [focusedItemId, setFocusedItemId] = useState(null);
+
+    const getVisibleItems = () => {
+        const items = [];
+        const source = activeCollectionsTab === 'server' ? serverCollections : localCollections;
+        const searchLower = searchQuery.toLowerCase();
+
+        const filtered = (source || []).filter(col => {
+            const collectionMatch = col.name.toLowerCase().includes(searchLower);
+            const requestMatch = col.requests?.some(req =>
+                req.name.toLowerCase().includes(searchLower) ||
+                req.method.toLowerCase().includes(searchLower) ||
+                req.url?.toLowerCase().includes(searchLower)
+            );
+            return collectionMatch || requestMatch;
+        });
+
+        filtered.forEach(col => {
+            items.push({ id: `col-${col.id}`, type: 'collection', data: col });
+            if (expandedFolders.has(col.id) || searchQuery) {
+                const requests = searchQuery ? col.requests.filter(req =>
+                    req.name.toLowerCase().includes(searchLower) ||
+                    req.method.toLowerCase().includes(searchLower) ||
+                    req.url?.toLowerCase().includes(searchLower)
+                ) : col.requests;
+
+                (requests || []).forEach(req => {
+                    items.push({ id: `req-${req.id}`, type: 'request', data: req, parentColId: col.id });
+                });
+            }
+        });
+        return items;
+    };
+
+    useEffect(() => {
+        const handleGlobalKeyDown = (e) => {
+            const isInputFocused = e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT';
+            if (isInputFocused && e.target.placeholder !== "Search requests...") return;
+
+            const visibleItems = getVisibleItems();
+            if (visibleItems.length === 0) return;
+
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setFocusedItemId(prev => {
+                    const currentIndex = visibleItems.findIndex(item => item.id === prev);
+                    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % visibleItems.length;
+                    return visibleItems[nextIndex].id;
+                });
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setFocusedItemId(prev => {
+                    const currentIndex = visibleItems.findIndex(item => item.id === prev);
+                    const nextIndex = currentIndex === -1 ? visibleItems.length - 1 : (currentIndex - 1 + visibleItems.length) % visibleItems.length;
+                    return visibleItems[nextIndex].id;
+                });
+            } else if (e.key === 'Enter') {
+                const focusedItem = visibleItems.find(item => item.id === focusedItemId);
+                if (focusedItem) {
+                    if (focusedItem.type === 'collection') {
+                        toggleFolder(focusedItem.data.id);
+                    } else {
+                        onLoadRequest(focusedItem.data);
+                    }
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleGlobalKeyDown);
+        return () => window.removeEventListener('keydown', handleGlobalKeyDown);
+    }, [focusedItemId, serverCollections, localCollections, searchQuery, expandedFolders, activeCollectionsTab]);
+
+    useEffect(() => {
+        if (focusedItemId) {
+            const el = document.getElementById(focusedItemId);
+            if (el) {
+                el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+        }
+    }, [focusedItemId]);
 
     const addCollection = () => {
         const newCollection = {
@@ -258,6 +338,7 @@ export function CollectionsPanel({
                                                     ) : collection.requests
                                                 }}
                                                 activeCollectionId={activeCollectionId}
+                                                focusedItemId={focusedItemId}
                                                 expandedFolders={searchQuery ? new Set([...expandedFolders, collection.id]) : expandedFolders}
                                                 toggleFolder={toggleFolder}
                                                 onLoadRequest={onLoadRequest}
@@ -326,6 +407,7 @@ export function CollectionsPanel({
                                                     ) : collection.requests
                                                 }}
                                                 activeCollectionId={activeCollectionId}
+                                                focusedItemId={focusedItemId}
                                                 expandedFolders={searchQuery ? new Set([...expandedFolders, collection.id]) : expandedFolders}
                                                 toggleFolder={toggleFolder}
                                                 onLoadRequest={onLoadRequest}

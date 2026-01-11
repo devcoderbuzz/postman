@@ -1731,7 +1731,7 @@ export function AdminDashboard() {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
                     <div className="bg-white dark:bg-slate-800 rounded-lg shadow-xl w-full max-w-lg">
                         <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
-                            <h3 className="font-bold text-lg">{editingAppCodeId ? 'Edit App Code' : 'Create New App Code'}</h3>
+                            <h3 className="font-bold text-lg">{editingAppCodeId ? 'Edit Module' : 'Create New Module'}</h3>
                             <button onClick={() => setIsCreatingAppCode(false)} className="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">✕</button>
                         </div>
                         <form onSubmit={handleCreateAppCode} className="flex flex-col flex-1 min-h-0">

@@ -106,7 +106,7 @@ describe('AdminDashboard Extended', () => {
         const createButtons = screen.getAllByText('CREATE');
         fireEvent.click(createButtons[0]); // First CREATE is for App Codes
 
-        const modal = screen.getByText('Create New App Code').closest('div.fixed');
+        const modal = screen.getByText('Create New Module').closest('div.fixed');
         const modalWithin = within(modal);
 
         fireEvent.change(modalWithin.getByPlaceholderText('e.g. GAPI-CB-SG'), { target: { value: 'NewP' } });

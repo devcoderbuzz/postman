@@ -289,7 +289,7 @@ describe('AdminDashboard', () => {
 
         // Modal should appear
         await waitFor(() => {
-            expect(screen.getByText('Create New App Code')).toBeInTheDocument();
+            expect(screen.getByText('Create New Module')).toBeInTheDocument();
         });
     });
 
