@@ -223,7 +223,7 @@ export function Settings({
 
                 <div className="pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
                     <p className="text-[10px] text-slate-400 font-medium tracking-tight">
-                        POSTMAN STUDIO • VERSION 1.1.0
+                        POSTMAN STUDIO • VERSION 1.0.0
                     </p>
                 </div>
             </div>
