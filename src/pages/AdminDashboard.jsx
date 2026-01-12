@@ -181,6 +181,13 @@ export function AdminDashboard() {
     const [localCollectionsPath, setLocalCollectionsPath] = useState(localStorage.getItem('localCollectionsPath') || '');
     const [layout, setLayout] = useState(localStorage.getItem('layout') || 'horizontal');
 
+    // Sync state from user object on login/refresh
+    useEffect(() => {
+        if (user?.localStorageRef) {
+            setLocalCollectionsPath(user.localStorageRef);
+        }
+    }, [user?.localStorageRef]);
+
     // Calculate user counts for each app code
     const appCodesWithUserCounts = useMemo(() => {
         const counts = {};
@@ -771,11 +778,28 @@ export function AdminDashboard() {
 
     // Helper to get unassigned codes for a user
     const getUnassignedCodes = (user) => {
-        if (!user || !user.assignedAppCodes) return [];
-        // Map assigned project IDs (usually numeric IDs stored in 'id' property)
-        const assignedIds = (user.assignedAppCodes || []).filter(Boolean).map(ac => String(ac.id));
-        // Filter out appCodes that are already assigned by comparing against projectId (the numeric ID)
-        return (appCodes || []).filter(ac => !assignedIds.includes(String(ac.projectId)));
+        if (!user) return [];
+        // If assignedAppCodes is missing or empty, return all appCodes
+        if (!user.assignedAppCodes || user.assignedAppCodes.length === 0) return appCodes || [];
+
+        // Use a Set for faster lookups of assigned IDs
+        const assignedIds = new Set(
+            user.assignedAppCodes
+                .filter(Boolean)
+                .map(ac => String(ac.id))
+        );
+
+        // Also consider raw projectIds if they exist but aren't hydrated yet
+        user.projectIds?.forEach(pid => {
+            const id = (typeof pid === 'object' && pid !== null) ? (pid.projectId || pid.id) : pid;
+            if (id) assignedIds.add(String(id));
+        });
+
+        // Filter out appCodes that are already assigned by comparing against both id and projectId
+        return (appCodes || []).filter(ac =>
+            !assignedIds.has(String(ac.id)) &&
+            !assignedIds.has(String(ac.projectId))
+        );
     };
 
     const handleUpdateUserStatus = async (userId, newStatus) => {
