@@ -265,6 +265,13 @@ export function UserWorkspace() {
     const [profilePic, setProfilePic] = useState(localStorage.getItem('profilePic') || '');
     const [localCollectionsPath, setLocalCollectionsPath] = useState(localStorage.getItem('localCollectionsPath') || '');
     const [showEnvSaveSuccess, setShowEnvSaveSuccess] = useState(false);
+
+    // Sync state from user object on login/refresh
+    useEffect(() => {
+        if (user?.localStorageRef) {
+            setLocalCollectionsPath(user.localStorageRef);
+        }
+    }, [user?.localStorageRef]);
     const [editDataRefreshTrigger, setEditDataRefreshTrigger] = useState(0);
     const [envSearchTerm, setEnvSearchTerm] = useState('');
 

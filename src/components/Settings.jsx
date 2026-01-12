@@ -139,13 +139,45 @@ export function Settings({
                                 <FolderOpen className="w-3.5 h-3.5" />
                                 Local Collections Path
                             </label>
-                            <input
-                                type="text"
-                                value={localCollectionsPath}
-                                onChange={(e) => setLocalCollectionsPath(e.target.value)}
-                                placeholder="e.g. /Users/name/collections"
-                                className="w-full px-4 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/50 text-slate-900 dark:text-white"
-                            />
+                            <div className="flex gap-2">
+                                <input
+                                    type="text"
+                                    value={localCollectionsPath}
+                                    onChange={(e) => setLocalCollectionsPath(e.target.value)}
+                                    placeholder="e.g. /Users/name/collections"
+                                    className="flex-1 px-4 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/50 text-slate-900 dark:text-white"
+                                />
+
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const { updateUser } = await import('../services/apiservice');
+                                            const userId = user?.id || user?.userId;
+                                            const authToken = user?.token;
+
+                                            if (!userId || !authToken) {
+                                                alert('User session or token invalid. Please log in again.');
+                                                console.error('Missing credentials:', { userId, authToken });
+                                                return;
+                                            }
+
+                                            console.log(`Calling updateUser with token: ${authToken.substring(0, 10)}...`);
+                                            await updateUser({
+                                                id: userId,
+                                                localStorageRef: localCollectionsPath
+                                            }, authToken);
+
+                                            alert('Local Collections Path saved successfully!');
+                                        } catch (error) {
+                                            console.error('Failed to save settings:', error);
+                                            alert(`Error saving settings: ${error.message}`);
+                                        }
+                                    }}
+                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-xs font-black shadow-lg shadow-red-600/20 active:scale-95 transition-all shrink-0"
+                                >
+                                    SAVE
+                                </button>
+                            </div>
                             <p className="text-[10px] text-slate-500 italic">Specify where your local collections are stored on your machine.</p>
                         </div>
                     </div>

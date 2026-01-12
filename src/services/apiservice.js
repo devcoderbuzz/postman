@@ -2,12 +2,18 @@ import axios from 'axios';
 
 const BASE_URL = 'http://localhost:8080/api';
 // Setup Axios Interceptor for 403 handling
+// Setup Axios Interceptor for 403 handling
 axios.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 403) {
-            console.warn('Axios Interceptor: 403 Forbidden detected. Dispatching global logout.');
-            window.dispatchEvent(new Event('auth-logout'));
+            // Prevent global logout for specific non-critical endpoints or during debugging
+            if (error.config && error.config.url && error.config.url.includes('/users/update')) {
+                console.warn('Axios Interceptor: 403 Forbidden on update. Suppressing global logout for debugging.');
+            } else {
+                console.warn('Axios Interceptor: 403 Forbidden detected. Dispatching global logout.');
+                window.dispatchEvent(new Event('auth-logout'));
+            }
         }
         return Promise.reject(error);
     }
@@ -488,25 +494,40 @@ export const deleteUser = async (userId, token) => {
 export const updateUser = async (userDataObject, token) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
-        console.log('Updating User...', userDataObject, authToken);
+        
+        if (!authToken) {
+            console.error('updateUser Error: No authentication token provided.');
+            throw new Error('Authentication token is missing. Please log in again.');
+        }
+
+        const authHeader = `Bearer ${authToken}`;
+        console.log('--- API Call: updateUser ---');
+        console.log('Payload:', JSON.stringify(userDataObject, null, 2));
+        console.log('Auth Token First 10 chars:', authToken.substring(0, 10));
+        if (authToken.startsWith('Bearer ')) {
+            console.warn('WARNING: Token already starts with "Bearer ". You might be double-prefixing!');
+        }
+        
         const response = await axios.post('http://localhost:3001/proxy', {
             method: 'POST',
             url: `${BASE_URL}/users/update`,
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${authToken}`
+                'Authorization': authHeader
             },
             data: userDataObject
         });
         
         if (response.data.isError) {
              const errorDetail = JSON.stringify(response.data.data || response.data);
-             throw new Error(`Failed to update user status. Server response: ${errorDetail}`);
+             console.error('updateUser Server Error:', errorDetail);
+             throw new Error(`Failed to update user. Server response: ${errorDetail}`);
         }
         
+        console.log('updateUser Success:', response.data.data);
         return response.data.data;
     } catch (error) {
-        console.error('Error updating status:', error.message);
+        console.error('Error in updateUser:', error.response?.data || error.message);
         throw error;
     }
 };

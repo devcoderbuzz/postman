@@ -10,7 +10,9 @@ export const AuthProvider = ({ children }) => {
     const logout = () => {
         setUser(null);
         sessionStorage.clear();
-        localStorage.removeItem('profilePic'); // Optional: keep or clear profile pic
+        localStorage.clear(); // Clear absolutely everything to prevent ghost data
+        // Or if you want to be specific to avoid clearing unrelated site data:
+        // ['profilePic', 'collections', 'environments', 'consoleHistory', 'localCollectionsPath', 'theme', 'layout'].forEach(k => localStorage.removeItem(k));
     };
 
     useEffect(() => {
@@ -38,6 +40,7 @@ export const AuthProvider = ({ children }) => {
         try {
             // Call the apiservice login function
             const data = await loginService(username, password);
+            console.log('AuthContext login data:', data);
 
             if (data) {
                 // Check status - if not active, give alert
@@ -57,14 +60,19 @@ export const AuthProvider = ({ children }) => {
                     role = 'developer';
                 }
 
+                const responseUser = data.user || data;
+                const userId = responseUser.id || responseUser.userId || data.id || data.userId;
+
                 const userData = {
-                    username: data.username || username,
-                    id: data.id || data.userId || (username.toLowerCase() === 'admin' ? 1 : Date.now()),
-                    role: role,
-                    status: data.status,
-                    token: data.token || 'mock-token', // Backend should return token
-                    assignedAppCodes: data.assignedAppCodes || [],
-                    projectIds: data.projectIds || []
+                    username: responseUser.username || data.username || username,
+                    id: userId || (username.toLowerCase() === 'admin' ? 1 : Date.now()),
+                    role: responseUser.role || data.role || role,
+                    status: responseUser.status || data.status,
+                    token: data.token || responseUser.token || 'mock-token',
+                    assignedAppCodes: responseUser.assignedAppCodes || data.assignedAppCodes || [],
+                    projectIds: responseUser.projectIds || data.projectIds || [],
+                    preferredTheme: responseUser.preferredTheme || data.preferredTheme || null,
+                    localStorageRef: responseUser.localStorageRef || data.localStorageRef || null
                 };
 
                 console.log('Login successful. UserData:', userData);
