@@ -15,6 +15,82 @@ SyntaxHighlighter.registerLanguage('xml', xml);
 SyntaxHighlighter.registerLanguage('css', css);
 SyntaxHighlighter.registerLanguage('javascript', javascript);
 
+// JsonTree component for custom JSON rendering with consistent colors
+function JsonTree({ data }) {
+    if (typeof data !== 'object' || data === null) {
+        // Primitive values
+        const isString = typeof data === 'string';
+        return (
+            <span className={cn(
+                "break-all",
+                isString ? "text-green-600 dark:text-[#a8ff60]" : "text-orange-600 dark:text-[#ce9178]"
+            )}>
+                {isString ? `"${data}"` : String(data)}
+            </span>
+        );
+    }
+
+    // Handle arrays
+    if (Array.isArray(data)) {
+        if (data.length === 0) return <span>[]</span>;
+        return (
+            <div className="font-mono text-xs leading-relaxed">
+                <span>[</span>
+                <div className="pl-4 border-l border-slate-200 dark:border-slate-700">
+                    {data.map((value, index) => {
+                        const isObject = typeof value === 'object' && value !== null;
+                        return (
+                            <div key={index} className="flex">
+                                {isObject ? (
+                                    <div className="flex-1">
+                                        <JsonTree data={value} />
+                                        {index < data.length - 1 ? ',' : ''}
+                                    </div>
+                                ) : (
+                                    <span>
+                                        <JsonTree data={value} />
+                                        {index < data.length - 1 ? ',' : ''}
+                                    </span>
+                                )}
+                            </div>
+                        );
+                    })}
+                </div>
+                <span>]</span>
+            </div>
+        );
+    }
+
+    // Handle objects
+    return (
+        <div className="font-mono text-xs leading-relaxed">
+            {Object.entries(data).map(([key, value], index) => {
+                const isObject = typeof value === 'object' && value !== null;
+                return (
+                    <div key={key} className="flex">
+                        <span className="text-blue-600 dark:text-[#9cdcfe] mr-1">"{key}":</span>
+                        {isObject ? (
+                            <div className="flex-1">
+                                <span>{Array.isArray(value) ? '[' : '{'}</span>
+                                <div className="pl-4 border-l border-slate-200 dark:border-slate-700">
+                                    <JsonTree data={value} />
+                                </div>
+                                <span>{Array.isArray(value) ? ']' : '}'}{index < Object.keys(data).length - 1 ? ',' : ''}</span>
+                            </div>
+                        ) : (
+                            <span>
+                                <JsonTree data={value} />
+                                {index < Object.keys(data).length - 1 ? ',' : ''}
+                            </span>
+                        )}
+                    </div>
+                );
+            })}
+        </div>
+    );
+}
+
+
 export function ResponseViewer({ response, error, isLoading, activeRequest, theme }) {
     const [activeTab, setActiveTab] = useState('body');
     const [viewMode, setViewMode] = useState('pretty');
@@ -175,20 +251,11 @@ export function ResponseViewer({ response, error, isLoading, activeRequest, them
                     </div>
                     <div className="flex-1 overflow-auto bg-white dark:bg-transparent relative">
                         {viewMode === 'pretty' ? (
-                            <SyntaxHighlighter
-                                language={language}
-                                style={theme === 'dark' ? atomOneDark : undefined}
-                                customStyle={{
-                                    margin: 0,
-                                    padding: '1rem',
-                                    background: 'transparent',
-                                    fontSize: '12px',
-                                    lineHeight: '1.5',
-                                }}
-                                wrapLines={true}
-                            >
-                                {typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2)}
-                            </SyntaxHighlighter>
+                            <div className="p-4 font-mono text-xs leading-relaxed text-slate-900 dark:text-slate-300">
+                                <JsonTree data={typeof response.data === 'string' ? (() => {
+                                    try { return JSON.parse(response.data); } catch { return response.data; }
+                                })() : response.data} />
+                            </div>
                         ) : (
                             <textarea
                                 readOnly

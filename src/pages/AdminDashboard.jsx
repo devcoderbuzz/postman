@@ -1165,7 +1165,7 @@ export function AdminDashboard() {
                                                 <table className="w-full text-left text-sm table-fixed">
                                                     <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10">
                                                         <tr>
-                                                            <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 text-[11px] w-[20%] text-center">User Name</th>
+                                                            <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 text-[11px] w-[20%] text-left">User Name</th>
                                                             <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 text-[11px] w-[20%] text-center">Role</th>
                                                             <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 text-[11px] w-[20%] text-center">Status</th>
                                                             <th className="px-3 py-1.5 font-semibold text-slate-600 dark:text-slate-300 text-[11px] w-[20%] text-center">Codes</th>
@@ -1176,8 +1176,8 @@ export function AdminDashboard() {
                                                         {filteredUsers.map(u => (
                                                             <tr key={u.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                                                 <td className="px-3 py-1.5">
-                                                                    <div className="flex items-center justify-center gap-2">
-                                                                        <div className="w-6 h-6 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
+                                                                    <div className="flex items-center gap-3 ml-2">
+                                                                        <div className="w-7 h-7 rounded-full overflow-hidden border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 flex items-center justify-center shrink-0">
                                                                             {(u.userProfileImage && u.userProfileImage.length > 30) || (u.profileImage && u.profileImage.length > 30) ? (
                                                                                 <img
                                                                                     src={u.userProfileImage || u.profileImage}
