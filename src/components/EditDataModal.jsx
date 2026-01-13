@@ -4,9 +4,14 @@ import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVe
 import { createUpdateCollections, getAllAppCodes, deleteCollection, getCollectionDetails, getEnvDetails } from '../services/apiservice';
 import { replaceEnvVariables } from '../lib/utils';
 import { VariableAutocomplete } from './VariableAutocomplete';
+import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
+import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json';
+import { atomOneDark, atomOneLight } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
 import { ConfirmationModal } from './ConfirmationModal';
 import { ImportModal } from './ImportModal';
+
+SyntaxHighlighter.registerLanguage('json', json);
 
 export function EditDataPanel({ refreshTrigger }) {
     const { user } = useAuth();
@@ -1029,6 +1034,22 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
     });
 
     const autocompleteRef = useRef(null);
+    const bodyTextareaRef = useRef(null);
+
+    const [scrollOffset, setScrollOffset] = useState(0);
+
+    const handleScroll = (e) => {
+        setScrollOffset(e.target.scrollTop);
+    };
+
+    // Auto-resize body textarea
+    useEffect(() => {
+        if (bodyTextareaRef.current) {
+            bodyTextareaRef.current.style.height = 'auto';
+            const newHeight = Math.min(bodyTextareaRef.current.scrollHeight, 400);
+            bodyTextareaRef.current.style.height = `${newHeight}px`;
+        }
+    }, [editedReq.body]);
 
     const handleInputChange = (field, value, e, headerId = null) => {
         if (field === 'url' || field === 'body') {
@@ -1196,8 +1217,8 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
     const hasVariablesInBody = resolvedBody !== (editedReq.body || '');
 
     return (
-        <div className="flex-1 flex flex-col bg-white dark:bg-slate-900 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900">
+        <div className="flex-1 flex flex-col bg-white dark:bg-[var(--bg-primary)] overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 dark:border-[var(--border-color)] flex justify-between items-center bg-white dark:bg-[var(--bg-primary)]">
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">
                     {isCreating ? 'New Request' : 'Edit Request'}
                 </h3>
@@ -1221,7 +1242,7 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
                         type="text"
                         value={editedReq.name}
                         onChange={e => handleChange('name', e.target.value)}
-                        className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded text-sm bg-white dark:bg-slate-800 dark:text-white focus:border-red-500 outline-none"
+                        className="w-full p-2 border border-slate-300 dark:border-[var(--border-color)] rounded text-sm bg-white dark:bg-[var(--bg-surface)] dark:text-[var(--text-primary)] focus:border-red-500 outline-none"
                         placeholder="My Request"
                     />
                 </div>
@@ -1232,7 +1253,7 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
                         <select
                             value={editedReq.method}
                             onChange={e => handleChange('method', e.target.value)}
-                            className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded text-sm bg-white dark:bg-slate-800 dark:text-white font-bold focus:border-red-500 outline-none"
+                            className="w-full p-2 border border-slate-300 dark:border-[var(--border-color)] rounded text-sm bg-white dark:bg-[var(--bg-surface)] dark:text-[var(--text-primary)] font-bold focus:border-red-500 outline-none"
                         >
                             <option value="GET">GET</option>
                             <option value="POST">POST</option>
@@ -1248,11 +1269,11 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
                             value={editedReq.url}
                             onChange={e => handleInputChange('url', e.target.value, e)}
                             onKeyDown={handleKeyDown}
-                            className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded text-sm bg-white dark:bg-slate-800 dark:text-white font-mono focus:border-red-500 outline-none"
+                            className="w-full p-2 border border-slate-300 dark:border-[var(--border-color)] rounded text-sm bg-white dark:bg-[var(--bg-surface)] dark:text-[var(--text-primary)] font-mono focus:border-red-500 outline-none"
                             placeholder="https://api.example.com/endpoint"
                         />
                         {hasVariablesInUrl && (
-                            <div className="mt-1 flex items-center gap-1.5 px-2 py-1 bg-slate-50 dark:bg-slate-800 rounded border border-slate-100 dark:border-slate-700">
+                            <div className="mt-1 flex items-center gap-1.5 px-2 py-1 bg-slate-50 dark:bg-[var(--bg-surface)] rounded border border-slate-100 dark:border-[var(--border-color)]">
                                 <span className="text-[10px] font-bold text-slate-400 uppercase">Preview:</span>
                                 <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">{resolvedUrl}</span>
                             </div>
@@ -1270,38 +1291,38 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
                             <Plus className="w-3 h-3" /> Add Header
                         </button>
                     </div>
-                    <div className="space-y-2 border border-slate-300 dark:border-slate-700 rounded p-3 bg-slate-50 dark:bg-slate-800/50">
+                    <div className="space-y-2 border border-slate-300 dark:border-[var(--border-color)] rounded p-3 bg-slate-50 dark:bg-[var(--bg-surface)]">
                         {headers.length === 0 ? (
                             <p className="text-xs text-slate-400 italic text-center py-2">No headers. Click "Add Header" to add one.</p>
                         ) : (
                             headers.map(header => (
-                                <div key={header.id} className="flex gap-2 items-center">
+                                <div key={header.id} className="flex gap-2 items-start group">
                                     <input
                                         type="text"
                                         value={header.key}
                                         onChange={e => handleInputChange('header-key', e.target.value, e, header.id)}
                                         onKeyDown={handleKeyDown}
                                         placeholder="Key"
-                                        className="flex-1 p-2 border border-slate-300 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 dark:text-white focus:border-red-500 outline-none"
+                                        className="flex-1 p-2 border border-slate-300 dark:border-[var(--border-color)] rounded text-xs bg-white dark:bg-[var(--bg-surface)] dark:text-[var(--text-primary)] focus:border-red-500 outline-none"
                                     />
-                                    <div className="flex-1 flex flex-col">
+                                    <div className="flex-1 flex flex-col min-w-0">
                                         <input
                                             type="text"
                                             value={header.value}
                                             onChange={e => handleInputChange('header-value', e.target.value, e, header.id)}
                                             onKeyDown={handleKeyDown}
                                             placeholder="Value"
-                                            className="w-full p-2 border border-slate-300 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 dark:text-white focus:border-red-500 outline-none"
+                                            className="w-full p-2 border border-slate-300 dark:border-[var(--border-color)] rounded text-xs bg-white dark:bg-[var(--bg-surface)] dark:text-[var(--text-primary)] focus:border-red-500 outline-none"
                                         />
                                         {header.value.includes('{{') && (
-                                            <span className="text-[9px] text-slate-400 px-1 truncate">
+                                            <span className="text-[9px] text-slate-400 px-1 pt-1 truncate italic">
                                                 {replaceEnvVariables(header.value, activeEnv)}
                                             </span>
                                         )}
                                     </div>
                                     <button
                                         onClick={() => handleDeleteHeader(header.id)}
-                                        className="p-2 text-slate-400 hover:text-red-500 rounded"
+                                        className="p-2 mt-0.5 text-slate-400 hover:text-red-500 rounded transition-colors"
                                         title="Delete Header"
                                     >
                                         <Trash2 className="w-4 h-4" />
@@ -1314,19 +1335,67 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
 
                 <div>
                     <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-400">Request Body</label>
-                    <textarea
-                        value={editedReq.body || ''}
-                        onChange={e => handleInputChange('body', e.target.value, e)}
-                        onKeyDown={handleKeyDown}
-                        className="w-full p-3 border border-slate-300 dark:border-slate-700 rounded text-sm font-mono h-40 bg-white dark:bg-slate-800 dark:text-white resize-none focus:border-red-500 outline-none"
-                        placeholder="{}"
-                    />
+                    <div className="relative border border-slate-300 dark:border-[var(--border-color)] rounded-lg overflow-hidden bg-white dark:bg-[var(--bg-surface)]">
+                        <div className="flex-1 relative overflow-hidden">
+                            {/* The visible highlighted layer */}
+                            <div
+                                className="absolute inset-0 pointer-events-none p-3 text-sm font-mono leading-[1.5rem] whitespace-pre-wrap overflow-hidden"
+                                style={{
+                                    color: 'transparent',
+                                    top: -scrollOffset
+                                }}
+                            >
+                                <SyntaxHighlighter
+                                    language="json"
+                                    style={document.documentElement.classList.contains('dark') ? atomOneLight : atomOneDark}
+                                    className="bg-transparent !p-0 !m-0"
+                                    customStyle={{ background: 'transparent', padding: 0 }}
+                                    wrapLongLines={true}
+                                >
+                                    {editedReq.body || ' '}
+                                </SyntaxHighlighter>
+                            </div>
+
+                            {/* The editable transparent layer */}
+                            <textarea
+                                ref={bodyTextareaRef}
+                                value={editedReq.body || ''}
+                                onChange={e => handleInputChange('body', e.target.value, e)}
+                                onKeyDown={handleKeyDown}
+                                onScroll={handleScroll}
+                                className="w-full p-3 bg-transparent text-sm font-mono focus:border-red-500 outline-none overflow-y-auto transition-[height] duration-200 relative z-10"
+                                style={{
+                                    minHeight: '120px',
+                                    maxHeight: '400px',
+                                    height: 'auto',
+                                    WebkitTextFillColor: 'transparent',
+                                    color: 'transparent',
+                                    lineHeight: '1.5rem'
+                                }}
+                                placeholder="{}"
+                                spellCheck="false"
+                            />
+                        </div>
+                    </div>
                     {hasVariablesInBody && (
-                        <div className="mt-2 p-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700 rounded-md">
+                        <div className="mt-2 p-3 bg-slate-50 dark:bg-[var(--bg-surface)] border border-slate-100 dark:border-[var(--border-color)] rounded-md">
                             <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Preview (Resolved):</div>
-                            <pre className="text-[10px] text-slate-500 dark:text-slate-400 font-mono whitespace-pre-wrap">
-                                {resolvedBody}
-                            </pre>
+                            <div className="max-h-60 overflow-y-auto rounded border border-slate-200 dark:border-[var(--border-color)]">
+                                <SyntaxHighlighter
+                                    language="json"
+                                    style={document.documentElement.classList.contains('dark') ? atomOneDark : atomOneLight}
+                                    customStyle={{
+                                        margin: 0,
+                                        padding: '12px',
+                                        fontSize: '11px',
+                                        background: 'transparent',
+                                        fontFamily: 'inherit'
+                                    }}
+                                    wrapLongLines={true}
+                                >
+                                    {resolvedBody}
+                                </SyntaxHighlighter>
+                            </div>
                         </div>
                     )}
                 </div>

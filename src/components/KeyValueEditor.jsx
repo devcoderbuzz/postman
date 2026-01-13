@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Trash2, Plus } from 'lucide-react';
+import { cn, replaceEnvVariables } from '../lib/utils';
 import { VariableAutocomplete } from './VariableAutocomplete';
 
 export function KeyValueEditor({ pairs, setPairs, environments, activeEnv }) {
@@ -104,7 +105,7 @@ export function KeyValueEditor({ pairs, setPairs, environments, activeEnv }) {
                 <div className="w-10"></div>
             </div>
             {pairs.map((pair, index) => (
-                <div key={index} className="flex border-b border-slate-200 dark:border-[var(--border-color)] last:border-0 group">
+                <div key={index} className="flex border-b border-slate-200 dark:border-[var(--border-color)] last:border-0 group items-start">
                     <input
                         className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
                         placeholder="Key"
@@ -112,16 +113,25 @@ export function KeyValueEditor({ pairs, setPairs, environments, activeEnv }) {
                         onChange={(e) => handleInputChange(index, 'key', e.target.value, e)}
                         onKeyDown={handleKeyDown}
                     />
-                    <input
-                        className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
-                        placeholder="Value"
-                        value={pair.value}
-                        onChange={(e) => handleInputChange(index, 'value', e.target.value, e)}
-                        onKeyDown={handleKeyDown}
-                    />
+                    <div className="flex-1 flex flex-col min-w-0 border-r border-slate-200 dark:border-[var(--border-color)]">
+                        <input
+                            className="w-full bg-transparent p-2 text-sm outline-none placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
+                            placeholder="Value"
+                            value={pair.value}
+                            onChange={(e) => handleInputChange(index, 'value', e.target.value, e)}
+                            onKeyDown={handleKeyDown}
+                        />
+                        {pair.value && pair.value.includes('{{') && (
+                            <div className="px-2 pb-1.5 truncate">
+                                <span className="text-[10px] text-slate-400 italic">
+                                    {replaceEnvVariables(pair.value, activeEnvironment)}
+                                </span>
+                            </div>
+                        )}
+                    </div>
                     <button
                         onClick={() => removePair(index)}
-                        className="w-10 flex items-center justify-center text-slate-400 dark:text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                        className="w-10 h-9 flex items-center justify-center text-slate-400 dark:text-slate-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
                     >
                         <Trash2 className="w-4 h-4" />
                     </button>
