@@ -5,8 +5,8 @@ import xml from 'react-syntax-highlighter/dist/esm/languages/hljs/xml';
 import { Sparkles, ChevronDown } from 'lucide-react';
 
 import { atomOneDark, atomOneLight } from 'react-syntax-highlighter/dist/esm/styles/hljs';
-
 import { cn } from '../lib/utils';
+import { VariableAutocomplete } from './VariableAutocomplete';
 
 SyntaxHighlighter.registerLanguage('json', json);
 SyntaxHighlighter.registerLanguage('xml', xml);
@@ -23,12 +23,89 @@ const BODY_TYPES = [
 
 const RAW_TYPES = ['Text', 'JSON', 'HTML', 'XML'];
 
-export function BodyEditor({ bodyType, setBodyType, body, setBody, rawType = 'JSON', setRawType }) {
+export function BodyEditor({ bodyType, setBodyType, body, setBody, rawType = 'JSON', setRawType, environments, activeEnv }) {
     const [jsonError, setJsonError] = useState(null);
     const [showRawDropdown, setShowRawDropdown] = useState(false);
+    const [autocomplete, setAutocomplete] = useState({
+        show: false,
+        filterText: '',
+        position: { top: 0, left: 0 },
+        selectionStart: 0,
+        activeIndex: 0
+    });
+
+    const activeEnvironment = environments?.find(e => e.id === activeEnv);
     const textareaRef = useRef(null);
     const lineNumbersRef = useRef(null);
     const dropdownRef = useRef(null);
+
+    const handleInputChange = (e) => {
+        const val = e.target.value;
+        handleJsonChange(val);
+
+        const target = e.target;
+        const cursorPos = target.selectionStart;
+        const textBeforeCursor = val.substring(0, cursorPos);
+        const lastOpenBraces = textBeforeCursor.lastIndexOf('{{');
+
+        if (lastOpenBraces !== -1 && lastOpenBraces >= textBeforeCursor.lastIndexOf('}}')) {
+            const filterText = textBeforeCursor.substring(lastOpenBraces + 2);
+            if (!filterText.includes(' ') && !filterText.includes('\n')) {
+                const rect = target.getBoundingClientRect();
+                // For textarea, we need a better way to get the cursor position
+                // But simplified for now:
+                setAutocomplete({
+                    show: true,
+                    filterText,
+                    position: {
+                        top: rect.top + window.scrollY + 20, // Simplified position
+                        left: rect.left + window.scrollX + 50
+                    },
+                    selectionStart: lastOpenBraces,
+                    activeIndex: 0
+                });
+                return;
+            }
+        }
+        setAutocomplete(prev => ({ ...prev, show: false }));
+    };
+
+    const handleKeyDown = (e) => {
+        if (!autocomplete.show) return;
+
+        const items = (activeEnvironment?.variables || []).filter(v =>
+            v.key.toLowerCase().includes(autocomplete.filterText.toLowerCase())
+        );
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setAutocomplete(prev => ({
+                ...prev,
+                activeIndex: (prev.activeIndex + 1) % (items.length || 1)
+            }));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setAutocomplete(prev => ({
+                ...prev,
+                activeIndex: (prev.activeIndex - 1 + items.length) % (items.length || 1)
+            }));
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            if (items[autocomplete.activeIndex]) {
+                e.preventDefault();
+                handleVariableSelect(items[autocomplete.activeIndex].key);
+            }
+        } else if (e.key === 'Escape') {
+            setAutocomplete(prev => ({ ...prev, show: false }));
+        }
+    };
+
+    const handleVariableSelect = (varName) => {
+        const insertText = `{{${varName}}}`;
+        const before = body.substring(0, autocomplete.selectionStart);
+        const after = body.substring(autocomplete.selectionStart + autocomplete.filterText.length + 2);
+        setBody(before + insertText + after);
+        setAutocomplete(prev => ({ ...prev, show: false }));
+    };
 
     useEffect(() => {
         const handleClickOutside = (e) => {
@@ -214,7 +291,8 @@ export function BodyEditor({ bodyType, setBodyType, body, setBody, rawType = 'JS
                         <textarea
                             ref={textareaRef}
                             value={body}
-                            onChange={(e) => handleJsonChange(e.target.value)}
+                            onChange={handleInputChange}
+                            onKeyDown={handleKeyDown}
                             onScroll={handleScroll}
                             placeholder={rawType === 'JSON' ? '{\n  "key": "value"\n}' : `Enter ${rawType} content...`}
                             className="w-full h-80 bg-transparent p-4 text-[13px] font-mono text-slate-900 dark:text-[var(--text-primary)] caret-slate-900 dark:caret-white outline-none resize-none pr-10 leading-[1.5rem] relative z-10"
@@ -238,6 +316,18 @@ export function BodyEditor({ bodyType, setBodyType, body, setBody, rawType = 'JS
                 <div className="flex items-center justify-center h-48 border border-slate-200 dark:border-slate-800 rounded-lg text-slate-400 dark:text-slate-500 text-sm italic">
                     {bodyType} editor - coming soon
                 </div>
+            )}
+
+            {autocomplete.show && (
+                <VariableAutocomplete
+                    variables={activeEnvironment?.variables}
+                    filterText={autocomplete.filterText}
+                    type="variable"
+                    onSelect={handleVariableSelect}
+                    position={autocomplete.position}
+                    activeIndex={autocomplete.activeIndex}
+                    onCancel={() => setAutocomplete(prev => ({ ...prev, show: false }))}
+                />
             )}
         </div>
     );

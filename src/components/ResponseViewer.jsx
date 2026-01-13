@@ -7,7 +7,7 @@ import xml from 'react-syntax-highlighter/dist/esm/languages/hljs/xml';
 import css from 'react-syntax-highlighter/dist/esm/languages/hljs/css';
 import javascript from 'react-syntax-highlighter/dist/esm/languages/hljs/javascript';
 import { atomOneDark } from 'react-syntax-highlighter/dist/esm/styles/hljs';
-import { cn } from '../lib/utils';
+import { cn, replaceEnvVariables } from '../lib/utils';
 import { buildCurl } from '../lib/curlBuilder';
 
 SyntaxHighlighter.registerLanguage('json', json);
@@ -91,7 +91,7 @@ function JsonTree({ data }) {
 }
 
 
-export function ResponseViewer({ response, error, isLoading, activeRequest, theme }) {
+export function ResponseViewer({ response, error, isLoading, activeRequest, theme, environments, activeEnv }) {
     const [activeTab, setActiveTab] = useState('body');
     const [viewMode, setViewMode] = useState('pretty');
     const [copied, setCopied] = useState(false);
@@ -163,10 +163,35 @@ export function ResponseViewer({ response, error, isLoading, activeRequest, them
 
     const handleCurlCopy = () => {
         if (!activeRequest) return;
-        const curl = buildCurl(activeRequest);
+        const currentEnv = environments?.find(e => e.id === activeEnv);
+        const processedRequest = {
+            ...activeRequest,
+            url: replaceEnvVariables(activeRequest.url, currentEnv),
+            headers: (activeRequest.headers || []).map(h => ({
+                ...h,
+                value: replaceEnvVariables(h.value, currentEnv)
+            })),
+            body: replaceEnvVariables(activeRequest.body, currentEnv)
+        };
+        const curl = buildCurl(processedRequest);
         navigator.clipboard.writeText(curl);
         setCurlCopied(true);
         setTimeout(() => setCurlCopied(false), 2000);
+    };
+
+    const getProcessedCurl = () => {
+        if (!activeRequest) return '';
+        const currentEnv = environments?.find(e => e.id === activeEnv);
+        const processedRequest = {
+            ...activeRequest,
+            url: replaceEnvVariables(activeRequest.url, currentEnv),
+            headers: (activeRequest.headers || []).map(h => ({
+                ...h,
+                value: replaceEnvVariables(h.value, currentEnv)
+            })),
+            body: replaceEnvVariables(activeRequest.body, currentEnv)
+        };
+        return buildCurl(processedRequest);
     };
 
     if (isLoading) {
@@ -303,7 +328,7 @@ export function ResponseViewer({ response, error, isLoading, activeRequest, them
                             showLineNumbers
                             wrapLongLines={true}
                         >
-                            {buildCurl(activeRequest)}
+                            {getProcessedCurl()}
                         </SyntaxHighlighter>
                     </div>
                 </div>

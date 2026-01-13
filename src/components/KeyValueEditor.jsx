@@ -1,12 +1,97 @@
+import { useState } from 'react';
 import { Trash2, Plus } from 'lucide-react';
+import { VariableAutocomplete } from './VariableAutocomplete';
 
-export function KeyValueEditor({ pairs, setPairs }) {
+export function KeyValueEditor({ pairs, setPairs, environments, activeEnv }) {
+    const [autocomplete, setAutocomplete] = useState({
+        show: false,
+        filterText: '',
+        position: { top: 0, left: 0 },
+        field: '', // 'key' or 'value'
+        index: null,
+        selectionStart: 0,
+        activeIndex: 0
+    });
+
+    const activeEnvironment = environments?.find(e => e.id === activeEnv);
+
     const addPair = () => setPairs([...pairs, { key: '', value: '', active: true }]);
     const updatePair = (index, field, value) => {
         const newPairs = [...pairs];
         newPairs[index][field] = value;
         setPairs(newPairs);
     };
+
+    const handleInputChange = (index, field, value, e) => {
+        updatePair(index, field, value);
+
+        const target = e.target;
+        const cursorPos = target.selectionStart;
+        const textBeforeCursor = value.substring(0, cursorPos);
+        const lastOpenBraces = textBeforeCursor.lastIndexOf('{{');
+
+        if (lastOpenBraces !== -1 && lastOpenBraces >= textBeforeCursor.lastIndexOf('}}')) {
+            const filterText = textBeforeCursor.substring(lastOpenBraces + 2);
+            if (!filterText.includes(' ')) {
+                const rect = target.getBoundingClientRect();
+                setAutocomplete({
+                    show: true,
+                    filterText,
+                    position: {
+                        top: rect.bottom + window.scrollY + 5,
+                        left: rect.left + window.scrollX
+                    },
+                    field: field,
+                    index: index,
+                    selectionStart: lastOpenBraces,
+                    activeIndex: 0
+                });
+                return;
+            }
+        }
+        setAutocomplete(prev => ({ ...prev, show: false }));
+    };
+
+    const handleKeyDown = (e) => {
+        if (!autocomplete.show) return;
+
+        const items = (activeEnvironment?.variables || []).filter(v =>
+            v.key.toLowerCase().includes(autocomplete.filterText.toLowerCase())
+        );
+
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            setAutocomplete(prev => ({
+                ...prev,
+                activeIndex: (prev.activeIndex + 1) % (items.length || 1)
+            }));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            setAutocomplete(prev => ({
+                ...prev,
+                activeIndex: (prev.activeIndex - 1 + items.length) % (items.length || 1)
+            }));
+        } else if (e.key === 'Enter' || e.key === 'Tab') {
+            if (items[autocomplete.activeIndex]) {
+                e.preventDefault();
+                handleVariableSelect(items[autocomplete.activeIndex].key);
+            }
+        } else if (e.key === 'Escape') {
+            setAutocomplete(prev => ({ ...prev, show: false }));
+        }
+    };
+
+    const handleVariableSelect = (varName) => {
+        const insertText = `{{${varName}}}`;
+        const currentPair = pairs[autocomplete.index];
+        const currentValue = currentPair[autocomplete.field] || '';
+        const before = currentValue.substring(0, autocomplete.selectionStart);
+        const after = currentValue.substring(autocomplete.selectionStart + autocomplete.filterText.length + 2);
+
+        updatePair(autocomplete.index, autocomplete.field, before + insertText + after);
+        setAutocomplete(prev => ({ ...prev, show: false }));
+    };
+
     const removePair = (index) => {
         setPairs(pairs.filter((_, i) => i !== index));
     };
@@ -24,13 +109,15 @@ export function KeyValueEditor({ pairs, setPairs }) {
                         className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
                         placeholder="Key"
                         value={pair.key}
-                        onChange={(e) => updatePair(index, 'key', e.target.value)}
+                        onChange={(e) => handleInputChange(index, 'key', e.target.value, e)}
+                        onKeyDown={handleKeyDown}
                     />
                     <input
                         className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
                         placeholder="Value"
                         value={pair.value}
-                        onChange={(e) => updatePair(index, 'value', e.target.value)}
+                        onChange={(e) => handleInputChange(index, 'value', e.target.value, e)}
+                        onKeyDown={handleKeyDown}
                     />
                     <button
                         onClick={() => removePair(index)}
@@ -46,6 +133,18 @@ export function KeyValueEditor({ pairs, setPairs }) {
             >
                 <Plus className="w-3 h-3" /> Add new
             </button>
+
+            {autocomplete.show && (
+                <VariableAutocomplete
+                    variables={activeEnvironment?.variables}
+                    filterText={autocomplete.filterText}
+                    type="variable"
+                    onSelect={handleVariableSelect}
+                    position={autocomplete.position}
+                    activeIndex={autocomplete.activeIndex}
+                    onCancel={() => setAutocomplete(prev => ({ ...prev, show: false }))}
+                />
+            )}
         </div>
     );
 }
