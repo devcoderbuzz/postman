@@ -43,13 +43,22 @@ export const AuthProvider = ({ children }) => {
             console.log('AuthContext login data:', data);
 
             if (data) {
+                // Extract user ID first (needed for both normal login and password reset)
+                const responseUser = data.user || data;
+                const userId = responseUser.id || responseUser.userId || data.id || data.userId;
+
                 // Check status - if not active, give alert
                 if (data.status && data.status.toLowerCase() === 'resetpassword') {
                     console.log('User needs password reset:', data);
-                    return { ...data, needsReset: true };
+                    // Return with normalized userId for password reset flow
+                    return {
+                        ...data,
+                        id: userId,
+                        userId: userId, // Include both for compatibility
+                        username: responseUser.username || data.username || username,
+                        needsReset: true
+                    };
                 }
-
-
 
                 // Determine role. Backend might return it, or we use defaults for now.
                 // Assuming backend returns 'role', otherwise fallback to mock logic.
@@ -59,9 +68,6 @@ export const AuthProvider = ({ children }) => {
                 } else if (username.toLowerCase().includes('dev')) {
                     role = 'developer';
                 }
-
-                const responseUser = data.user || data;
-                const userId = responseUser.id || responseUser.userId || data.id || data.userId;
 
                 const userData = {
                     username: responseUser.username || data.username || username,

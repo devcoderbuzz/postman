@@ -40,8 +40,17 @@ export function Login() {
     const handleResetPassword = async (username, passwords) => {
         try {
             setError('');
+            const userId = tempUser.id || tempUser.userId;
+
+            console.log('Reset Password - tempUser:', tempUser);
+            console.log('Reset Password - userId being sent:', userId);
+
+            if (!userId) {
+                throw new Error('User ID is missing. Please try logging in again.');
+            }
+
             await activateUser(
-                tempUser.userId,
+                userId,
                 username,
                 passwords.currentPassword,
                 passwords.newPassword,

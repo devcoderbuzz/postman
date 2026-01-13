@@ -21,7 +21,16 @@ vi.mock('react-router-dom', () => ({
 }));
 
 vi.mock('../../components/ResetPasswordModal', () => ({
-    ResetPasswordModal: () => <div data-testid="reset-modal">Reset Password Modal</div>
+    ResetPasswordModal: ({ isOpen, onSave, username }) => isOpen ? (
+        <div data-testid="reset-modal">
+            <button
+                data-testid="mock-reset-save"
+                onClick={() => onSave(username, { currentPassword: 'oldPassword', newPassword: 'newPassword' })}
+            >
+                Confirm Reset
+            </button>
+        </div>
+    ) : null
 }));
 
 describe('Login Page', () => {
@@ -102,7 +111,9 @@ describe('Login Page', () => {
 
         fireEvent.change(screen.getAllByLabelText(/Username/i)[0], { target: { value: 'newuser' } });
         fireEvent.change(screen.getAllByLabelText(/Password/i)[0], { target: { value: 'pass' } });
-        fireEvent.change(screen.getByLabelText('Confirm Password'), { target: { value: 'pass' } });
+        fireEvent.change(screen.getByLabelText('Confirm Password'), {
+            target: { value: 'pass' }
+        });
 
         fireEvent.click(screen.getByRole('button', { name: 'Register' }));
 
@@ -110,5 +121,38 @@ describe('Login Page', () => {
             expect(apiService.register).toHaveBeenCalled();
         });
         expect(window.alert).toHaveBeenCalledWith(expect.stringContaining('Registration successful'));
+    });
+
+    it('should show reset password modal and call activateUser with correct ID when status is RESETPASSWORD', async () => {
+        // Mock login returning 'RESETPASSWORD' status and an 'id' (not userId) to test the fix
+        const mockUserWithId = { status: 'RESETPASSWORD', id: 12345, username: 'user1', token: 'mock-token' };
+        mockLogin.mockResolvedValue(mockUserWithId);
+
+        // Mock alert
+        vi.spyOn(window, 'alert').mockImplementation(() => { });
+
+        render(<Login />);
+        fireEvent.change(screen.getByLabelText(/Username/i), { target: { value: 'user1' } });
+        fireEvent.change(screen.getByLabelText(/Password/i), { target: { value: 'oldPassword' } });
+        fireEvent.click(screen.getByText('Sign In'));
+
+        // Wait for modal
+        await waitFor(() => {
+            expect(screen.getByTestId('reset-modal')).toBeInTheDocument();
+        });
+
+        // Click save in mock modal
+        fireEvent.click(screen.getByTestId('mock-reset-save'));
+
+        // Verify activateUser call
+        await waitFor(() => {
+            expect(apiService.activateUser).toHaveBeenCalledWith(
+                12345, // Expected ID from 'id' property
+                'user1',
+                'oldPassword',
+                'newPassword',
+                'mock-token'
+            );
+        });
     });
 });

@@ -781,18 +781,23 @@ export function UserWorkspace() {
         { id: 'settings', label: 'Settings' },
     ];
 
-    const applyAuth = (headersObj, paramsObj, request) => {
+    const applyAuth = (headersObj, paramsObj, request, currentEnv) => {
         const { authType, authData } = request;
         if (authType === 'bearer' && authData.token) {
-            headersObj['Authorization'] = `Bearer ${authData.token}`;
+            const processedToken = replaceEnvVariables(authData.token, currentEnv);
+            headersObj['Authorization'] = `Bearer ${processedToken}`;
         } else if (authType === 'basic' && authData.username && authData.password) {
-            const encoded = btoa(`${authData.username}:${authData.password}`);
+            const processedUsername = replaceEnvVariables(authData.username, currentEnv);
+            const processedPassword = replaceEnvVariables(authData.password, currentEnv);
+            const encoded = btoa(`${processedUsername}:${processedPassword}`);
             headersObj['Authorization'] = `Basic ${encoded}`;
         } else if (authType === 'api-key' && authData.key && authData.value) {
+            const processedKey = replaceEnvVariables(authData.key, currentEnv);
+            const processedValue = replaceEnvVariables(authData.value, currentEnv);
             if (authData.addTo === 'header') {
-                headersObj[authData.key] = authData.value;
+                headersObj[processedKey] = processedValue;
             } else {
-                paramsObj[authData.key] = authData.value;
+                paramsObj[processedKey] = processedValue;
             }
         }
     };
@@ -829,7 +834,7 @@ export function UserWorkspace() {
             if (!headersObj['User-Agent']) headersObj['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
             if (!headersObj['Accept-Language']) headersObj['Accept-Language'] = 'en-US,en;q=0.9';
 
-            applyAuth(headersObj, paramsObj, request);
+            applyAuth(headersObj, paramsObj, request, currentEnv);
 
             console.log("DEBUG: Request Type Info", { bodyType: request.bodyType, rawType: request.rawType });
 
@@ -1788,7 +1793,7 @@ export function UserWorkspace() {
                                             {activeTab === 'params' && (
                                                 <div className="space-y-4">
                                                     <p className="text-xs text-slate-500 mb-2 font-semibold uppercase tracking-wider">Query Parameters</p>
-                                                    <KeyValueEditor pairs={activeRequest.params} setPairs={(val) => updateActiveRequest({ params: val })} />
+                                                    <KeyValueEditor pairs={activeRequest.params} setPairs={(val) => updateActiveRequest({ params: val })} environments={environments} activeEnv={activeEnv} />
                                                 </div>
                                             )}
                                             {activeTab === 'headers' && (
@@ -1797,7 +1802,7 @@ export function UserWorkspace() {
                                                         <p className="text-xs text-slate-500 mb-2 font-semibold uppercase tracking-wider">Headers</p>
                                                         <span className="text-[10px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded">Auto-generated headers hidden</span>
                                                     </div>
-                                                    <KeyValueEditor pairs={activeRequest.headers} setPairs={(val) => updateActiveRequest({ headers: val })} />
+                                                    <KeyValueEditor pairs={activeRequest.headers} setPairs={(val) => updateActiveRequest({ headers: val })} environments={environments} activeEnv={activeEnv} />
                                                 </div>
                                             )}
                                             {activeTab === 'body' && (
@@ -1808,6 +1813,8 @@ export function UserWorkspace() {
                                                     setBody={(val) => updateActiveRequest({ body: val })}
                                                     rawType={activeRequest.rawType || 'JSON'}
                                                     setRawType={(val) => updateActiveRequest({ rawType: val })}
+                                                    environments={environments}
+                                                    activeEnv={activeEnv}
                                                 />
                                             )}
                                             {activeTab === 'auth' && (
@@ -1816,6 +1823,8 @@ export function UserWorkspace() {
                                                     setAuthType={(val) => updateActiveRequest({ authType: val })}
                                                     authData={activeRequest.authData}
                                                     setAuthData={(val) => updateActiveRequest({ authData: val })}
+                                                    environments={environments}
+                                                    activeEnv={activeEnv}
                                                 />
                                             )}
                                             {activeTab === 'scripts' && (
@@ -1858,6 +1867,8 @@ export function UserWorkspace() {
                                             isLoading={activeRequest.isLoading}
                                             activeRequest={activeRequest}
                                             theme={theme}
+                                            environments={environments}
+                                            activeEnv={activeEnv}
                                         />
                                     </div>
                                 </div>
