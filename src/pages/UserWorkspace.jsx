@@ -582,8 +582,8 @@ export function UserWorkspace() {
             // Handle different possible response structures
             if (Array.isArray(envData)) {
                 // Check if it's the structure [ { environments: [...] } ]
-                if (envData.length > 0 && envData[0].environments && Array.isArray(envData[0].environments)) {
-                    environmentsToProcess = envData.flatMap(p => p.environments || []);
+                if (envData.length > 0 && envData[0] && envData[0].environments && Array.isArray(envData[0].environments)) {
+                    environmentsToProcess = envData.flatMap(p => (p && p.environments) || []);
                 } else {
                     // If it returns an array of environments directly
                     environmentsToProcess = envData;
