@@ -114,7 +114,7 @@ export function AdminDashboard() {
         if (Array.isArray(raw)) {
             // Check if it's Project-Grouped (your provided format)
             const first = raw[0];
-            const isProjectGrouped = !!(first.environments || first.envs);
+            const isProjectGrouped = !!(first && (first.environments || first.envs));
 
             if (isProjectGrouped) {
                 // Find the project object that matches our targetProjectId

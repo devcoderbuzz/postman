@@ -120,8 +120,8 @@ export function EditDataPanel({ refreshTrigger }) {
                     if (data) {
                         let envList = [];
                         if (Array.isArray(data)) {
-                            if (data.length > 0 && data[0].environments) {
-                                envList = data.flatMap(p => p.environments || []);
+                            if (data.length > 0 && data[0] && data[0].environments) {
+                                envList = data.flatMap(p => (p && p.environments) || []);
                             } else {
                                 envList = data;
                             }
