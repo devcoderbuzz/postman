@@ -1,12 +1,12 @@
 const axios = require('axios');
 
 async function benchmark() {
-    console.log('Use http/https agent keepAlive');
+    console.log('Use http/https agent keepAlive (Direct API)');
     
     // First request
     let start = Date.now();
     try {
-        await axios.post('http://localhost:3001/proxy', {
+        await axios({
             method: 'GET',
             url: 'https://dogapi.dog/api/v2/breeds',
             headers: {}
@@ -19,7 +19,7 @@ async function benchmark() {
     // Second request
     start = Date.now();
     try {
-        await axios.post('http://localhost:3001/proxy', {
+        await axios({
             method: 'GET',
             url: 'https://dogapi.dog/api/v2/breeds',
             headers: {}

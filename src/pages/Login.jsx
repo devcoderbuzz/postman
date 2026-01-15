@@ -140,6 +140,17 @@ export function Login() {
                                 className="w-full px-4 py-3 border rounded-md border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 transition-all font-medium"
                                 required
                             />
+                        </div>
+                        <div className="mb-8">
+                            <label htmlFor="login-password" className="block text-slate-700 dark:text-slate-300 text-xs font-bold mb-2 uppercase tracking-wide">Password</label>
+                            <input
+                                id="login-password"
+                                type="password"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                className="w-full px-4 py-3 border rounded-md border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 transition-all font-medium"
+                                required
+                            />
                             <div className="mt-2 text-right">
                                 <button
                                     type="button"
@@ -152,17 +163,6 @@ export function Login() {
                                     Register now ?
                                 </button>
                             </div>
-                        </div>
-                        <div className="mb-8">
-                            <label htmlFor="login-password" className="block text-slate-700 dark:text-slate-300 text-xs font-bold mb-2 uppercase tracking-wide">Password</label>
-                            <input
-                                id="login-password"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 border rounded-md border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-red-500 transition-all font-medium"
-                                required
-                            />
                         </div>
                         <button
                             type="submit"

@@ -12,32 +12,27 @@ describe('apiservice', () => {
     describe('login', () => {
         it('should call axios.post with correct arguments and return data on success', async () => {
              const mockResponse = {
-                data: {
-                    isError: false,
-                    data: { token: 'fake-token', user: { id: 1, username: 'test' } }
-                }
+                data: { token: 'fake-token', user: { id: 1, username: 'test' } }
             };
             axios.post.mockResolvedValue(mockResponse);
 
             const result = await apiService.login('testuser', 'password123');
 
-            expect(axios.post).toHaveBeenCalledWith('http://localhost:3001/proxy', {
-                method: 'POST',
-                url: expect.stringContaining('/users/login'),
-                headers: expect.any(Object),
-                data: { username: 'testuser', password: 'password123' }
+            expect(axios.post).toHaveBeenCalledWith(expect.stringContaining('/users/login'), {
+                username: 'testuser',
+                password: 'password123'
             });
-            expect(result).toEqual(mockResponse.data.data);
+            expect(result).toEqual(mockResponse.data);
         });
 
-        it('should throw error when isError is true', async () => {
-             const mockResponse = {
-                data: {
-                    isError: true,
+        it('should throw error when backend returns error', async () => {
+             const errorResponse = {
+                response: {
+                    status: 401,
                     data: { error: 'Invalid credentials' }
                 }
             };
-            axios.post.mockResolvedValue(mockResponse);
+            axios.post.mockRejectedValue(errorResponse);
 
             await expect(apiService.login('testuser', 'wrong')).rejects.toThrow('Invalid credentials');
         });
@@ -51,18 +46,15 @@ describe('apiservice', () => {
     describe('getAllUsers', () => {
         it('should fetch users correctly', async () => {
              const mockResponse = {
-                data: {
-                    isError: false,
-                    data: [{ id: 1, username: 'user1' }]
-                }
+                data: [{ id: 1, username: 'user1' }]
             };
-            axios.post.mockResolvedValue(mockResponse);
+            axios.get.mockResolvedValue(mockResponse);
 
             const currentUser = { username: 'admin', role: 'admin', status: 'active', token: 'token123' };
             const result = await apiService.getAllUsers(currentUser);
 
-            expect(axios.post).toHaveBeenCalledWith('http://localhost:3001/proxy', expect.objectContaining({
-                data: expect.objectContaining({ username: 'admin' })
+            expect(axios.get).toHaveBeenCalledWith(expect.stringContaining('/users/allusersWithProjectData'), expect.objectContaining({
+                params: expect.objectContaining({ username: 'admin' })
             }));
             expect(result).toEqual([{ id: 1, username: 'user1' }]);
         });
@@ -71,18 +63,17 @@ describe('apiservice', () => {
     describe('getAllAppCodesForAdmin', () => {
         it('should fetch hierarchy correctly', async () => {
              const mockResponse = {
-                data: {
-                    isError: false,
-                    data: [{ id: 1, projectName: 'P1' }]
-                }
+                data: [{ id: 1, projectName: 'P1' }]
             };
-            axios.post.mockResolvedValue(mockResponse);
+            axios.get.mockResolvedValue(mockResponse);
 
             const currentUser = { token: 'token123' };
             const result = await apiService.getAllAppCodesForAdmin(currentUser);
 
-            expect(axios.post).toHaveBeenCalledWith('http://localhost:3001/proxy', expect.objectContaining({
-                url: expect.stringContaining('/projects/hierarchy')
+            expect(axios.get).toHaveBeenCalledWith(expect.stringContaining('/projects/hierarchy'), expect.objectContaining({
+                headers: expect.objectContaining({
+                    Authorization: 'Bearer token123'
+                })
             }));
             expect(result).toEqual([{ id: 1, projectName: 'P1' }]);
         });
@@ -91,10 +82,7 @@ describe('apiservice', () => {
      describe('register', () => {
         it('should register successfully', async () => {
             const mockResponse = {
-                data: {
-                    isError: false,
-                    data: { id: 1, username: 'newuser' }
-                }
+                data: { id: 1, username: 'newuser' }
             };
             axios.post.mockResolvedValue(mockResponse);
             
@@ -121,10 +109,7 @@ describe('apiservice', () => {
     describe('updateUser', () => {
         it('should update user status', async () => {
              const mockResponse = {
-                data: {
-                    isError: false,
-                    data: { success: true }
-                }
+                data: { success: true }
             };
             axios.post.mockResolvedValue(mockResponse);
             
@@ -134,7 +119,7 @@ describe('apiservice', () => {
     });
 
     describe('Other API functions', () => {
-        const successResponse = { data: { isError: false, data: { success: true } } };
+        const successResponse = { data: { success: true } };
         beforeEach(() => {
             axios.post.mockResolvedValue(successResponse);
         });
@@ -186,9 +171,15 @@ describe('apiservice', () => {
          it('resetPassword', async () => {
             await expect(apiService.resetPassword(1, 'u', 'pw', 'newpw', 't')).resolves.toEqual({ success: true });
         });
+    });
+
     describe('Error Handling', () => {
-        const errorResponse = { data: { isError: true, data: { message: 'Some Error' } } };
         const networkError = new Error('Network Error');
+        const apiError = {
+            response: {
+                data: { message: 'Some Error' }
+            }
+        };
 
         const apiFunctions = [
             { name: 'updatePassword', fn: () => apiService.updatePassword('u', 'o', 'n', 't') },
@@ -207,8 +198,8 @@ describe('apiservice', () => {
 
         apiFunctions.forEach(({ name, fn }) => {
             it(`${name} should throw error on API failure`, async () => {
-                axios.post.mockResolvedValue(errorResponse);
-                await expect(fn()).rejects.toThrow();
+                axios.post.mockRejectedValue(apiError);
+                await expect(fn()).rejects.toThrow('Some Error');
             });
 
             it(`${name} should throw error on Network failure`, async () => {
@@ -217,5 +208,4 @@ describe('apiservice', () => {
             });
         });
     });
-});
 });

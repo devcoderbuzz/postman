@@ -863,37 +863,21 @@ export function UserWorkspace() {
             config.params = paramsObj;
             config.headers = { ...headersObj };
 
-            console.log("SENDING TO PROXY:", {
+            console.log("SENDING DIRECTLY:", {
                 targetUrl: config.url,
                 method: config.method,
                 headers: config.headers,
                 data: config.data
             });
 
-            const proxyRes = await axios({
-                method: 'POST',
-                url: 'http://localhost:3001/proxy',
-                data: {
-                    method: config.method,
-                    url: config.url,
-                    headers: config.headers,
-                    data: config.data,
-                    params: config.params
-                }
+            const res = await axios({
+                method: config.method,
+                url: config.url,
+                headers: config.headers,
+                data: config.data,
+                params: config.params
             });
-            const res = proxyRes.data;
-            if (res.isError) {
-                throw {
-                    status: res.status,
-                    message: res.statusText || 'Proxy Error',
-                    response: {
-                        status: res.status,
-                        statusText: res.statusText,
-                        data: res.data,
-                        headers: res.headers
-                    }
-                };
-            }
+
             const endTime = Date.now();
             const responseData = {
                 status: res.status,

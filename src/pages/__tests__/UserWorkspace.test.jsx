@@ -105,13 +105,10 @@ describe('UserWorkspace', () => {
 
         // Axios for request sending
         axios.mockResolvedValue({
-            data: {
-                isError: false,
-                status: 200,
-                statusText: 'OK',
-                headers: { 'content-type': 'application/json' },
-                data: { message: 'success' }
-            }
+            status: 200,
+            statusText: 'OK',
+            headers: { 'content-type': 'application/json' },
+            data: { message: 'success' }
         });
 
         // Mock interceptors
@@ -153,8 +150,8 @@ describe('UserWorkspace', () => {
 
         await waitFor(() => {
             expect(axios).toHaveBeenCalledWith(expect.objectContaining({
-                method: 'POST',
-                url: 'http://localhost:3001/proxy'
+                method: 'GET',
+                url: 'http://api.test/users'
             }));
         });
     });

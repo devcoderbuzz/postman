@@ -28,28 +28,16 @@ axios.interceptors.response.use(
  */
 export const login = async (username, password) => {
     try {
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/users/login`,
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            data: {
-                username: username,
-                password: password
-            }
+        const response = await axios.post(`${BASE_URL}/users/login`, {
+            username: username,
+            password: password
         });
-        
-        // The proxy returns { status, data, headers, ... }
-        // If data.isError is true, it was a 4xx/5xx from the target
-        if (response.data.isError) {
-            console.error('Login Error 1233:', response.data.data.error);   
-             throw new Error(response.data.data.error);
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error during login:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.error || error.response.data.message || 'Login failed');
+        }
         throw error;
     }
 };
@@ -67,22 +55,14 @@ export const login = async (username, password) => {
  */
 export const register = async (userData) => {
     try {
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/users/register`,
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            data: userData
-        });
+        const response = await axios.post(`${BASE_URL}/users/register`, userData);
         console.log('Register Response:', response.data);
-        if (response.data.isError) {
-             throw new Error(response.data.data?.error || response.data.statusText || 'Registration failed');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error during registration:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.error || error.response.data.message || 'Registration failed');
+        }
         throw error;
     }
 };
@@ -98,28 +78,24 @@ export const getAllUsers = async (currentUser) => {
     try {
         const token = currentUser.token || sessionStorage.getItem('authToken');
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'GET',
-            url: `${BASE_URL}/users/allusersWithProjectData`,
+        const response = await axios.get(`${BASE_URL}/users/allusersWithProjectData`, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            data: {
+            params: {
                 username: currentUser.username,
                 role: currentUser.role,
                 status: currentUser.status
-                // Password is intentionally omitted for security, relying on Bearer token
             }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to fetch users');
-        }
-        console.log('All Users Response:', response.data.data);
-        return response.data.data;
+        console.log('All Users Response:', response.data);
+        return response.data;
     } catch (error) {
         console.error('Error fetching users:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to fetch users');
+        }
         throw error;
     }
 };
@@ -136,22 +112,18 @@ export const getAllAppCodesForAdmin = async (currentUser) => {
     try {
         const token = currentUser.token || sessionStorage.getItem('authToken');
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'GET',
-            url: `${BASE_URL}/projects/hierarchy`,
+        const response = await axios.get(`${BASE_URL}/projects/hierarchy`, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to fetch project hierarchy');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error fetching project hierarchy:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to fetch project hierarchy');
+        }
         throw error;
     }
 };
@@ -167,27 +139,22 @@ export const getAllAppCodesForAdmin = async (currentUser) => {
  */
 export const updatePassword = async (username, oldPassword, newPassword, token) => {
     try {
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/users/update-password`,
+        const response = await axios.post(`${BASE_URL}/users/update-password`, {
+            username: username,
+            currentPassword: oldPassword,
+            newPassword: newPassword
+        }, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
-            },
-            data: {
-                username: username,
-                currentPassword: oldPassword,
-                newPassword: newPassword
             }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Password update failed');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error during password update:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Password update failed');
+        }
         throw error;
     }
 };
@@ -203,29 +170,24 @@ export const updatePassword = async (username, oldPassword, newPassword, token) 
  */
 export const activateUser = async (userId,userName, currentPassword, newPassword, token) => {
     try {
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/users/reset-password`,
+        const response = await axios.post(`${BASE_URL}/users/reset-password`, {
+            userId: userId,
+            username: userName,
+            currentPassword: currentPassword,
+            newPassword: newPassword,
+            userStatus: 'ACTIVE'
+        }, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
-            },
-            data: {
-                userId: userId,
-                username: userName,
-                currentPassword: currentPassword,
-                newPassword: newPassword,
-                userStatus: 'ACTIVE'
             }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Activation failed');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error during user activation:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Activation failed');
+        }
         throw error;
     }
 };
@@ -233,28 +195,23 @@ export const activateUser = async (userId,userName, currentPassword, newPassword
 
 export const resetPassword = async (userId, userName, currentPassword,newPassword, token) => {
     try {
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/users/reset-password`,
+        const response = await axios.post(`${BASE_URL}/users/reset-password`, {
+            userId: userId,
+            username: userName,
+            currentPassword: currentPassword,
+            newPassword: newPassword
+        }, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
-            },
-            data: {
-                userId: userId,
-                username: userName,
-                currentPassword: currentPassword,
-                newPassword: newPassword
             }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Activation failed');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
-        console.error('Error during user activation:', error.message);
+        console.error('Error during reset password:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Reset password failed');
+        }
         throw error;
     }
 };
@@ -270,23 +227,18 @@ export const createRequestData = async (requestData, token) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/requests`,
+        const response = await axios.post(`${BASE_URL}/requests`, requestData, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: requestData
+            }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to create request');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error creating request:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to create request');
+        }
         throw error;
     }
 };
@@ -305,30 +257,24 @@ export const createRequestData = async (requestData, token) => {
 export const updateProfilePic = async (userId, profileImage, token) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
-        console.log('Calling updateProfilePic for user:', userId, 'Image data length:', profileImage);
+        console.log('Calling updateProfilePic for user:', userId, 'Image data length:', profileImage?.length);
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/users/update-profile-pic`,
+        const response = await axios.post(`${BASE_URL}/users/update-profile-pic`, {
+            userId: userId,
+            profileImage: profileImage
+        }, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: {
-                userId: userId,
-                profileImage: profileImage
             }
         });
 
         console.log('updateProfilePic Response:', response.data);
-        
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to update profile picture');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error updating profile picture:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to update profile picture');
+        }
         throw error;
     }
 };
@@ -345,23 +291,18 @@ export const GetProjectDetails = async (projectIds, token) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/projects/all`,
+        const response = await axios.post(`${BASE_URL}/projects/all`, projectIds, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: projectIds
+            }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to fetch project details');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error fetching project details:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to fetch project details');
+        }
         throw error;
     }
 };
@@ -379,28 +320,21 @@ export const unassignUserFromProject = async (userId, projectId, token) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/users/unassign-project`,
+        const response = await axios.post(`${BASE_URL}/users/unassign-project`, {
+            userId: userId,
+            projectId: projectId
+        }, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: {
-                userId: userId,
-                projectId: projectId
             }
         });
         
-        if (response.data.isError) {
-             // Debugging: Stringify the entire data to see what the error actually is
-             const errorDetail = JSON.stringify(response.data.data || response.data);
-             throw new Error(`Failed to unassign project. Server response: ${errorDetail}`);
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error unassigning project:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || error.response.data.error || 'Failed to unassign project');
+        }
         throw error;
     }
 };
@@ -419,29 +353,22 @@ export const assignUserToProject = async (userId, projectId, token) => {
         const authToken = token || sessionStorage.getItem('authToken');
         console.log('Assigning User to Project...', userId, projectId, authToken);
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/users/assign-project`,
+        const response = await axios.post(`${BASE_URL}/users/assign-project`, {
+            userId: userId,
+            projectId: projectId
+        }, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: {
-                userId: userId,
-                projectId: projectId
             }
         });
         
-        if (response.data.isError) {
-             // Debugging: Stringify the entire data to see what the error actually is
-             const errorDetail = JSON.stringify(response.data.data.error || response.data);
-             throw new Error(`Failed to assign project. Server response: ${errorDetail}`);
-        }
-        console.log('User assigned to Project successfully 124...', response.data.data.error);
-        
-        return response.data.data;
+        console.log('User assigned to Project successfully');
+        return response.data;
     } catch (error) {
         console.error('Error assigning project:', error.response?.data || error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || error.response.data.error || 'Failed to assign project');
+        }
         throw error;
     }
 };
@@ -458,26 +385,20 @@ export const deleteUser = async (userId, token) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/users/delete`,
+        const response = await axios.post(`${BASE_URL}/users/delete`, {
+            id: userId
+        }, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: {
-                id: userId
             }
         });
         
-        if (response.data.isError) {
-             const errorDetail = JSON.stringify(response.data.data || response.data);
-             throw new Error(`Failed to delete user. Server response: ${errorDetail}`);
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error deleting user:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to delete user');
+        }
         throw error;
     }
 };
@@ -503,31 +424,20 @@ export const updateUser = async (userDataObject, token) => {
         const authHeader = `Bearer ${authToken}`;
         console.log('--- API Call: updateUser ---');
         console.log('Payload:', JSON.stringify(userDataObject, null, 2));
-        console.log('Auth Token First 10 chars:', authToken.substring(0, 10));
-        if (authToken.startsWith('Bearer ')) {
-            console.warn('WARNING: Token already starts with "Bearer ". You might be double-prefixing!');
-        }
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/users/update`,
+        const response = await axios.post(`${BASE_URL}/users/update`, userDataObject, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': authHeader
-            },
-            data: userDataObject
+            }
         });
         
-        if (response.data.isError) {
-             const errorDetail = JSON.stringify(response.data.data || response.data);
-             console.error('updateUser Server Error:', errorDetail);
-             throw new Error(`Failed to update user. Server response: ${errorDetail}`);
-        }
-        
-        console.log('updateUser Success:', response.data.data);
-        return response.data.data;
+        console.log('updateUser Success:', response.data);
+        return response.data;
     } catch (error) {
         console.error('Error in updateUser:', error.response?.data || error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || error.response.data.error || 'Failed to update user');
+        }
         throw error;
     }
 };
@@ -563,26 +473,20 @@ export const getCollectionsByProjectId = async (projectId) => {
 export const createUpdateCollections = async (collectionData, token) => {
     console.log('Creating/Updating Collection...', collectionData);
     try {
-        console.log('Creating/Updating Collection...', collectionData);
         const authToken = token || sessionStorage.getItem('authToken');
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/collections/create`,
+        const response = await axios.post(`${BASE_URL}/collections/create`, collectionData, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: collectionData
+            }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to create/update collection');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error creating/updating collection:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to create/update collection');
+        }
         throw error;
     }
 };
@@ -600,25 +504,20 @@ export const deleteCollection = async (collectionId, token) => {
         const authToken = token || sessionStorage.getItem('authToken');
         console.log('Deleting Collection...', collectionId);
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/collections/delete`,
+        const response = await axios.post(`${BASE_URL}/collections/delete`, {
+            id: collectionId
+        }, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: {
-                id: collectionId
             }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to delete collection');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error deleting collection:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to delete collection');
+        }
         throw error;
     }
 };
@@ -637,23 +536,18 @@ export const createUpdateProject = async (projectData, token) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/projects/create`,
+        const response = await axios.post(`${BASE_URL}/projects/create`, projectData, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: projectData
+            }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to create/update project');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error creating/updating project:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to create/update project');
+        }
         throw error;
     }
 };
@@ -670,25 +564,20 @@ export const deleteProject = async (projectId, token) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/projects/delete`,
+        const response = await axios.post(`${BASE_URL}/projects/delete`, {
+            id: projectId
+        }, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: {
-                id: projectId
             }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to delete project');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error deleting project:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to delete project');
+        }
         throw error;
     }
 };
@@ -704,23 +593,18 @@ export const getAllAppCodes = async (token) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
 
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'GET',
-            url: `${BASE_URL}/projects/appCodes`,
+        const response = await axios.get(`${BASE_URL}/projects/appCodes`, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: [] // Empty array as body
+            }
         });
 
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to fetch app codes');
-        }
-
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error fetching app codes:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to fetch app codes');
+        }
         throw error;
     }
 };
@@ -737,23 +621,18 @@ export const getCollectionDetails = async (projectIds, token) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
 
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/projects/projectCollectionDetails`,
+        const response = await axios.post(`${BASE_URL}/projects/projectCollectionDetails`, projectIds, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: projectIds
+            }
         });
 
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to fetch collection details');
-        }
-
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error fetching collection details:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to fetch collection details');
+        }
         throw error;
     }
 };
@@ -771,25 +650,21 @@ export const getEnvDetails = async (projectId, token) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/environments/all`,
+        const response = await axios.post(`${BASE_URL}/environments/all`, projectId ? {
+            projectId: projectId
+        } : {}, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: projectId ? {
-                projectId: projectId
-            } : {}
+            }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to fetch environment details');
-        }
-        console.log("Environment details for project", projectId, ":", response.data.data);
-        return response.data.data;
+        console.log("Environment details for project", projectId, ":", response.data);
+        return response.data;
     } catch (error) {
         console.error('Error fetching environment details:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to fetch environment details');
+        }
         throw error;
     }
 };
@@ -806,23 +681,18 @@ export const updateEnvDetails = async (envData, token) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/environments/update`,
+        const response = await axios.post(`${BASE_URL}/environments/update`, envData, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: envData
+            }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to update environment details');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error updating environment details:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to update environment details');
+        }
         throw error;
     }
 };
@@ -839,28 +709,23 @@ export const deleteEnvDetails = async (projectId, envName, token) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/environments/delete`,
+        const response = await axios.post(`${BASE_URL}/environments/delete`, {
+           project :{
+            id: projectId,
+           },
+           envName: envName
+        }, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: {
-               project :{
-                id: projectId,
-               },
-               envName: envName
             }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to delete environment details');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error deleting environment details:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to delete environment details');
+        }
         throw error;
     }
 };
@@ -877,25 +742,20 @@ export const deleteVariable = async (variableId, token) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/environments/variable/delete`,
+        const response = await axios.post(`${BASE_URL}/environments/variable/delete`, {
+            id: variableId
+        }, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: {
-                id: variableId
             }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to delete variable');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error deleting variable:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to delete variable');
+        }
         throw error;
     }
 };
@@ -914,23 +774,18 @@ export const createUpdateEnvVariable = async (variableData, token) => {
     try {
         const authToken = token || sessionStorage.getItem('authToken');
         console.log("variableData", variableData);
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/environments/variable/update`,
+        const response = await axios.post(`${BASE_URL}/environments/variable/update`, variableData, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: variableData
+            }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to update variable');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error updating variable:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to update variable');
+        }
         throw error;
     }
 };
@@ -956,23 +811,18 @@ export const renameEnv = async (projectId, oldEnvName, newEnvName, token) => {
             projectId: projectId
         }).toString();
         
-        const response = await axios.post('http://localhost:3001/proxy', {
-            method: 'POST',
-            url: `${BASE_URL}/environments/rename?${queryParams}`,
+        const response = await axios.post(`${BASE_URL}/environments/rename?${queryParams}`, {}, {
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${authToken}`
-            },
-            data: {}
+            }
         });
         
-        if (response.data.isError) {
-             throw new Error(response.data.data?.message || response.data.statusText || 'Failed to rename environment');
-        }
-        
-        return response.data.data;
+        return response.data;
     } catch (error) {
         console.error('Error renaming environment:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Failed to rename environment');
+        }
         throw error;
     }
 };

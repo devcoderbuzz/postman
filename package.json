@@ -5,19 +5,16 @@
   "type": "module",
   "scripts": {
     "test": "vitest",
-    "dev": "concurrently \"npm run server\" \"vite\"",
+    "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "server": "node server/index.js"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@faker-js/faker": "^9.9.0",
     "axios": "^1.13.2",
     "clsx": "^2.1.1",
-    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
-    "express": "^5.2.1",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -37,7 +34,6 @@
     "@vitest/coverage-v8": "^4.0.16",
     "@vitest/ui": "^4.0.15",
     "autoprefixer": "^10.4.22",
-    "concurrently": "^9.2.1",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
