@@ -307,6 +307,8 @@ export function UserWorkspace() {
     const [isResizingRequest, setIsResizingRequest] = useState(false);
     const [consoleHeight, setConsoleHeight] = useState(200);
     const [isResizingConsole, setIsResizingConsole] = useState(false);
+    const [keyColumnWidth, setKeyColumnWidth] = useState(40);
+    const [isResizingEnvTable, setIsResizingEnvTable] = useState(false);
 
     // Project state
     const placeholderProjects = [{ id: 'default', name: 'Default Project' }];
@@ -551,6 +553,30 @@ export function UserWorkspace() {
             };
         }
     }, [isResizingConsole]);
+
+    // Resize logic for Environment Table
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            if (!isResizingEnvTable) return;
+            const container = document.getElementById('env-table-container');
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
+            const offsetX = e.clientX - rect.left;
+            const percentage = (offsetX / rect.width) * 100;
+            if (percentage >= 10 && percentage <= 80) {
+                setKeyColumnWidth(percentage);
+            }
+        };
+        const handleMouseUp = () => setIsResizingEnvTable(false);
+        if (isResizingEnvTable) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            return () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+        }
+    }, [isResizingEnvTable]);
 
     const fetchEnvironments = async (appCode = activeAppCodeName, moduleName = activeModule, appCodesData = null) => {
         if (!user) return;
@@ -1529,7 +1555,7 @@ export function UserWorkspace() {
                         </div>
                         <div className="flex-1 p-8 overflow-auto bg-slate-50 dark:bg-[var(--bg-primary)]">
                             {activeEnv ? (
-                                <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                                <div className="max-w-full mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <h2 className="text-xl font-bold text-slate-900 dark:text-[var(--text-primary)]">
@@ -1562,9 +1588,15 @@ export function UserWorkspace() {
                                             </div>
                                         </div>
                                         <div className="p-4 space-y-4">
-                                            <div className="flex flex-col border border-slate-200 dark:border-[var(--border-color)] rounded-lg overflow-hidden bg-white dark:bg-[var(--bg-surface)]">
+                                            <div id="env-table-container" className="flex flex-col border border-slate-200 dark:border-[var(--border-color)] rounded-lg overflow-hidden bg-white dark:bg-[var(--bg-surface)]">
                                                 <div className="flex border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-50 dark:bg-[var(--bg-surface)] text-xs font-semibold text-slate-500 dark:text-slate-400">
-                                                    <div className="flex-1 p-2 border-r border-slate-200 dark:border-[var(--border-color)]">Key</div>
+                                                    <div className="p-2 border-r border-slate-200 dark:border-[var(--border-color)] relative group" style={{ width: `${keyColumnWidth}%` }}>
+                                                        Key
+                                                        <div
+                                                            onMouseDown={(e) => { e.preventDefault(); setIsResizingEnvTable(true); }}
+                                                            className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-red-500/50 transition-colors z-10"
+                                                        />
+                                                    </div>
                                                     <div className="flex-1 p-2 border-r border-slate-200 dark:border-[var(--border-color)]">Value</div>
                                                     <div className="w-16 p-2 text-center text-[10px] uppercase">Actions</div>
                                                 </div>
@@ -1579,19 +1611,38 @@ export function UserWorkspace() {
                                                         const isModified = pair.key !== pair.originalKey || pair.value !== pair.originalValue;
                                                         const isDeveloper = user?.role?.toLowerCase() === 'developer' || user?.role?.toLowerCase() === 'dev';
                                                         return (
-                                                            <div key={index} className="flex border-b border-slate-200 dark:border-[var(--border-color)] last:border-0 group">
-                                                                <input
-                                                                    className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
+                                                            <div key={index} className="flex border-b border-slate-200 dark:border-[var(--border-color)] last:border-0 group min-h-[38px]">
+                                                                <textarea
+                                                                    rows={1}
+                                                                    className="bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)] resize-none overflow-hidden"
+                                                                    style={{ width: `${keyColumnWidth}%` }}
                                                                     placeholder="Key"
                                                                     value={pair.key}
-                                                                    onChange={(e) => handleUpdateEnvVariable(index, 'key', e.target.value)}
+                                                                    onChange={(e) => {
+                                                                        handleUpdateEnvVariable(index, 'key', e.target.value);
+                                                                        e.target.style.height = 'auto';
+                                                                        e.target.style.height = e.target.scrollHeight + 'px';
+                                                                    }}
+                                                                    onFocus={(e) => {
+                                                                        e.target.style.height = 'auto';
+                                                                        e.target.style.height = e.target.scrollHeight + 'px';
+                                                                    }}
                                                                     readOnly={!isDeveloper}
                                                                 />
-                                                                <input
-                                                                    className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
+                                                                <textarea
+                                                                    rows={1}
+                                                                    className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)] resize-none overflow-hidden"
                                                                     placeholder="Value"
                                                                     value={pair.value}
-                                                                    onChange={(e) => handleUpdateEnvVariable(index, 'value', e.target.value)}
+                                                                    onChange={(e) => {
+                                                                        handleUpdateEnvVariable(index, 'value', e.target.value);
+                                                                        e.target.style.height = 'auto';
+                                                                        e.target.style.height = e.target.scrollHeight + 'px';
+                                                                    }}
+                                                                    onFocus={(e) => {
+                                                                        e.target.style.height = 'auto';
+                                                                        e.target.style.height = e.target.scrollHeight + 'px';
+                                                                    }}
                                                                     readOnly={!isDeveloper}
                                                                 />
                                                                 {isDeveloper && (

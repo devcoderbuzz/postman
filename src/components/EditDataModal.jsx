@@ -1284,12 +1284,6 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
                 <div>
                     <div className="flex items-center justify-between mb-2">
                         <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">Headers</label>
-                        <button
-                            onClick={handleAddHeader}
-                            className="text-xs text-red-600 dark:text-red-400 hover:underline flex items-center gap-1"
-                        >
-                            <Plus className="w-3 h-3" /> Add Header
-                        </button>
                     </div>
                     <div className="space-y-2 border border-slate-300 dark:border-[var(--border-color)] rounded p-3 bg-slate-50 dark:bg-[var(--bg-surface)]">
                         {headers.length === 0 ? (
@@ -1330,6 +1324,14 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
                                 </div>
                             ))
                         )}
+                        <div className="pt-2 border-t border-slate-200 dark:border-slate-700/50 mt-2">
+                            <button
+                                onClick={handleAddHeader}
+                                className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-bold flex items-center gap-1 transition-colors"
+                            >
+                                <Plus className="w-3.5 h-3.5" /> Add Header
+                            </button>
+                        </div>
                     </div>
                 </div>
 
