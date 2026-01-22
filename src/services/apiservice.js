@@ -7,12 +7,22 @@ axios.interceptors.response.use(
     (response) => response,
     (error) => {
         if (error.response && error.response.status === 403) {
-            // Prevent global logout for specific non-critical endpoints or during debugging
-            if (error.config && error.config.url && error.config.url.includes('/users/update')) {
-                console.warn('Axios Interceptor: 403 Forbidden on update. Suppressing global logout for debugging.');
+            const url = error.config?.url || '';
+            // Only logout if it's a request to OUR backend.
+            // Be strict: must start with BASE_URL or be a relative /api/ request to our own origin.
+            const isBackendRequest = url.startsWith(BASE_URL) || (url.startsWith('/api/') && !url.startsWith('//'));
+            const shouldSkipLogout = error.config?.skipAuthLogout === true || url.includes('/users/update');
+
+            if (isBackendRequest && !shouldSkipLogout) {
+                console.warn('Axios Interceptor: 403 Forbidden from backend. Auto-logout suppressed per user request.', { url });
+                // window.dispatchEvent(new Event('auth-logout')); // Disabled auto-logout
+                window.dispatchEvent(new CustomEvent('auth-error-forbidden', { detail: { url } }));
             } else {
-                console.warn('Axios Interceptor: 403 Forbidden detected. Dispatching global logout.');
-                window.dispatchEvent(new Event('auth-logout'));
+                console.warn('Axios Interceptor: 403 Forbidden suppressed (External API or Skip Flag).', { 
+                    url, 
+                    isBackendRequest, 
+                    shouldSkipLogout 
+                });
             }
         }
         return Promise.reject(error);

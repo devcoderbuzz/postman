@@ -7,7 +7,7 @@ export function cn(...inputs) {
   return twMerge(clsx(inputs));
 }
 
-const dynamicAliases = {
+export const dynamicAliases = {
     '$guid': () => faker.string.uuid(),
     '$timestamp': () => Math.floor(Date.now() / 1000).toString(),
     '$isoTimestamp': () => new Date().toISOString(),
@@ -34,6 +34,8 @@ const dynamicAliases = {
     '$randomCurrencyCode': () => faker.finance.currencyCode(),
     '$randomPrice': () => faker.finance.amount(),
 };
+
+export const DYNAMIC_VARIABLES = Object.keys(dynamicAliases).map(k => k.substring(1));
 
 /**
  * Resolves a dynamic variable name to its faker value.
@@ -93,4 +95,45 @@ export function replaceEnvVariables(text, environment) {
     // Fix double slashes except protocol
     result = result.replace(/([^:])\/\/+/g, '$1/');
     return result;
+}
+
+export function getCursorCoordinates(input, cursorIndex) {
+    const { offsetWidth, value } = input;
+    const { scrollLeft, scrollTop } = input;
+    
+    // Create mirror div
+    const div = document.createElement('div');
+    const style = window.getComputedStyle(input);
+    
+    // Copy essential measurement styles
+    const props = ['fontFamily', 'fontSize', 'fontWeight', 'fontStyle', 'letterSpacing', 'textTransform', 'wordSpacing', 'textIndent', 'paddingLeft', 'paddingTop', 'borderLeftWidth', 'borderTopWidth', 'lineHeight'];
+    props.forEach(prop => {
+        div.style[prop] = style[prop];
+    });
+    
+    div.style.position = 'absolute';
+    div.style.visibility = 'hidden';
+    div.style.whiteSpace = input.tagName === 'TEXTAREA' ? 'pre-wrap' : 'pre';
+    div.style.width = input.tagName === 'TEXTAREA' ? `${offsetWidth}px` : 'auto';
+    div.style.left = '-9999px';
+    div.style.top = '0';
+    
+    const textBeforeCursor = value.substring(0, cursorIndex);
+    div.textContent = textBeforeCursor;
+    
+    const span = document.createElement('span');
+    span.textContent = value.substring(cursorIndex, cursorIndex + 1) || '.';
+    div.appendChild(span);
+    
+    document.body.appendChild(div);
+    const { offsetLeft: spanLeft, offsetTop: spanTop } = span;
+    document.body.removeChild(div);
+    
+    const rect = input.getBoundingClientRect();
+    const lineHeight = parseInt(style.lineHeight) || parseInt(style.fontSize) * 1.2 || 20;
+
+    return {
+        top: rect.top + spanTop - scrollTop + lineHeight + 2,
+        left: rect.left + spanLeft - scrollLeft
+    };
 }

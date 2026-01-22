@@ -47,7 +47,9 @@ function ConsoleSection({ title, children, defaultExpanded = false, className = 
     );
 }
 
-function JsonTree({ data }) {
+function JsonTree({ data, suffix = "" }) {
+    const [isCollapsed, setIsCollapsed] = useState(false);
+
     if (typeof data !== 'object' || data === null) {
         // Primitive values
         const isString = typeof data === 'string';
@@ -57,34 +59,76 @@ function JsonTree({ data }) {
                 isString ? "text-green-600 dark:text-[#a8ff60]" : "text-orange-600 dark:text-[#ce9178]"
             )}>
                 {isString ? `"${data}"` : String(data)}
+                {suffix}
+            </span>
+        );
+    }
+
+    const isArray = Array.isArray(data);
+    const openBrace = isArray ? '[' : '{';
+    const closeBrace = isArray ? ']' : '}';
+    const entries = isArray ? data : Object.entries(data);
+
+    if (entries.length === 0) {
+        return <span className="text-slate-900 dark:text-slate-300">{openBrace}{closeBrace}{suffix}</span>;
+    }
+
+    // Single line for arrays of primitives
+    if (isArray && data.every(item => typeof item !== 'object' || item === null)) {
+        return (
+            <span className="text-slate-900 dark:text-slate-300">
+                [
+                {data.map((item, index) => (
+                    <JsonTree key={index} data={item} suffix={index === data.length - 1 ? "" : ", "} />
+                ))}
+                ]{suffix}
             </span>
         );
     }
 
     return (
-        <div className="font-mono text-[11px] leading-relaxed">
-            {Object.entries(data).map(([key, value], index) => {
-                const isObject = typeof value === 'object' && value !== null;
-                return (
-                    <div key={key} className="flex">
-                        <span className="text-blue-600 dark:text-[#9cdcfe] mr-1">"{key}":</span>
-                        {isObject ? (
-                            <div className="flex-1">
-                                <span>{'{'}</span>
-                                <div className="pl-4 border-l border-slate-200 dark:border-slate-800">
-                                    <JsonTree data={value} />
+        <div className="font-mono text-[11px] leading-relaxed text-slate-900 dark:text-slate-300">
+            <span
+                className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded inline-flex items-center select-none"
+                onClick={() => setIsCollapsed(!isCollapsed)}
+            >
+                {isCollapsed ? (
+                    <ChevronRight className="w-3 h-3 mr-1 text-slate-400" />
+                ) : (
+                    <ChevronDown className="w-3 h-3 mr-1 text-slate-400" />
+                )}
+                {openBrace}
+                {isCollapsed && (
+                    <>
+                        <span className="text-slate-400 mx-1">...</span>
+                        {closeBrace}
+                        {suffix}
+                    </>
+                )}
+            </span>
+
+            {!isCollapsed && (
+                <>
+                    <div className="pl-4 border-l border-slate-200 dark:border-slate-800">
+                        {entries.map((item, index) => {
+                            const key = isArray ? null : item[0];
+                            const value = isArray ? item : item[1];
+                            const isLast = index === entries.length - 1;
+                            return (
+                                <div key={isArray ? index : key} className="flex">
+                                    {key !== null && (
+                                        <span className="text-blue-600 dark:text-[#9cdcfe] mr-1">"{key}":</span>
+                                    )}
+                                    <div className="flex-1">
+                                        <JsonTree data={value} suffix={isLast ? "" : ","} />
+                                    </div>
                                 </div>
-                                <span>{'}'}{index < Object.keys(data).length - 1 ? ',' : ''}</span>
-                            </div>
-                        ) : (
-                            <span>
-                                <JsonTree data={value} />
-                                {index < Object.keys(data).length - 1 ? ',' : ''}
-                            </span>
-                        )}
+                            );
+                        })}
                     </div>
-                );
-            })}
+                    <span>{closeBrace}{suffix}</span>
+                </>
+            )}
         </div>
     );
 }
@@ -95,7 +139,51 @@ function ConsoleItem({ item, isLatest }) {
     // Helper to parse if string
     const parseIfString = (data) => {
         if (typeof data === 'string') {
-            try { return JSON.parse(data); } catch (e) { return data; }
+            const trimmed = data.trim();
+            if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                try { return JSON.parse(trimmed); } catch (e) { }
+            }
+            if (trimmed.startsWith('<')) {
+                try {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(trimmed, "text/xml");
+                    if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
+                        return data;
+                    }
+                    const parseNode = (node) => {
+                        if (node.nodeType === 3) return node.nodeValue.trim();
+                        const obj = {};
+                        if (node.attributes?.length > 0) {
+                            for (let i = 0; i < node.attributes.length; i++) {
+                                const attr = node.attributes[i];
+                                obj[`@${attr.name}`] = attr.value;
+                            }
+                        }
+                        if (node.childNodes?.length > 0) {
+                            let hasElements = false;
+                            for (let i = 0; i < node.childNodes.length; i++) {
+                                const child = node.childNodes[i];
+                                if (child.nodeType === 1) {
+                                    hasElements = true;
+                                    const name = child.nodeName;
+                                    const value = parseNode(child);
+                                    if (obj[name]) {
+                                        if (!Array.isArray(obj[name])) obj[name] = [obj[name]];
+                                        obj[name].push(value);
+                                    } else {
+                                        obj[name] = value;
+                                    }
+                                } else if (child.nodeType === 3 && child.nodeValue.trim()) {
+                                    if (!hasElements) return child.nodeValue.trim();
+                                    obj["#text"] = child.nodeValue.trim();
+                                }
+                            }
+                        }
+                        return Object.keys(obj).length === 0 ? "" : obj;
+                    };
+                    return { [xmlDoc.documentElement.nodeName]: parseNode(xmlDoc.documentElement) };
+                } catch (e) { }
+            }
         }
         return data;
     }
@@ -172,11 +260,7 @@ function ConsoleItem({ item, isLatest }) {
                             <ConsoleSection title="Request Body">
                                 {typeof requestBody === 'object' ? (
                                     <div className="ml-2">
-                                        <span>{'{'}</span>
-                                        <div className="pl-2 border-l border-slate-200 dark:border-slate-800 my-0.5">
-                                            <JsonTree data={requestBody} />
-                                        </div>
-                                        <span>{'}'}</span>
+                                        <JsonTree data={requestBody} />
                                     </div>
                                 ) : (
                                     <pre className="whitespace-pre-wrap text-blue-600 dark:text-[#ce9178]">{item.requestBody}</pre>
@@ -201,11 +285,7 @@ function ConsoleItem({ item, isLatest }) {
                             <ConsoleSection title="Response Body" defaultExpanded={true}>
                                 {typeof responseBody === 'object' ? (
                                     <div className="ml-2">
-                                        <span>{'{'}</span>
-                                        <div className="pl-2 border-l border-slate-200 dark:border-slate-800 my-0.5">
-                                            <JsonTree data={responseBody} />
-                                        </div>
-                                        <span>{'}'}</span>
+                                        <JsonTree data={responseBody} />
                                     </div>
                                 ) : (
                                     <pre className="whitespace-pre-wrap text-green-600 dark:text-[#ce9178]">{String(item.responseData)}</pre>
@@ -290,13 +370,21 @@ export function UserWorkspace() {
 
     useEffect(() => {
         if (profilePic) {
-            localStorage.setItem('profilePic', profilePic);
+            try {
+                localStorage.setItem('profilePic', profilePic);
+            } catch (e) {
+                console.error('Failed to save profile pic to local storage', e);
+            }
         }
     }, [profilePic]);
 
     useEffect(() => {
         if (localCollectionsPath) {
-            localStorage.setItem('localCollectionsPath', localCollectionsPath);
+            try {
+                localStorage.setItem('localCollectionsPath', localCollectionsPath);
+            } catch (e) {
+                console.error('Failed to save local collections path', e);
+            }
         }
     }, [localCollectionsPath]);
 
@@ -377,8 +465,8 @@ export function UserWorkspace() {
                             url: req.url,
                             params: req.params || [],
                             headers: (() => {
-                                if (!req.headers) return [];
-                                let headersObj = req.headers;
+                                let headersObj = req.headers || req.header;
+                                if (!headersObj) return [];
 
                                 // If it's already an object, map it
                                 if (typeof headersObj === 'object' && headersObj !== null) {
@@ -479,7 +567,9 @@ export function UserWorkspace() {
 
     // Save layout preference
     useEffect(() => {
-        localStorage.setItem('layout', layout);
+        try {
+            localStorage.setItem('layout', layout);
+        } catch (e) { }
     }, [layout]);
 
     // Apply theme to document - Now handled by ThemeContext
@@ -490,21 +580,58 @@ export function UserWorkspace() {
     }, [theme]);
     */
 
+    useEffect(() => {
+        const handleForbidden = (e) => {
+            const url = e.detail?.url || 'the server';
+            setErrorMessage(`Access Denied (403): You do not have permission to perform this action on ${url}.`);
+        };
+        window.addEventListener('auth-error-forbidden', handleForbidden);
+        return () => window.removeEventListener('auth-error-forbidden', handleForbidden);
+    }, []);
+
     // Save to localStorage
     useEffect(() => {
-        localStorage.setItem('collections', JSON.stringify(localCollections));
+        try {
+            localStorage.setItem('collections', JSON.stringify(localCollections));
+        } catch (e) {
+            console.error('Failed to save collections to local storage', e);
+            if (e.name === 'QuotaExceededError') {
+                setErrorMessage('Local storage quota exceeded. Cannot save more local collections.');
+            }
+        }
     }, [localCollections]);
 
     // Console / Footer State
     const [showConsole, setShowConsole] = useState(false);
     const latestRequest = history.length > 0 ? history[0] : null;
 
+    // Safe localStorage saving for console history
     useEffect(() => {
-        localStorage.setItem('consoleHistory', JSON.stringify(history));
+        try {
+            // Keep history limited to prevent quota issues
+            const limitedHistory = history.slice(0, 50);
+            localStorage.setItem('consoleHistory', JSON.stringify(limitedHistory));
+        } catch (e) {
+            console.error('LocalStorage quota exceeded for console history. Trimming further...', e);
+            // If it still fails, trim significantly and try again
+            const trimmedHistory = history.slice(0, 10);
+            try {
+                localStorage.setItem('consoleHistory', JSON.stringify(trimmedHistory));
+                setHistory(trimmedHistory);
+            } catch (inner) {
+                console.error('Failed to save even trimmed history. Clearing console history.', inner);
+                localStorage.removeItem('consoleHistory');
+                setHistory([]);
+            }
+        }
     }, [history]);
 
     useEffect(() => {
-        localStorage.setItem('environments', JSON.stringify(environments));
+        try {
+            localStorage.setItem('environments', JSON.stringify(environments));
+        } catch (e) {
+            console.error('Failed to save environments to local storage', e);
+        }
     }, [environments]);
 
     // Resize logic for Request/Response split

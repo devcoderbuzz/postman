@@ -1,10 +1,11 @@
-import { useState } from 'react';
-import { cn } from '../lib/utils';
+import { useState, useRef } from 'react';
+import { cn, getCursorCoordinates } from '../lib/utils';
 import { VariableAutocomplete } from './VariableAutocomplete';
 
 const AUTH_TYPES = ['none', 'bearer', 'basic', 'api-key'];
 
 export function AuthEditor({ authType, setAuthType, authData, setAuthData, environments, activeEnv }) {
+    const containerRef = useRef(null);
     const [autocomplete, setAutocomplete] = useState({
         show: false,
         filterText: '',
@@ -14,7 +15,7 @@ export function AuthEditor({ authType, setAuthType, authData, setAuthData, envir
         activeIndex: 0
     });
 
-    const activeEnvironment = environments?.find(e => e.id === activeEnv);
+    const activeEnvironment = environments?.find(e => e?.id === activeEnv);
 
     const updateAuthData = (key, value) => {
         setAuthData({ ...authData, [key]: value });
@@ -31,13 +32,15 @@ export function AuthEditor({ authType, setAuthType, authData, setAuthData, envir
         if (lastOpenBraces !== -1 && lastOpenBraces >= textBeforeCursor.lastIndexOf('}}')) {
             const filterText = textBeforeCursor.substring(lastOpenBraces + 2);
             if (!filterText.includes(' ')) {
-                const rect = target.getBoundingClientRect();
+                const coords = getCursorCoordinates(target, cursorPos);
+                const panelRect = containerRef.current?.getBoundingClientRect() || { top: 0, left: 0 };
+
                 setAutocomplete({
                     show: true,
                     filterText,
                     position: {
-                        top: rect.bottom + window.scrollY + 5,
-                        left: rect.left + window.scrollX
+                        top: coords.top - panelRect.top + (containerRef.current?.scrollTop || 0),
+                        left: coords.left - panelRect.left + (containerRef.current?.scrollLeft || 0)
                     },
                     field: field,
                     selectionStart: lastOpenBraces,
@@ -88,7 +91,7 @@ export function AuthEditor({ authType, setAuthType, authData, setAuthData, envir
     };
 
     return (
-        <div className="space-y-4">
+        <div ref={containerRef} className={cn(authType !== 'none' && "space-y-4", "relative")}>
             <div className="flex gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
                 {AUTH_TYPES.map(type => (
                     <button
@@ -106,11 +109,7 @@ export function AuthEditor({ authType, setAuthType, authData, setAuthData, envir
                 ))}
             </div>
 
-            {authType === 'none' && (
-                <div className="flex items-center justify-center h-32 text-slate-400 dark:text-slate-500 text-sm">
-                    No authentication
-                </div>
-            )}
+            {/* No authentication section removed as per user request */}
 
             {authType === 'bearer' && (
                 <div className="space-y-3">

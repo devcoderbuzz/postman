@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Tabs } from './Tabs';
-import { Copy, Download, Check } from 'lucide-react';
+import { Copy, Download, Check, ChevronRight, ChevronDown } from 'lucide-react';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json';
 import xml from 'react-syntax-highlighter/dist/esm/languages/hljs/xml';
@@ -16,7 +16,9 @@ SyntaxHighlighter.registerLanguage('css', css);
 SyntaxHighlighter.registerLanguage('javascript', javascript);
 
 // JsonTree component for custom JSON rendering with consistent colors
-function JsonTree({ data }) {
+function JsonTree({ data, suffix = "" }) {
+    const [isCollapsed, setIsCollapsed] = useState(false);
+
     if (typeof data !== 'object' || data === null) {
         // Primitive values
         const isString = typeof data === 'string';
@@ -26,66 +28,76 @@ function JsonTree({ data }) {
                 isString ? "text-green-600 dark:text-[#a8ff60]" : "text-orange-600 dark:text-[#ce9178]"
             )}>
                 {isString ? `"${data}"` : String(data)}
+                {suffix}
             </span>
         );
     }
 
-    // Handle arrays
-    if (Array.isArray(data)) {
-        if (data.length === 0) return <span>[]</span>;
+    const isArray = Array.isArray(data);
+    const openBrace = isArray ? '[' : '{';
+    const closeBrace = isArray ? ']' : '}';
+    const entries = isArray ? data : Object.entries(data);
+
+    if (entries.length === 0) {
+        return <span className="text-slate-900 dark:text-slate-300">{openBrace}{closeBrace}{suffix}</span>;
+    }
+
+    // Single line for arrays of primitives
+    if (isArray && data.every(item => typeof item !== 'object' || item === null)) {
         return (
-            <div className="font-mono text-xs leading-relaxed">
-                <span>[</span>
-                <div className="pl-4 border-l border-slate-200 dark:border-slate-700">
-                    {data.map((value, index) => {
-                        const isObject = typeof value === 'object' && value !== null;
-                        return (
-                            <div key={index} className="flex">
-                                {isObject ? (
-                                    <div className="flex-1">
-                                        <JsonTree data={value} />
-                                        {index < data.length - 1 ? ',' : ''}
-                                    </div>
-                                ) : (
-                                    <span>
-                                        <JsonTree data={value} />
-                                        {index < data.length - 1 ? ',' : ''}
-                                    </span>
-                                )}
-                            </div>
-                        );
-                    })}
-                </div>
-                <span>]</span>
-            </div>
+            <span className="text-slate-900 dark:text-slate-300">
+                [
+                {data.map((item, index) => (
+                    <JsonTree key={index} data={item} suffix={index === data.length - 1 ? "" : ", "} />
+                ))}
+                ]{suffix}
+            </span>
         );
     }
 
-    // Handle objects
     return (
-        <div className="font-mono text-xs leading-relaxed">
-            {Object.entries(data).map(([key, value], index) => {
-                const isObject = typeof value === 'object' && value !== null;
-                return (
-                    <div key={key} className="flex">
-                        <span className="text-blue-600 dark:text-[#9cdcfe] mr-1">"{key}":</span>
-                        {isObject ? (
-                            <div className="flex-1">
-                                <span>{Array.isArray(value) ? '[' : '{'}</span>
-                                <div className="pl-4 border-l border-slate-200 dark:border-slate-700">
-                                    <JsonTree data={value} />
+        <div className="font-mono text-xs leading-relaxed text-slate-900 dark:text-slate-300">
+            <span
+                className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded inline-flex items-center select-none"
+                onClick={() => setIsCollapsed(!isCollapsed)}
+            >
+                {isCollapsed ? (
+                    <ChevronRight className="w-3 h-3 mr-1 text-slate-400" />
+                ) : (
+                    <ChevronDown className="w-3 h-3 mr-1 text-slate-400" />
+                )}
+                {openBrace}
+                {isCollapsed && (
+                    <>
+                        <span className="text-slate-400 mx-1">...</span>
+                        {closeBrace}
+                        {suffix}
+                    </>
+                )}
+            </span>
+
+            {!isCollapsed && (
+                <>
+                    <div className="pl-4 border-l border-slate-200 dark:border-slate-700">
+                        {entries.map((item, index) => {
+                            const key = isArray ? null : item[0];
+                            const value = isArray ? item : item[1];
+                            const isLast = index === entries.length - 1;
+                            return (
+                                <div key={isArray ? index : key} className="flex">
+                                    {key !== null && (
+                                        <span className="text-blue-600 dark:text-[#9cdcfe] mr-1">"{key}":</span>
+                                    )}
+                                    <div className="flex-1">
+                                        <JsonTree data={value} suffix={isLast ? "" : ","} />
+                                    </div>
                                 </div>
-                                <span>{Array.isArray(value) ? ']' : '}'}{index < Object.keys(data).length - 1 ? ',' : ''}</span>
-                            </div>
-                        ) : (
-                            <span>
-                                <JsonTree data={value} />
-                                {index < Object.keys(data).length - 1 ? ',' : ''}
-                            </span>
-                        )}
+                            );
+                        })}
                     </div>
-                );
-            })}
+                    <span>{closeBrace}{suffix}</span>
+                </>
+            )}
         </div>
     );
 }
@@ -278,7 +290,48 @@ export function ResponseViewer({ response, error, isLoading, activeRequest, them
                         {viewMode === 'pretty' ? (
                             <div className="p-4 font-mono text-xs leading-relaxed text-slate-900 dark:text-slate-300">
                                 <JsonTree data={typeof response.data === 'string' ? (() => {
-                                    try { return JSON.parse(response.data); } catch { return response.data; }
+                                    try {
+                                        if (language === 'xml') {
+                                            const parser = new DOMParser();
+                                            const xmlDoc = parser.parseFromString(response.data, "text/xml");
+                                            if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
+                                                throw new Error("Invalid XML");
+                                            }
+                                            const parseNode = (node) => {
+                                                if (node.nodeType === 3) return node.nodeValue.trim();
+                                                const obj = {};
+                                                if (node.attributes?.length > 0) {
+                                                    for (let i = 0; i < node.attributes.length; i++) {
+                                                        const attr = node.attributes[i];
+                                                        obj[`@${attr.name}`] = attr.value;
+                                                    }
+                                                }
+                                                if (node.childNodes?.length > 0) {
+                                                    let hasElements = false;
+                                                    for (let i = 0; i < node.childNodes.length; i++) {
+                                                        const child = node.childNodes[i];
+                                                        if (child.nodeType === 1) {
+                                                            hasElements = true;
+                                                            const name = child.nodeName;
+                                                            const value = parseNode(child);
+                                                            if (obj[name]) {
+                                                                if (!Array.isArray(obj[name])) obj[name] = [obj[name]];
+                                                                obj[name].push(value);
+                                                            } else {
+                                                                obj[name] = value;
+                                                            }
+                                                        } else if (child.nodeType === 3 && child.nodeValue.trim()) {
+                                                            if (!hasElements) return child.nodeValue.trim();
+                                                            obj["#text"] = child.nodeValue.trim();
+                                                        }
+                                                    }
+                                                }
+                                                return Object.keys(obj).length === 0 ? "" : obj;
+                                            };
+                                            return { [xmlDoc.documentElement.nodeName]: parseNode(xmlDoc.documentElement) };
+                                        }
+                                        return JSON.parse(response.data);
+                                    } catch { return response.data; }
                                 })() : response.data} />
                             </div>
                         ) : (

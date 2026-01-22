@@ -1,17 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
+import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
-import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical, Save, Folder, FileText, Search, Globe } from 'lucide-react';
+import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical, Save, Folder, FileText, Search, Globe, Sparkles, Play, Lock } from 'lucide-react';
 import { createUpdateCollections, getAllAppCodes, deleteCollection, getCollectionDetails, getEnvDetails } from '../services/apiservice';
-import { replaceEnvVariables } from '../lib/utils';
+import { replaceEnvVariables, getCursorCoordinates, DYNAMIC_VARIABLES } from '../lib/utils';
 import { VariableAutocomplete } from './VariableAutocomplete';
+import { AuthEditor } from './AuthEditor';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
 import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json';
+import xml from 'react-syntax-highlighter/dist/esm/languages/hljs/xml';
 import { atomOneDark, atomOneLight } from 'react-syntax-highlighter/dist/esm/styles/hljs';
 
 import { ConfirmationModal } from './ConfirmationModal';
 import { ImportModal } from './ImportModal';
 
 SyntaxHighlighter.registerLanguage('json', json);
+SyntaxHighlighter.registerLanguage('xml', xml);
+SyntaxHighlighter.registerLanguage('html', xml);
 
 export function EditDataPanel({ refreshTrigger }) {
     const { user } = useAuth();
@@ -354,6 +359,8 @@ export function EditDataPanel({ refreshTrigger }) {
         e.stopPropagation();
         setIsLoading(true);
         try {
+            const activeEnv = panelEnvironments.find(env => String(env.id) === String(selectedEnvId));
+
             // Helper to check if an ID is one of our temporary strings
             const isTransientId = (id) => {
                 if (!id) return true;
@@ -382,8 +389,7 @@ export function EditDataPanel({ refreshTrigger }) {
                 description: collection.description || `Collection for project ${selectedProject}`,
                 projectId: actualProjectId,
                 projectEntity: {
-                    id: actualProjectId,
-                    projectId: actualProjectId
+                    id: actualProjectId
                 },
                 requests: (collection.requests || []).map(req => {
                     const isNewReq = isTransientId(req.requestId || req.id);
@@ -392,33 +398,80 @@ export function EditDataPanel({ refreshTrigger }) {
                         id: actualId,
                         requestId: actualId,
                         name: req.name,
-                        url: req.url,
+                        url: req.url || '',
                         method: req.method,
                         body: (() => {
-                            const val = req.body;
-                            if (typeof val !== 'string') {
-                                const s = JSON.stringify(val || {});
-                                return (s === '{}' || s === '[]') ? '' : s;
+                            let val = req.body;
+                            if (typeof val === 'object' && val !== null) {
+                                val = JSON.stringify(val);
                             }
-                            try {
-                                const minified = JSON.stringify(JSON.parse(val));
-                                return (minified === '{}' || minified === '[]') ? '' : minified;
-                            } catch (e) {
-                                return (val === '{}' || val === '[]') ? '' : val;
+
+                            // If it's a string, try to re-minify or default to '{}'
+                            if (typeof val === 'string') {
+                                try {
+                                    return JSON.stringify(JSON.parse(val || '{}'));
+                                } catch (e) {
+                                    return val || '{}';
+                                }
                             }
+                            return JSON.stringify(val || {});
                         })(),
                         headers: (() => {
-                            const val = req.headers;
-                            if (typeof val !== 'string') {
-                                const s = JSON.stringify(val || {});
-                                return (s === '{}' || s === '[]') ? '' : s;
+                            let hVal = req.headers;
+                            let headersObj = {};
+
+                            // 1. Parse/Convert Base Headers to Object
+                            if (Array.isArray(hVal)) {
+                                hVal.forEach(h => {
+                                    if (h.key && h.key.trim()) {
+                                        headersObj[h.key.trim()] = h.value || '';
+                                    }
+                                });
+                            } else if (typeof hVal === 'string' && hVal.trim().startsWith('{')) {
+                                try {
+                                    headersObj = JSON.parse(hVal);
+                                } catch (e) { }
+                            } else if (typeof hVal === 'object' && hVal !== null) {
+                                headersObj = { ...hVal };
                             }
-                            try {
-                                const minified = JSON.stringify(JSON.parse(val));
-                                return (minified === '{}' || minified === '[]') ? '' : minified;
-                            } catch (e) {
-                                return (val === '{}' || val === '[]') ? '' : val;
+
+                            // 2. Inject Auth Data into Headers (Keeping raw variables)
+                            const aType = req.authType || 'none';
+                            const aData = typeof req.authData === 'string' ? (() => {
+                                try { return JSON.parse(req.authData); } catch (e) { return {}; }
+                            })() : (req.authData || {});
+
+                            if (aType === 'bearer' && aData.token) {
+                                headersObj['Authorization'] = `Bearer ${aData.token}`;
+                            } else if (aType === 'basic' && aData.username && aData.password) {
+                                if (aData.username.includes('{{') || aData.password.includes('{{')) {
+                                    headersObj['Authorization'] = `Basic {{${aData.username}:${aData.password}}}`;
+                                } else {
+                                    headersObj['Authorization'] = `Basic ${btoa(`${aData.username}:${aData.password}`)}`;
+                                }
+                            } else if (aType === 'api-key' && aData.key && aData.value) {
+                                if (aData.addTo === 'header') {
+                                    headersObj[aData.key] = aData.value;
+                                }
                             }
+
+                            // 4. Return minified stringified JSON
+                            return JSON.stringify(headersObj);
+                        })(),
+                        authType: req.authType || 'none',
+                        authData: (() => {
+                            let val = req.authData;
+                            if (typeof val === 'string' && val.trim().startsWith('{')) {
+                                try { val = JSON.parse(val); } catch (e) { }
+                            }
+                            return JSON.stringify(val || {});
+                        })(),
+                        params: (() => {
+                            let val = req.params;
+                            if (typeof val === 'string' && val.trim().startsWith('[')) {
+                                try { val = JSON.parse(val); } catch (e) { }
+                            }
+                            return JSON.stringify(val || []);
                         })()
                     };
                 })
@@ -460,7 +513,7 @@ export function EditDataPanel({ refreshTrigger }) {
         }
     };
 
-    const handleImport = (type, data) => {
+    const handleImport = (type, data, targetCollectionId) => {
         if (!selectedAppCodeId) return;
 
         try {
@@ -521,37 +574,149 @@ export function EditDataPanel({ refreshTrigger }) {
                     return [...prev, newCol];
                 });
             } else if (type === 'curl') {
-                // Very basic curl parsing
-                const methodMatch = data.match(/-X\s+([A-Z]+)/);
-                const urlMatch = data.match(/['"](http.*?)['"]/);
-                const headerMatches = [...data.matchAll(/-H\s+['"](.*?)['"]/g)];
-                const dataMatch = data.match(/--data\s+['"](.*?)['"]/);
+                // Robust cURL parsing
+                const cleanData = data.replace(/\\\n/g, ' '); // Handle line continuations
+
+                // Extract Method
+                const methodMatch = cleanData.match(/-X\s+([A-Z]+)/);
+                const method = methodMatch ? methodMatch[1] : (cleanData.includes('-d ') || cleanData.includes('--data') ? 'POST' : 'GET');
+
+                // Extract URL (find the first thing that looks like a URL or starts with {{)
+                const urlMatch = cleanData.match(/(?:['"])(http[s]?:\/\/.*?|{{.*?}}.*?)(?:['"])/) || cleanData.match(/\s(http[s]?:\/\/.*?|{{.*?}}.*?)\s/);
+                const url = urlMatch ? urlMatch[1] : '';
+
+                // Extract Headers
+                // Handle multiple quoting styles and mixed quotes
+                const headers = {};
+                const headerMatches = [...cleanData.matchAll(/(?:-H|--header)\s+['"](.*?)['"]/g)];
+                headerMatches.forEach(match => {
+                    const headerContent = match[1];
+                    const firstColon = headerContent.indexOf(':');
+                    if (firstColon !== -1) {
+                        const key = headerContent.slice(0, firstColon).trim();
+                        const val = headerContent.slice(firstColon + 1).trim();
+                        headers[key] = val;
+                    }
+                });
+
+                // Authorization Extraction
+                let authType = 'none';
+                let authData = {};
+                if (headers['Authorization']) {
+                    const authHeader = headers['Authorization'];
+                    if (authHeader.startsWith('Bearer ')) {
+                        authType = 'bearer';
+                        authData = { token: authHeader.substring(7) };
+                        delete headers['Authorization']; // Managed by Auth UI
+                    } else if (authHeader.startsWith('Basic ')) {
+                        authType = 'basic';
+                        try {
+                            const decoded = atob(authHeader.substring(6));
+                            const [u, p] = decoded.split(':');
+                            authData = { username: u, password: p };
+                            delete headers['Authorization'];
+                        } catch (e) { }
+                    }
+                }
+
+                // Extract Body (-d or --data)
+                // More robust approach: find the data flag, then manually parse the quoted string
+                let body = '';
+
+                // Find all occurrences of data flags
+                const dataFlagPattern = /(?:-d|--data(?:-raw)?|--data-binary)\s+/g;
+                let match;
+                const bodies = [];
+
+                while ((match = dataFlagPattern.exec(cleanData)) !== null) {
+                    const startPos = match.index + match[0].length;
+                    const char = cleanData[startPos];
+
+                    if (char === '"' || char === "'") {
+                        // Manually parse quoted string, handling escapes
+                        let endPos = startPos + 1;
+                        let escaped = false;
+
+                        while (endPos < cleanData.length) {
+                            const c = cleanData[endPos];
+
+                            if (escaped) {
+                                escaped = false;
+                            } else if (c === '\\') {
+                                escaped = true;
+                            } else if (c === char) {
+                                // Found matching closing quote
+                                const bodyContent = cleanData.substring(startPos + 1, endPos);
+                                bodies.push(bodyContent);
+                                break;
+                            }
+                            endPos++;
+                        }
+                    } else {
+                        // Unquoted body - capture until whitespace or end
+                        const unquotedMatch = cleanData.substring(startPos).match(/^(\S+)/);
+                        if (unquotedMatch) {
+                            bodies.push(unquotedMatch[1]);
+                        }
+                    }
+                }
+
+                if (bodies.length > 0) {
+                    body = bodies.join('&');
+                }
+
+                // Try to pretty print if JSON
+                if (body) {
+                    try {
+                        const parsed = JSON.parse(body);
+                        body = JSON.stringify(parsed, null, 2);
+                    } catch (e) { }
+                }
 
                 const newReq = {
-                    requestId: `curl - ${Date.now()} `,
+                    requestId: `curl-${Date.now()}-${Math.random()}`,
                     name: 'Imported cURL',
-                    method: methodMatch ? methodMatch[1] : 'GET',
-                    url: urlMatch ? urlMatch[1] : '',
-                    headers: headerMatches.reduce((acc, match) => {
-                        const [key, val] = match[1].split(':').map(s => s.trim());
-                        if (key && val) acc[key] = val;
-                        return acc;
-                    }, {}),
-                    body: dataMatch ? dataMatch[1] : null,
+                    method,
+                    url,
+                    headers,
+                    body,
+                    authType,
+                    authData
                 };
 
-                // Add to a "cURL Imports" collection
-                let existingCurlCol = collections.find(c => c.name === 'cURL Imports');
-                if (existingCurlCol) {
-                    setCollections(collections.map(c => c.collectionId === existingCurlCol.collectionId ? { ...c, requests: [...c.requests, { ...newReq, collectionId: c.collectionId }] } : c));
-                } else {
-                    const newCurlCol = {
-                        collectionId: `curl - col - ${Date.now()} `,
-                        name: 'cURL Imports',
-                        requests: [{ ...newReq, collectionId: `curl - col - ${Date.now()} ` }]
-                    };
-                    setCollections([...collections, newCurlCol]);
+                let finalTargetId = targetCollectionId;
+
+                // If no target selected, default to 'cURL Imports' collection
+                if (!finalTargetId) {
+                    const existingCurlCol = collections.find(c => c.name === 'cURL Imports');
+                    if (existingCurlCol) {
+                        finalTargetId = existingCurlCol.collectionId;
+                    } else {
+                        const newId = `curl-col-${Date.now()}`;
+                        const newCurlCol = {
+                            collectionId: newId,
+                            name: 'cURL Imports',
+                            requests: []
+                        };
+                        setCollections(prev => [...prev, newCurlCol]);
+                        finalTargetId = newId;
+                    }
                 }
+
+                // Always open the editor
+                console.log("Setting editing request:", newReq);
+                console.log("Target ID:", finalTargetId);
+
+                // Close modal explicitly
+                setIsImporting(false);
+
+                // Force expanded first
+                setExpandedCollections(prev => new Set([...prev, finalTargetId]));
+                setCreatingForCollection(finalTargetId);
+
+                // Then set the request to edit
+                setIsCreatingRequest(true);
+                setEditingRequest(newReq);
             }
         } catch (e) {
             console.error(e);
@@ -902,6 +1067,7 @@ export function EditDataPanel({ refreshTrigger }) {
                     isOpen={isImporting}
                     onClose={() => setIsImporting(false)}
                     onImport={handleImport}
+                    collections={collections}
                 />
             )}
 
@@ -969,7 +1135,10 @@ const STANDARD_HEADERS = [
 ];
 
 
+
+
 function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv }) {
+    const panelRef = useRef(null);
     const [editedReq, setEditedReq] = useState(() => {
         const req = { ...request };
         let b = req.body;
@@ -1035,6 +1204,12 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
 
     const autocompleteRef = useRef(null);
     const bodyTextareaRef = useRef(null);
+    const [rawType, setRawType] = useState('JSON');
+    const [showRawDropdown, setShowRawDropdown] = useState(false);
+    const [authType, setAuthType] = useState(request.authType || 'none');
+    const [authData, setAuthData] = useState(request.authData || {});
+    const [response, setResponse] = useState(null);
+    const [isLoading, setIsLoading] = useState(false);
 
     const [scrollOffset, setScrollOffset] = useState(0);
 
@@ -1068,13 +1243,15 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
         if (lastOpenBraces !== -1 && lastOpenBraces >= textBeforeCursor.lastIndexOf('}}')) {
             const filterText = textBeforeCursor.substring(lastOpenBraces + 2);
             if (!filterText.includes(' ')) {
-                const rect = target.getBoundingClientRect();
+                const coords = getCursorCoordinates(target, cursorPos);
+                const panelRect = panelRef.current?.getBoundingClientRect() || { top: 0, left: 0 };
+
                 setAutocomplete({
                     show: true,
                     filterText,
                     position: {
-                        top: rect.bottom + window.scrollY + 5,
-                        left: rect.left + window.scrollX
+                        top: coords.top - panelRect.top + (panelRef.current?.scrollTop || 0),
+                        left: coords.left - panelRect.left + (panelRef.current?.scrollLeft || 0)
                     },
                     field: field,
                     headerId: headerId,
@@ -1089,12 +1266,14 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
         // Special case for header-key standard suggestions
         if (field === 'header-key' && value.length > 0) {
             const rect = target.getBoundingClientRect();
+            const panelRect = panelRef.current?.getBoundingClientRect() || { top: 0, left: 0 };
+
             setAutocomplete({
                 show: true,
                 filterText: value,
                 position: {
-                    top: rect.bottom + window.scrollY + 5,
-                    left: rect.left + window.scrollX
+                    top: rect.bottom - panelRect.top + (panelRef.current?.scrollTop || 0) + 5,
+                    left: rect.left - panelRect.left + (panelRef.current?.scrollLeft || 0)
                 },
                 field: field,
                 headerId: headerId,
@@ -1113,9 +1292,14 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
 
         let items = [];
         if (autocomplete.type === 'variable') {
-            items = (activeEnv?.variables || []).filter(v =>
+            const envVars = (activeEnv?.variables || []).filter(v =>
                 v.key.toLowerCase().includes(autocomplete.filterText.toLowerCase())
             );
+            const dynamicVars = DYNAMIC_VARIABLES.filter(v =>
+                v.toLowerCase().includes(autocomplete.filterText.toLowerCase())
+            ).map(v => ({ key: '$' + v, value: 'Dynamic Variable' }));
+
+            items = [...envVars, ...dynamicVars];
         } else if (autocomplete.type === 'header') {
             items = STANDARD_HEADERS.filter(h =>
                 h.toLowerCase().includes(autocomplete.filterText.toLowerCase())
@@ -1178,6 +1362,31 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
         setEditedReq(prev => ({ ...prev, [field]: value }));
     };
 
+    const handleBeautify = () => {
+        try {
+            const body = editedReq.body || '';
+            if (!body.trim()) return;
+
+            if (rawType === 'JSON') {
+                const parsed = JSON.parse(body);
+                setEditedReq(prev => ({ ...prev, body: JSON.stringify(parsed, null, 2) }));
+            } else if (rawType === 'XML' || rawType === 'HTML') {
+                let formatted = '';
+                let indent = '';
+                const tab = '  ';
+                body.split(/>\s*</).forEach((node) => {
+                    if (node.match(/^\/\w/)) indent = indent.substring(tab.length);
+                    formatted += indent + '<' + node + '>\n';
+                    if (node.match(/^<?\w[^>]*[^\/]$/)) indent += tab;
+                });
+                const cleaned = formatted.substring(1).trim();
+                setEditedReq(prev => ({ ...prev, body: cleaned }));
+            }
+        } catch (e) {
+            console.error("Formatting error:", e);
+        }
+    };
+
     const handleAddHeader = () => {
         setHeaders([...headers, { key: '', value: '', id: Math.random() }]);
     };
@@ -1190,6 +1399,102 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
         setHeaders(headers.filter(h => h.id !== id));
     };
 
+    const handleVerify = async () => {
+        setIsLoading(true);
+        setResponse(null);
+        const startTime = Date.now();
+
+        try {
+            let headersObj = headers.reduce((acc, h) => {
+                if (h.key.trim()) {
+                    acc[h.key.trim()] = replaceEnvVariables(h.value || '', activeEnv);
+                }
+                return acc;
+            }, {});
+
+            let paramsObj = {}; // For API key in query params
+
+            // Apply Auth
+            if (authType === 'bearer' && authData.token) {
+                const processedToken = replaceEnvVariables(authData.token, activeEnv);
+                headersObj['Authorization'] = `Bearer ${processedToken}`;
+            } else if (authType === 'basic' && authData.username && authData.password) {
+                const processedUsername = replaceEnvVariables(authData.username, activeEnv);
+                const processedPassword = replaceEnvVariables(authData.password, activeEnv);
+                const encoded = btoa(`${processedUsername}:${processedPassword}`);
+                headersObj['Authorization'] = `Basic ${encoded}`;
+            } else if (authType === 'api-key' && authData.key && authData.value) {
+                const processedKey = replaceEnvVariables(authData.key, activeEnv);
+                const processedValue = replaceEnvVariables(authData.value, activeEnv);
+                if (authData.addTo === 'header') {
+                    headersObj[processedKey] = processedValue;
+                } else {
+                    paramsObj[processedKey] = processedValue;
+                }
+            }
+
+            // Add standard headers
+            if (!headersObj['Accept']) headersObj['Accept'] = 'application/json, text/plain, */*';
+            if (!headersObj['User-Agent']) headersObj['User-Agent'] = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+            if (!headersObj['Accept-Language']) headersObj['Accept-Language'] = 'en-US,en;q=0.9';
+
+            let requestData = editedReq.body;
+            if (requestData && rawType === 'JSON') {
+                try {
+                    requestData = JSON.parse(requestData);
+                } catch (e) {
+                    // Keep as string if parsing fails
+                }
+            }
+
+            // Create a clean axios instance to bypass any global interceptors for verification
+            const verifyInstance = axios.create();
+            const res = await verifyInstance({
+                method: editedReq.method,
+                url: resolvedUrl,
+                headers: headersObj,
+                params: paramsObj,
+                data: requestData,
+                timeout: 30000
+            });
+
+            const endTime = Date.now();
+            setResponse({
+                status: res.status,
+                statusText: res.statusText,
+                data: res.data,
+                headers: res.headers,
+                time: endTime - startTime,
+                size: JSON.stringify(res.data).length
+            });
+        } catch (err) {
+            const endTime = Date.now();
+            if (err.response) {
+                setResponse({
+                    status: err.response.status,
+                    statusText: err.response.statusText,
+                    data: err.response.data,
+                    headers: err.response.headers,
+                    time: endTime - startTime,
+                    size: JSON.stringify(err.response.data).length,
+                    isError: true
+                });
+            } else {
+                setResponse({
+                    status: 0,
+                    statusText: 'Error',
+                    data: err.message,
+                    headers: {},
+                    time: endTime - startTime,
+                    size: 0,
+                    isError: true
+                });
+            }
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
     const handleSave = () => {
         const headersObj = headers.reduce((acc, h) => {
             if (h.key.trim()) {
@@ -1198,7 +1503,7 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
             return acc;
         }, {});
 
-        onSave({ ...editedReq, headers: headersObj });
+        onSave({ ...editedReq, headers: headersObj, authType, authData });
     };
 
     const resolvedUrl = replaceEnvVariables(editedReq.url, activeEnv);
@@ -1217,7 +1522,7 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
     const hasVariablesInBody = resolvedBody !== (editedReq.body || '');
 
     return (
-        <div className="flex-1 flex flex-col bg-white dark:bg-[var(--bg-primary)] overflow-hidden">
+        <div ref={panelRef} className="flex-1 flex flex-col bg-white dark:bg-[var(--bg-primary)] overflow-hidden relative">
             <div className="px-6 py-4 border-b border-slate-200 dark:border-[var(--border-color)] flex justify-between items-center bg-white dark:bg-[var(--bg-primary)]">
                 <h3 className="font-bold text-lg text-slate-900 dark:text-white">
                     {isCreating ? 'New Request' : 'Edit Request'}
@@ -1235,25 +1540,25 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
                 </div>
             </div>
 
-            <div className="p-6 overflow-y-auto space-y-4 flex-1">
+            <div className="flex flex-col px-6 py-3 border-b border-slate-200 dark:border-slate-800 space-y-3">
                 <div>
-                    <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-400">Request Name</label>
+                    <label className="block text-[10px] font-bold mb-1 text-slate-400 uppercase tracking-wider">Request Name</label>
                     <input
                         type="text"
                         value={editedReq.name}
                         onChange={e => handleChange('name', e.target.value)}
-                        className="w-full p-2 border border-slate-300 dark:border-[var(--border-color)] rounded text-sm bg-white dark:bg-[var(--bg-surface)] dark:text-[var(--text-primary)] focus:border-red-500 outline-none"
+                        className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 dark:text-white focus:border-red-500 outline-none transition-colors"
                         placeholder="My Request"
                     />
                 </div>
 
                 <div className="flex gap-3">
-                    <div className="w-32">
-                        <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-400">Method</label>
+                    <div className="w-24">
+                        <label className="block text-[10px] font-bold mb-1 text-slate-400 uppercase tracking-wider">Method</label>
                         <select
                             value={editedReq.method}
                             onChange={e => handleChange('method', e.target.value)}
-                            className="w-full p-2 border border-slate-300 dark:border-[var(--border-color)] rounded text-sm bg-white dark:bg-[var(--bg-surface)] dark:text-[var(--text-primary)] font-bold focus:border-red-500 outline-none"
+                            className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 dark:text-red-500 font-bold focus:border-red-500 outline-none cursor-pointer uppercase"
                         >
                             <option value="GET">GET</option>
                             <option value="POST">POST</option>
@@ -1263,149 +1568,289 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
                         </select>
                     </div>
                     <div className="flex-1">
-                        <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-400">Endpoint URL</label>
-                        <input
-                            type="text"
-                            value={editedReq.url}
-                            onChange={e => handleInputChange('url', e.target.value, e)}
-                            onKeyDown={handleKeyDown}
-                            className="w-full p-2 border border-slate-300 dark:border-[var(--border-color)] rounded text-sm bg-white dark:bg-[var(--bg-surface)] dark:text-[var(--text-primary)] font-mono focus:border-red-500 outline-none"
-                            placeholder="https://api.example.com/endpoint"
-                        />
-                        {hasVariablesInUrl && (
-                            <div className="mt-1 flex items-center gap-1.5 px-2 py-1 bg-slate-50 dark:bg-[var(--bg-surface)] rounded border border-slate-100 dark:border-[var(--border-color)]">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase">Preview:</span>
-                                <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono truncate">{resolvedUrl}</span>
-                            </div>
-                        )}
+                        <label className="block text-[10px] font-bold mb-1 text-slate-400 uppercase tracking-wider">URL</label>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={editedReq.url}
+                                onChange={e => handleInputChange('url', e.target.value, e)}
+                                onKeyDown={handleKeyDown}
+                                className="flex-1 px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 dark:text-white font-mono focus:border-red-500 outline-none transition-colors"
+                                placeholder="https://api.example.com/endpoint"
+                            />
+                            <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); handleVerify(); }}
+                                disabled={isLoading || !editedReq.url?.trim()}
+                                className={`px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-[10px] font-bold uppercase flex items-center gap-1.5 transition-colors shadow-sm ${(isLoading || !editedReq.url?.trim()) ? 'opacity-50 cursor-not-allowed grayscale-[0.5]' : ''}`}
+                            >
+                                {isLoading ? (
+                                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                ) : (
+                                    <Play className="w-3 h-3" />
+                                )}
+                                {isLoading ? 'Sending...' : 'Verify'}
+                            </button>
+                        </div>
                     </div>
                 </div>
+            </div>
 
-                <div>
-                    <div className="flex items-center justify-between mb-2">
-                        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400">Headers</label>
-                    </div>
-                    <div className="space-y-2 border border-slate-300 dark:border-[var(--border-color)] rounded p-3 bg-slate-50 dark:bg-[var(--bg-surface)]">
-                        {headers.length === 0 ? (
-                            <p className="text-xs text-slate-400 italic text-center py-2">No headers. Click "Add Header" to add one.</p>
-                        ) : (
-                            headers.map(header => (
-                                <div key={header.id} className="flex gap-2 items-start group">
-                                    <input
-                                        type="text"
-                                        value={header.key}
-                                        onChange={e => handleInputChange('header-key', e.target.value, e, header.id)}
-                                        onKeyDown={handleKeyDown}
-                                        placeholder="Key"
-                                        className="flex-1 p-2 border border-slate-300 dark:border-[var(--border-color)] rounded text-xs bg-white dark:bg-[var(--bg-surface)] dark:text-[var(--text-primary)] focus:border-red-500 outline-none"
-                                    />
-                                    <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex-1 flex min-h-0 overflow-hidden">
+                {/* Left Side: Request */}
+                <div className="w-1/2 overflow-y-auto px-4 py-3 space-y-4 border-r border-slate-200 dark:border-slate-800 custom-scrollbar">
+                    {/* (Unchanged headers/body sections) */}
+                    <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Headers</label>
+                        </div>
+                        <div className="space-y-1.5 border border-slate-200 dark:border-slate-700 rounded p-2 bg-slate-50 dark:bg-slate-900/30">
+                            {headers.length === 0 ? (
+                                <p className="text-[10px] text-slate-400 italic text-center py-2">No headers defined</p>
+                            ) : (
+                                headers.map(header => (
+                                    <div key={header.id} className="flex gap-1.5 items-start group">
+                                        <input
+                                            type="text"
+                                            value={header.key}
+                                            onChange={e => handleInputChange('header-key', e.target.value, e, header.id)}
+                                            onKeyDown={handleKeyDown}
+                                            placeholder="Key"
+                                            className="flex-1 px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded text-[11px] bg-white dark:bg-slate-800 dark:text-white focus:border-red-500 outline-none"
+                                        />
                                         <input
                                             type="text"
                                             value={header.value}
                                             onChange={e => handleInputChange('header-value', e.target.value, e, header.id)}
                                             onKeyDown={handleKeyDown}
                                             placeholder="Value"
-                                            className="w-full p-2 border border-slate-300 dark:border-[var(--border-color)] rounded text-xs bg-white dark:bg-[var(--bg-surface)] dark:text-[var(--text-primary)] focus:border-red-500 outline-none"
+                                            className="flex-1 px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded text-[11px] bg-white dark:bg-slate-800 dark:text-white focus:border-red-500 outline-none"
                                         />
-                                        {header.value.includes('{{') && (
-                                            <span className="text-[9px] text-slate-400 px-1 pt-1 truncate italic">
-                                                {replaceEnvVariables(header.value, activeEnv)}
-                                            </span>
-                                        )}
+                                        <button
+                                            onClick={() => handleDeleteHeader(header.id)}
+                                            className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
                                     </div>
-                                    <button
-                                        onClick={() => handleDeleteHeader(header.id)}
-                                        className="p-2 mt-0.5 text-slate-400 hover:text-red-500 rounded transition-colors"
-                                        title="Delete Header"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            ))
-                        )}
-                        <div className="pt-2 border-t border-slate-200 dark:border-slate-700/50 mt-2">
-                            <button
-                                onClick={handleAddHeader}
-                                className="text-xs text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 font-bold flex items-center gap-1 transition-colors"
-                            >
-                                <Plus className="w-3.5 h-3.5" /> Add Header
-                            </button>
+                                ))
+                            )}
+                            <div className="pt-2 border-t border-slate-200 dark:border-slate-700/50 mt-1">
+                                <button
+                                    onClick={handleAddHeader}
+                                    className="text-[10px] text-red-600 dark:text-red-400 hover:text-red-700 font-bold flex items-center gap-1 transition-colors uppercase"
+                                >
+                                    <Plus className="w-3 h-3" /> Add Header
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <div>
-                    <label className="block text-xs font-semibold mb-1 text-slate-600 dark:text-slate-400">Request Body</label>
-                    <div className="relative border border-slate-300 dark:border-[var(--border-color)] rounded-lg overflow-hidden bg-white dark:bg-[var(--bg-surface)]">
-                        <div className="flex-1 relative overflow-hidden">
-                            {/* The visible highlighted layer */}
-                            <div
-                                className="absolute inset-0 pointer-events-none p-3 text-sm font-mono leading-[1.5rem] whitespace-pre-wrap overflow-hidden"
-                                style={{
-                                    color: 'transparent',
-                                    top: -scrollOffset
-                                }}
-                            >
-                                <SyntaxHighlighter
-                                    language="json"
-                                    style={document.documentElement.classList.contains('dark') ? atomOneLight : atomOneDark}
-                                    className="bg-transparent !p-0 !m-0"
-                                    customStyle={{ background: 'transparent', padding: 0 }}
-                                    wrapLongLines={true}
-                                >
-                                    {editedReq.body || ' '}
-                                </SyntaxHighlighter>
-                            </div>
-
-                            {/* The editable transparent layer */}
-                            <textarea
-                                ref={bodyTextareaRef}
-                                value={editedReq.body || ''}
-                                onChange={e => handleInputChange('body', e.target.value, e)}
-                                onKeyDown={handleKeyDown}
-                                onScroll={handleScroll}
-                                className="w-full p-3 bg-transparent text-sm font-mono focus:border-red-500 outline-none overflow-y-auto transition-[height] duration-200 relative z-10"
-                                style={{
-                                    minHeight: '120px',
-                                    maxHeight: '400px',
-                                    height: 'auto',
-                                    WebkitTextFillColor: 'transparent',
-                                    color: 'transparent',
-                                    lineHeight: '1.5rem'
-                                }}
-                                placeholder="{}"
-                                spellCheck="false"
+                    <div>
+                        <div className="flex items-center gap-2 mb-1.5">
+                            <Lock className="w-3 h-3 text-slate-400" />
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Authentication</label>
+                        </div>
+                        <div className="border border-slate-200 dark:border-slate-700 rounded p-3 bg-slate-50 dark:bg-red-900/5 transition-all">
+                            <AuthEditor
+                                authType={authType}
+                                setAuthType={setAuthType}
+                                authData={authData}
+                                setAuthData={setAuthData}
+                                environments={[activeEnv]}
+                                activeEnv={activeEnv?.id}
                             />
                         </div>
                     </div>
-                    {hasVariablesInBody && (
-                        <div className="mt-2 p-3 bg-slate-50 dark:bg-[var(--bg-surface)] border border-slate-100 dark:border-[var(--border-color)] rounded-md">
-                            <div className="text-[10px] font-bold text-slate-400 uppercase mb-1">Preview (Resolved):</div>
-                            <div className="max-h-60 overflow-y-auto rounded border border-slate-200 dark:border-[var(--border-color)]">
-                                <SyntaxHighlighter
-                                    language="json"
-                                    style={document.documentElement.classList.contains('dark') ? atomOneDark : atomOneLight}
-                                    customStyle={{
-                                        margin: 0,
-                                        padding: '12px',
-                                        fontSize: '11px',
-                                        background: 'transparent',
-                                        fontFamily: 'inherit'
-                                    }}
-                                    wrapLongLines={true}
+
+                    <div className="pt-2">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-wider">Request Body</label>
+                            <div className="flex items-center gap-3">
+                                <div className="relative">
+                                    <button
+                                        onClick={() => setShowRawDropdown(!showRawDropdown)}
+                                        className="flex items-center gap-1 text-blue-600 dark:text-blue-500 text-[10px] font-bold hover:underline uppercase"
+                                    >
+                                        {rawType}
+                                        <ChevronDown className="w-3 h-3" />
+                                    </button>
+                                    {showRawDropdown && (
+                                        <div className="absolute top-full right-0 mt-1 w-24 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded shadow-lg z-50 py-1">
+                                            {['JSON', 'XML', 'HTML', 'Text'].map(type => (
+                                                <button
+                                                    key={type}
+                                                    onClick={() => { setRawType(type); setShowRawDropdown(false); }}
+                                                    className={`w-full text-left px-3 py-1 text-[10px] hover:bg-slate-100 dark:hover:bg-slate-700 ${rawType === type ? 'text-blue-600 font-bold' : 'text-slate-600 dark:text-slate-300'}`}
+                                                >
+                                                    {type}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={handleBeautify}
+                                    className="flex items-center gap-1 text-slate-500 hover:text-red-500 text-[10px] font-bold uppercase transition-colors"
                                 >
-                                    {resolvedBody}
-                                </SyntaxHighlighter>
+                                    <Sparkles className="w-3 h-3 text-yellow-500" />
+                                    Beautify
+                                </button>
                             </div>
                         </div>
-                    )}
+                        <div className="relative border border-slate-200 dark:border-slate-700 rounded overflow-hidden bg-white dark:bg-slate-800">
+                            <div className="flex-1 relative overflow-hidden">
+                                <div
+                                    className="absolute inset-0 pointer-events-none p-2 text-xs font-mono leading-relaxed whitespace-pre-wrap overflow-hidden"
+                                    style={{
+                                        color: 'transparent',
+                                        top: -scrollOffset
+                                    }}
+                                >
+                                    <SyntaxHighlighter
+                                        language={rawType.toLowerCase()}
+                                        style={document.documentElement.classList.contains('dark') ? atomOneLight : atomOneDark}
+                                        className="bg-transparent !p-0 !m-0"
+                                        customStyle={{ background: 'transparent', padding: 0 }}
+                                        wrapLongLines={true}
+                                    >
+                                        {editedReq.body || ' '}
+                                    </SyntaxHighlighter>
+                                </div>
+
+                                <textarea
+                                    ref={bodyTextareaRef}
+                                    value={editedReq.body || ''}
+                                    onChange={e => handleInputChange('body', e.target.value, e)}
+                                    onKeyDown={handleKeyDown}
+                                    onScroll={handleScroll}
+                                    className="w-full p-2 bg-transparent text-xs font-mono focus:border-red-500 outline-none overflow-y-auto transition-[height] duration-200 relative z-10"
+                                    style={{
+                                        minHeight: '150px',
+                                        maxHeight: '350px',
+                                        height: 'auto',
+                                        WebkitTextFillColor: 'transparent',
+                                        color: 'transparent',
+                                        caretColor: '#ef4444',
+                                        lineHeight: '1.5'
+                                    }}
+                                    placeholder="{}"
+                                    spellCheck="false"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Right Side: Preview / Response */}
+                <div className="w-1/2 overflow-y-auto px-4 py-3 bg-slate-50 dark:bg-slate-900/10 space-y-4 custom-scrollbar flex flex-col">
+                    <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]">Response</label>
+                        {response && (
+                            <div className="flex items-center gap-3 text-[10px] font-mono">
+                                <span className={`${response.status >= 200 && response.status < 300 ? 'text-green-500' : 'text-red-500'} font-bold`}>
+                                    {response.status} {response.statusText}
+                                </span>
+                                <span className="text-slate-400">{response.time}ms</span>
+                                <span className="text-slate-400">{(response.size / 1024).toFixed(2)} KB</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="space-y-4 flex-1 flex flex-col min-h-0">
+                        {!response && !isLoading ? (
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1.5 tracking-wide">Resolved URL</label>
+                                    <div className="px-2.5 py-1.5 bg-white dark:bg-slate-800 rounded border border-slate-200 dark:border-slate-700 font-mono text-[10px] text-slate-600 dark:text-slate-300 break-all shadow-sm">
+                                        {resolvedUrl || 'No URL specified'}
+                                    </div>
+                                </div>
+
+                                {(hasVariablesInBody || (editedReq.body && editedReq.body.length > 2)) && (
+                                    <div>
+                                        <label className="block text-[9px] font-bold text-slate-400 uppercase mb-1.5 tracking-wide">Resolved Request Body</label>
+                                        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded overflow-hidden shadow-sm">
+                                            <div className="max-h-[250px] overflow-y-auto custom-scrollbar">
+                                                <SyntaxHighlighter
+                                                    language={rawType.toLowerCase()}
+                                                    style={document.documentElement.classList.contains('dark') ? atomOneDark : atomOneLight}
+                                                    customStyle={{
+                                                        margin: 0,
+                                                        padding: '10px',
+                                                        fontSize: '10px',
+                                                        background: 'transparent',
+                                                        lineHeight: '1.4'
+                                                    }}
+                                                    wrapLongLines={true}
+                                                >
+                                                    {resolvedBody || '// Empty body'}
+                                                </SyntaxHighlighter>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex-1 flex flex-col items-center justify-center text-center py-12 border-t border-dashed border-slate-200 dark:border-slate-800">
+                                    <div className="w-12 h-12 bg-slate-200 dark:bg-slate-800 rounded-full flex items-center justify-center mb-3 opacity-50">
+                                        <Globe className="w-6 h-6 text-slate-400" />
+                                    </div>
+                                    <h4 className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-0.5">Ready to Verify</h4>
+                                    <p className="text-[10px] text-slate-400 max-w-[150px]">Click the Verify button to execute this request.</p>
+                                </div>
+                            </div>
+                        ) : isLoading ? (
+                            <div className="flex-1 flex flex-col items-center justify-center py-12">
+                                <div className="w-8 h-8 border-4 border-red-600/20 border-t-red-600 rounded-full animate-spin mb-4" />
+                                <p className="text-xs text-slate-500 animate-pulse font-medium uppercase tracking-widest">Executing Request...</p>
+                            </div>
+                        ) : (
+                            <div className="flex-1 flex flex-col min-h-0">
+                                <div className="flex-1 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded overflow-hidden flex flex-col shadow-sm">
+                                    <div className="bg-slate-50 dark:bg-slate-900/50 px-3 py-1.5 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+                                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Response Body</span>
+                                        <button
+                                            onClick={() => {
+                                                const content = typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2);
+                                                try {
+                                                    const parsed = JSON.parse(content);
+                                                    setResponse(prev => ({ ...prev, data: parsed }));
+                                                } catch (e) { }
+                                            }}
+                                            className="text-[9px] text-red-600 hover:underline font-bold"
+                                        >
+                                            PRETTIFY
+                                        </button>
+                                    </div>
+                                    <div className="flex-1 overflow-auto custom-scrollbar">
+                                        <SyntaxHighlighter
+                                            language="json"
+                                            style={document.documentElement.classList.contains('dark') ? atomOneDark : atomOneLight}
+                                            customStyle={{
+                                                margin: 0,
+                                                padding: '12px',
+                                                fontSize: '11px',
+                                                background: 'transparent',
+                                                lineHeight: '1.5'
+                                            }}
+                                            wrapLongLines={true}
+                                        >
+                                            {typeof response.data === 'string' ? response.data : JSON.stringify(response.data, null, 2)}
+                                        </SyntaxHighlighter>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </div>
             </div>
+
+
 
             {autocomplete.show && (
                 <VariableAutocomplete
                     variables={activeEnv?.variables}
+                    dynamicVariables={DYNAMIC_VARIABLES}
                     standardHeaders={STANDARD_HEADERS}
                     filterText={autocomplete.filterText}
                     type={autocomplete.type}

@@ -1488,7 +1488,7 @@ export function AdminDashboard() {
 
                                                                 {/* Headers */}
                                                                 {(() => {
-                                                                    let headers = selectedRequest.headers;
+                                                                    let headers = selectedRequest.headers || selectedRequest.header;
                                                                     if (typeof headers === 'string') {
                                                                         try { headers = JSON.parse(headers); } catch (e) { headers = {}; }
                                                                     }
