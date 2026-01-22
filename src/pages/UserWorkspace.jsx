@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { getCollectionsByProjectId, getAllProjects, getEnvDetails, updateEnvDetails, getAllAppCodes, getCollectionDetails, createUpdateEnvVariable, deleteVariable, renameEnv, deleteEnvDetails } from '../services/apiservice';
 import { Layout } from '../components/Layout';
@@ -321,6 +321,8 @@ export function UserWorkspace() {
         isLoading: false
     }]);
     const [activeRequestId, setActiveRequestId] = useState('default');
+    const isSyncingRef = useRef(false);
+
 
     // Derived active request
     const activeRequest = (requests.find(r => r.id === activeRequestId) || requests[0] || {});
@@ -331,6 +333,103 @@ export function UserWorkspace() {
             req.id === activeRequestId ? { ...req, ...updates } : req
         ));
     };
+
+    // Sync FROM Headers TO Auth for activeRequest
+    useEffect(() => {
+        if (!activeRequest || isSyncingRef.current) return;
+
+        const authHeader = activeRequest.headers?.find(h => h.key.toLowerCase() === 'authorization' && h.active);
+        const apiKeyHeader = activeRequest.authType === 'api-key' && activeRequest.authData?.key
+            ? activeRequest.headers?.find(h => h.key.toLowerCase() === activeRequest.authData.key.toLowerCase() && h.active)
+            : null;
+
+        if (authHeader) {
+            const val = authHeader.value;
+            if (val.toLowerCase().startsWith('bearer ')) {
+                const token = val.substring(7).trim();
+                if (activeRequest.authType !== 'bearer' || activeRequest.authData?.token !== token) {
+                    isSyncingRef.current = true;
+                    updateActiveRequest({
+                        authType: 'bearer',
+                        authData: { ...activeRequest.authData, token }
+                    });
+                    setTimeout(() => { isSyncingRef.current = false; }, 0);
+                }
+            } else if (val.toLowerCase().startsWith('basic ')) {
+                if (activeRequest.authType !== 'basic') {
+                    try {
+                        const decoded = atob(val.substring(6).trim());
+                        const [username, password] = decoded.split(':');
+                        isSyncingRef.current = true;
+                        updateActiveRequest({
+                            authType: 'basic',
+                            authData: { ...activeRequest.authData, username, password }
+                        });
+                        setTimeout(() => { isSyncingRef.current = false; }, 0);
+                    } catch (e) { }
+                }
+            }
+        } else if (apiKeyHeader) {
+            const val = apiKeyHeader.value;
+            if (activeRequest.authData?.value !== val) {
+                isSyncingRef.current = true;
+                updateActiveRequest({
+                    authData: { ...activeRequest.authData, value: val }
+                });
+                setTimeout(() => { isSyncingRef.current = false; }, 0);
+            }
+        }
+    }, [activeRequest.headers, activeRequest.id]);
+
+    // Sync FROM Auth TO Headers for activeRequest
+    useEffect(() => {
+        if (!activeRequest || isSyncingRef.current) return;
+
+        const { authType, authData } = activeRequest;
+        let authVal = '';
+        if (authType === 'bearer' && authData?.token) {
+            authVal = `Bearer ${authData.token}`;
+        } else if (authType === 'basic' && authData?.username && authData?.password) {
+            authVal = `Basic ${btoa(`${authData.username}:${authData.password}`)}`;
+        } else if (authType === 'api-key' && authData?.addTo === 'header' && authData?.key) {
+            authVal = authData.value || '';
+        }
+
+        if (!authVal && authType !== 'api-key' && authType !== 'none') return;
+
+        const authKey = authType === 'api-key' ? authData?.key : 'Authorization';
+        if (!authKey) return;
+
+        const newHeaders = [...(activeRequest.headers || [])];
+        const index = newHeaders.findIndex(h => h.key.toLowerCase() === authKey.toLowerCase());
+
+        if (authType === 'none') {
+            // Remove Authorization header if auth set to None
+            const authIndex = newHeaders.findIndex(h => h.key.toLowerCase() === 'authorization');
+            if (authIndex !== -1) {
+                newHeaders.splice(authIndex, 1);
+                isSyncingRef.current = true;
+                updateActiveRequest({ headers: newHeaders });
+                setTimeout(() => { isSyncingRef.current = false; }, 0);
+            }
+            return;
+        }
+
+        if (index !== -1) {
+            if (newHeaders[index].value !== authVal) {
+                newHeaders[index] = { ...newHeaders[index], value: authVal, active: true };
+                isSyncingRef.current = true;
+                updateActiveRequest({ headers: newHeaders });
+                setTimeout(() => { isSyncingRef.current = false; }, 0);
+            }
+        } else if (authVal || authType === 'api-key') {
+            newHeaders.push({ key: authKey, value: authVal || '', active: true });
+            isSyncingRef.current = true;
+            updateActiveRequest({ headers: newHeaders });
+            setTimeout(() => { isSyncingRef.current = false; }, 0);
+        }
+    }, [activeRequest.authType, activeRequest.authData, activeRequest.id]);
+
 
     const [activeCollectionId, setActiveCollectionId] = useState(null);
 

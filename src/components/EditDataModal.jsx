@@ -1175,20 +1175,15 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
 
     const [headers, setHeaders] = useState(() => {
         let h = request.headers;
-        // Robustly unwrap multi-stringified headers
         while (typeof h === 'string' && h.length > 0) {
             try {
                 const parsed = JSON.parse(h);
-                if (typeof parsed === 'string') {
-                    h = parsed;
-                    continue;
-                }
-                h = parsed;
-                break;
+                if (typeof parsed === 'string') { h = parsed; continue; }
+                h = parsed; break;
             } catch (e) { break; }
         }
-        h = typeof h === 'object' && h !== null ? h : {};
-        return Object.entries(h).map(([key, value]) => ({ key, value: String(value), id: Math.random() }));
+        const hObj = typeof h === 'object' && h !== null ? h : {};
+        return Object.entries(hObj).map(([key, value]) => ({ key, value: String(value), id: Math.random() }));
     });
 
     const [autocomplete, setAutocomplete] = useState({
@@ -1206,8 +1201,157 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
     const bodyTextareaRef = useRef(null);
     const [rawType, setRawType] = useState('JSON');
     const [showRawDropdown, setShowRawDropdown] = useState(false);
-    const [authType, setAuthType] = useState(request.authType || 'none');
-    const [authData, setAuthData] = useState(request.authData || {});
+
+    const [authType, setAuthType] = useState(() => {
+        if (request.authType && request.authType !== 'none') return request.authType;
+        // Search headers for Authorization
+        let h = request.headers;
+        while (typeof h === 'string' && h.length > 0) {
+            try {
+                const parsed = JSON.parse(h);
+                if (typeof parsed === 'string') { h = parsed; continue; }
+                h = parsed; break;
+            } catch (e) { break; }
+        }
+        const hObj = typeof h === 'object' && h !== null ? h : {};
+        const authHeader = Object.entries(hObj).find(([k]) => k.toLowerCase() === 'authorization');
+        if (authHeader) {
+            const val = String(authHeader[1]).trim();
+            if (val.toLowerCase().startsWith('bearer ')) return 'bearer';
+            if (val.toLowerCase().startsWith('basic ')) return 'basic';
+        }
+        return 'none';
+    });
+
+    const [authData, setAuthData] = useState(() => {
+        if (request.authData && (typeof request.authData === 'object' ? Object.keys(request.authData).length > 0 : true)) {
+            if (typeof request.authData === 'string' && request.authData.startsWith('{')) {
+                try { return JSON.parse(request.authData); } catch (e) { }
+            }
+            if (typeof request.authData === 'object') return request.authData;
+        }
+
+        // Search headers for values
+        let h = request.headers;
+        while (typeof h === 'string' && h.length > 0) {
+            try {
+                const parsed = JSON.parse(h);
+                if (typeof parsed === 'string') { h = parsed; continue; }
+                h = parsed; break;
+            } catch (e) { break; }
+        }
+        const hObj = typeof h === 'object' && h !== null ? h : {};
+        const authHeader = Object.entries(hObj).find(([k]) => k.toLowerCase() === 'authorization');
+        if (authHeader) {
+            const val = String(authHeader[1]).trim();
+            if (val.toLowerCase().startsWith('bearer ')) {
+                return { token: val.substring(7).trim() };
+            }
+            if (val.toLowerCase().startsWith('basic ')) {
+                try {
+                    const encoded = val.substring(6).trim();
+                    const decoded = atob(encoded);
+                    const [username, password] = decoded.split(':');
+                    return { username, password };
+                } catch (e) {
+                    return { raw: val.substring(6).trim() };
+                }
+            }
+        }
+        return {};
+    });
+
+    // Flag to prevent infinite sync loops
+    const isSyncingRef = useRef(false);
+
+    // Sync FROM Headers TO Auth
+    useEffect(() => {
+        if (isSyncingRef.current) return;
+        const authHeader = headers.find(h => h.key.toLowerCase() === 'authorization');
+        const apiKeyHeader = authType === 'api-key' && authData.key
+            ? headers.find(h => h.key.toLowerCase() === authData.key.toLowerCase())
+            : null;
+
+        if (authHeader) {
+            const val = authHeader.value.trim();
+            if (val.toLowerCase().startsWith('bearer ')) {
+                const token = val.substring(7).trim();
+                if (authType !== 'bearer' || authData.token !== token) {
+                    isSyncingRef.current = true;
+                    setAuthType('bearer');
+                    setAuthData(prev => ({ ...prev, token }));
+                    setTimeout(() => { isSyncingRef.current = false; }, 50);
+                }
+            } else if (val.toLowerCase().startsWith('basic ')) {
+                if (authType !== 'basic') {
+                    isSyncingRef.current = true;
+                    setAuthType('basic');
+                    try {
+                        const decoded = atob(val.substring(6).trim());
+                        const [username, password] = decoded.split(':');
+                        setAuthData({ username, password });
+                    } catch (e) { }
+                    setTimeout(() => { isSyncingRef.current = false; }, 50);
+                }
+            }
+        } else if (apiKeyHeader) {
+            if (authData.value !== apiKeyHeader.value) {
+                isSyncingRef.current = true;
+                setAuthData(prev => ({ ...prev, value: apiKeyHeader.value }));
+                setTimeout(() => { isSyncingRef.current = false; }, 50);
+            }
+        }
+    }, [headers]);
+
+    // Sync FROM Auth TO Headers
+    useEffect(() => {
+        if (isSyncingRef.current) return;
+        let authVal = '';
+        if (authType === 'bearer' && authData.token) {
+            authVal = `Bearer ${authData.token}`;
+        } else if (authType === 'basic' && authData.username && authData.password) {
+            try {
+                authVal = `Basic ${btoa(`${authData.username}:${authData.password}`)}`;
+            } catch (e) { }
+        } else if (authType === 'api-key' && authData.addTo === 'header' && authData.key) {
+            authVal = authData.value || '';
+        }
+
+        if (!authVal && authType !== 'api-key' && authType !== 'none') return;
+
+        const authKey = authType === 'api-key' ? authData.key : 'Authorization';
+        if (!authKey) return;
+
+        setHeaders(prev => {
+            const newHeaders = [...prev];
+            const index = newHeaders.findIndex(h => h.key.toLowerCase() === authKey.toLowerCase());
+
+            if (authType === 'none') {
+                const authIdx = newHeaders.findIndex(h => h.key.toLowerCase() === 'authorization');
+                if (authIdx !== -1) {
+                    isSyncingRef.current = true;
+                    newHeaders.splice(authIdx, 1);
+                    setTimeout(() => { isSyncingRef.current = false; }, 50);
+                    return newHeaders;
+                }
+                return prev;
+            }
+
+            if (index !== -1) {
+                if (newHeaders[index].value === authVal) return prev;
+                isSyncingRef.current = true;
+                newHeaders[index] = { ...newHeaders[index], value: authVal };
+                setTimeout(() => { isSyncingRef.current = false; }, 50);
+                return newHeaders;
+            } else if (authVal || authType === 'api-key') {
+                isSyncingRef.current = true;
+                newHeaders.push({ key: authKey, value: authVal || '', id: Math.random() });
+                setTimeout(() => { isSyncingRef.current = false; }, 50);
+                return newHeaders;
+            }
+            return prev;
+        });
+    }, [authType, authData]);
     const [response, setResponse] = useState(null);
     const [isLoading, setIsLoading] = useState(false);
 
