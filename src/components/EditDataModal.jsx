@@ -1358,17 +1358,12 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
     const [scrollOffset, setScrollOffset] = useState(0);
 
     const handleScroll = (e) => {
-        setScrollOffset(e.target.scrollTop);
+        const top = e.target.scrollTop;
+        setScrollOffset(top);
     };
 
-    // Auto-resize body textarea
-    useEffect(() => {
-        if (bodyTextareaRef.current) {
-            bodyTextareaRef.current.style.height = 'auto';
-            const newHeight = Math.min(bodyTextareaRef.current.scrollHeight, 400);
-            bodyTextareaRef.current.style.height = `${newHeight}px`;
-        }
-    }, [editedReq.body]);
+
+
 
     const handleInputChange = (field, value, e, headerId = null) => {
         if (field === 'url' || field === 'body') {
@@ -1834,33 +1829,46 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
                                     )}
                                 </div>
                                 <button
+                                    onClick={() => setEditedReq(prev => ({ ...prev, body: '' }))}
+                                    className="flex items-center gap-1 text-slate-500 hover:text-red-500 text-[10px] font-bold uppercase transition-colors"
+                                >
+                                    <Trash2 className="w-3 h-3" />
+                                    Clear
+                                </button>
+                                <button
                                     onClick={handleBeautify}
                                     className="flex items-center gap-1 text-slate-500 hover:text-red-500 text-[10px] font-bold uppercase transition-colors"
                                 >
                                     <Sparkles className="w-3 h-3 text-yellow-500" />
                                     Beautify
                                 </button>
+
                             </div>
                         </div>
                         <div className="relative border border-slate-200 dark:border-slate-700 rounded overflow-hidden bg-white dark:bg-slate-800">
                             <div className="flex-1 relative overflow-hidden">
                                 <div
-                                    className="absolute inset-0 pointer-events-none p-2 text-xs font-mono leading-relaxed whitespace-pre-wrap overflow-hidden"
+                                    className="absolute inset-0 pointer-events-none p-2 text-[11px] font-mono leading-relaxed whitespace-pre"
                                     style={{
                                         color: 'transparent',
-                                        top: -scrollOffset
+                                        top: -scrollOffset,
+                                        left: bodyTextareaRef.current ? -bodyTextareaRef.current.scrollLeft : 0,
+                                        padding: '8px',
+                                        fontVariantLigatures: 'none'
                                     }}
                                 >
                                     <SyntaxHighlighter
                                         language={rawType.toLowerCase()}
-                                        style={document.documentElement.classList.contains('dark') ? atomOneLight : atomOneDark}
+                                        style={document.documentElement.classList.contains('dark') ? atomOneDark : atomOneLight}
                                         className="bg-transparent !p-0 !m-0"
                                         customStyle={{ background: 'transparent', padding: 0 }}
-                                        wrapLongLines={true}
+                                        wrapLongLines={false}
                                     >
                                         {editedReq.body || ' '}
                                     </SyntaxHighlighter>
                                 </div>
+
+
 
                                 <textarea
                                     ref={bodyTextareaRef}
@@ -1868,16 +1876,15 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
                                     onChange={e => handleInputChange('body', e.target.value, e)}
                                     onKeyDown={handleKeyDown}
                                     onScroll={handleScroll}
-                                    className="w-full p-2 bg-transparent text-xs font-mono focus:border-red-500 outline-none overflow-y-auto transition-[height] duration-200 relative z-10"
+                                    className="w-full h-80 bg-transparent p-2 text-[11px] font-mono focus:border-red-500 outline-none resize-none relative z-10 custom-scrollbar whitespace-pre"
                                     style={{
-                                        minHeight: '150px',
-                                        maxHeight: '350px',
-                                        height: 'auto',
                                         WebkitTextFillColor: 'transparent',
-                                        color: 'transparent',
                                         caretColor: '#ef4444',
-                                        lineHeight: '1.5'
+                                        lineHeight: '1.625',
+                                        fontVariantLigatures: 'none'
                                     }}
+
+
                                     placeholder="{}"
                                     spellCheck="false"
                                 />

@@ -2043,7 +2043,7 @@ export function UserWorkspace() {
                                 >
                                     <div className="flex-1 border-r border-slate-200 dark:border-[var(--border-color)] p-2.5 flex flex-col min-h-0 overflow-auto">
                                         <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
-                                        <div className="flex-1 overflow-auto mt-2">
+                                        <div className={`flex-1 flex flex-col min-h-0 mt-2 ${activeTab === 'body' ? 'overflow-hidden' : 'overflow-auto'}`}>
                                             {activeTab === 'docs' && (
                                                 <div className="flex flex-col items-center justify-center h-64 text-slate-400 dark:text-slate-500">
                                                     <AlignLeft className="w-12 h-12 mb-4 opacity-20" />
