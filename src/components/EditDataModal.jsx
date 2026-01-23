@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical, Save, Folder, FileText, Search, Globe, Sparkles, Play, Lock } from 'lucide-react';
 import { createUpdateCollections, getAllAppCodes, deleteCollection, getCollectionDetails, getEnvDetails } from '../services/apiservice';
-import { replaceEnvVariables, getCursorCoordinates, DYNAMIC_VARIABLES } from '../lib/utils';
+import { cn, replaceEnvVariables, getCursorCoordinates, DYNAMIC_VARIABLES } from '../lib/utils';
 import { VariableAutocomplete } from './VariableAutocomplete';
 import { AuthEditor } from './AuthEditor';
 import { Light as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -1679,58 +1679,63 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
                 </div>
             </div>
 
-            <div className="flex flex-col px-6 py-3 border-b border-slate-200 dark:border-slate-800 space-y-3">
-                <div>
-                    <label className="block text-[10px] font-bold mb-1 text-slate-400 uppercase tracking-wider">Request Name</label>
+            <div className="flex items-center gap-4 px-6 py-3 border-b border-slate-200 dark:border-slate-800 bg-slate-50/30 dark:bg-white/5">
+                {/* Method Field */}
+                <div className="w-24 shrink-0">
+                    <label className="block text-[9px] font-black mb-1 text-slate-400 uppercase tracking-widest pl-1">Method</label>
+                    <select
+                        value={editedReq.method}
+                        onChange={e => handleChange('method', e.target.value)}
+                        className="w-full px-2 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 dark:text-red-500 font-bold focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none cursor-pointer uppercase transition-all shadow-sm"
+                    >
+                        <option value="GET">GET</option>
+                        <option value="POST">POST</option>
+                        <option value="PUT">PUT</option>
+                        <option value="DELETE">DELETE</option>
+                        <option value="PATCH">PATCH</option>
+                    </select>
+                </div>
+
+                {/* Name / Type Field */}
+                <div className="w-64 shrink-0">
+                    <label className="block text-[9px] font-black mb-1 text-slate-400 uppercase tracking-widest pl-1">Request Name</label>
                     <input
                         type="text"
                         value={editedReq.name}
                         onChange={e => handleChange('name', e.target.value)}
-                        className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 dark:text-white focus:border-red-500 outline-none transition-colors"
-                        placeholder="My Request"
+                        className="w-full px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 dark:text-white font-medium focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none transition-all shadow-sm"
+                        placeholder="e.g. Get User Profile"
                     />
                 </div>
 
-                <div className="flex gap-3">
-                    <div className="w-24">
-                        <label className="block text-[10px] font-bold mb-1 text-slate-400 uppercase tracking-wider">Method</label>
-                        <select
-                            value={editedReq.method}
-                            onChange={e => handleChange('method', e.target.value)}
-                            className="w-full px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 dark:text-red-500 font-bold focus:border-red-500 outline-none cursor-pointer uppercase"
+                {/* URL Field */}
+                <div className="flex-1">
+                    <label className="block text-[9px] font-black mb-1 text-slate-400 uppercase tracking-widest pl-1">API Endpoint URL</label>
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={editedReq.url}
+                            onChange={e => handleInputChange('url', e.target.value, e)}
+                            onKeyDown={handleKeyDown}
+                            className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 dark:text-white font-mono focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none transition-all shadow-sm"
+                            placeholder="https://api.example.com/v1/resource"
+                        />
+                        <button
+                            type="button"
+                            onClick={(e) => { e.preventDefault(); handleVerify(); }}
+                            disabled={isLoading || !editedReq.url?.trim()}
+                            className={cn(
+                                "px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-black uppercase flex items-center gap-2 transition-all shadow-md active:scale-95 shrink-0",
+                                (isLoading || !editedReq.url?.trim()) && "opacity-50 cursor-not-allowed grayscale-[0.5]"
+                            )}
                         >
-                            <option value="GET">GET</option>
-                            <option value="POST">POST</option>
-                            <option value="PUT">PUT</option>
-                            <option value="DELETE">DELETE</option>
-                            <option value="PATCH">PATCH</option>
-                        </select>
-                    </div>
-                    <div className="flex-1">
-                        <label className="block text-[10px] font-bold mb-1 text-slate-400 uppercase tracking-wider">URL</label>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                value={editedReq.url}
-                                onChange={e => handleInputChange('url', e.target.value, e)}
-                                onKeyDown={handleKeyDown}
-                                className="flex-1 px-2 py-1.5 border border-slate-200 dark:border-slate-700 rounded text-xs bg-white dark:bg-slate-800 dark:text-white font-mono focus:border-red-500 outline-none transition-colors"
-                                placeholder="https://api.example.com/endpoint"
-                            />
-                            <button
-                                type="button"
-                                onClick={(e) => { e.preventDefault(); handleVerify(); }}
-                                disabled={isLoading || !editedReq.url?.trim()}
-                                className={`px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded text-[10px] font-bold uppercase flex items-center gap-1.5 transition-colors shadow-sm ${(isLoading || !editedReq.url?.trim()) ? 'opacity-50 cursor-not-allowed grayscale-[0.5]' : ''}`}
-                            >
-                                {isLoading ? (
-                                    <div className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                                ) : (
-                                    <Play className="w-3 h-3" />
-                                )}
-                                {isLoading ? 'Sending...' : 'Verify'}
-                            </button>
-                        </div>
+                            {isLoading ? (
+                                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                            ) : (
+                                <Play className="w-3.5 h-3.5 fill-current" />
+                            )}
+                            {isLoading ? 'Wait...' : 'Verify'}
+                        </button>
                     </div>
                 </div>
             </div>

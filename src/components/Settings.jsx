@@ -3,6 +3,7 @@ import { Moon, Sun, Upload, FolderOpen } from 'lucide-react';
 import { ImageCropper } from './ImageCropper';
 import { ResetPasswordModal } from './ResetPasswordModal';
 import { updateProfilePic, resetPassword } from '../services/apiservice';
+import { useAuth } from '../contexts/AuthContext';
 
 export function Settings({
     user,
@@ -16,6 +17,7 @@ export function Settings({
     localCollectionsPath,
     setLocalCollectionsPath
 }) {
+    const { updateUserData } = useAuth();
     const [tempImage, setTempImage] = useState(null);
     const [isResetPasswordOpen, setIsResetPasswordOpen] = useState(false);
     const fileInputRef = useRef(null);
@@ -65,8 +67,12 @@ export function Settings({
             if (userIdToUpdate) {
                 console.log('Final User ID being used for update:', userIdToUpdate);
                 const response = await updateProfilePic(userIdToUpdate, croppedImage, user.token);
+
                 // Update local storage too so reload keeps it
                 localStorage.setItem('profilePic', croppedImage);
+
+                // Update global context so other components see it
+                updateUserData({ profileImage: croppedImage });
 
                 setProfilePic(croppedImage);
                 setTempImage(null);
