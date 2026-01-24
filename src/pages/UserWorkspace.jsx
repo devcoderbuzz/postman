@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
-import { getCollectionsByProjectId, getAllProjects, getEnvDetails, updateEnvDetails, getAllAppCodes, getCollectionDetails, createUpdateEnvVariable, deleteVariable, renameEnv, deleteEnvDetails } from '../services/apiservice';
+import { getCollectionsByProjectId, getAllProjects, getEnvDetails, updateEnvDetails, getAllAppCodes, getCollectionDetails, createUpdateEnvVariable, deleteVariable, renameEnv, deleteEnvDetails, proxyService } from '../services/apiservice';
 import { Layout } from '../components/Layout';
 import { RequestBar } from '../components/RequestBar';
 import { Tabs } from '../components/Tabs';
@@ -322,6 +322,7 @@ export function UserWorkspace() {
     }]);
     const [activeRequestId, setActiveRequestId] = useState('default');
     const isSyncingRef = useRef(false);
+    const controllersRef = useRef({});
 
 
     // Derived active request
@@ -1105,6 +1106,11 @@ export function UserWorkspace() {
             headers: {},
             data: null
         };
+
+        // Create AbortController for cancellation
+        const controller = new AbortController();
+        controllersRef.current[activeRequestId] = controller;
+
         const startTime = Date.now();
 
         try {
@@ -1153,20 +1159,34 @@ export function UserWorkspace() {
             config.params = paramsObj;
             config.headers = { ...headersObj };
 
-            console.log("SENDING DIRECTLY:", {
+            console.log("SENDING VIA PROXY:", {
                 targetUrl: config.url,
                 method: config.method,
-                headers: config.headers,
-                data: config.data
-            });
-
-            const res = await axios({
-                method: config.method,
-                url: config.url,
                 headers: config.headers,
                 data: config.data,
                 params: config.params
             });
+
+            // Use proxyService instead of direct axios call
+            const proxyResponse = await proxyService({
+                url: config.url,
+                method: config.method,
+                headers: config.headers,
+                body: config.data || {},
+                params: config.params
+            }, user?.token, controller.signal);
+
+            // The proxy service is expected to return an object with status, data, and headers from the target
+            // If it returns them directly, we wrap it to match axios response structure if needed
+            const res = {
+                status: proxyResponse.status || 200,
+                statusText: proxyResponse.statusText || 'OK',
+                data: proxyResponse.data !== undefined ? proxyResponse.data : proxyResponse,
+                headers: proxyResponse.headers || {}
+            };
+
+            // Remove controller after success
+            delete controllersRef.current[activeRequestId];
 
             const endTime = Date.now();
             const responseData = {
@@ -1236,6 +1256,17 @@ export function UserWorkspace() {
                 expanded: false
             };
             setHistory(prev => [historyEntry, ...prev].slice(0, 50));
+        } finally {
+            delete controllersRef.current[activeRequestId];
+        }
+    };
+
+    const handleCancel = () => {
+        const controller = controllersRef.current[activeRequestId];
+        if (controller) {
+            controller.abort();
+            delete controllersRef.current[activeRequestId];
+            updateActiveRequest({ isLoading: false, error: new Error('Request cancelled by user') });
         }
     };
 
@@ -2221,6 +2252,7 @@ export function UserWorkspace() {
                             url={activeRequest.url}
                             setUrl={(val) => updateActiveRequest({ url: val })}
                             onSend={handleSend}
+                            onCancel={handleCancel}
                             isLoading={activeRequest.isLoading}
                             environments={environments}
                             activeEnv={activeEnv}

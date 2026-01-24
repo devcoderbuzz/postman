@@ -836,3 +836,35 @@ export const renameEnv = async (projectId, oldEnvName, newEnvName, token) => {
         throw error;
     }
 };
+
+/**
+ * Proxy service to forward requests.
+ * Calls the /proxy/forward endpoint.
+ * 
+ * @param {Object} proxyData - The proxy data object (url, method, headers, body)
+ * @param {string} token - Authorization token
+ * @returns {Promise<any>} - The response data
+ */
+export const proxyService = async (proxyData, token, signal) => {
+    try {
+        const authToken = token || sessionStorage.getItem('authToken');
+        const headers = {};
+        if (authToken) {
+            headers['Authorization'] = `Bearer ${authToken}`;
+        }
+        
+        const response = await axios.post(`${BASE_URL}/proxy/forward`, proxyData, {
+            headers: headers,
+            signal: signal
+        });
+        
+        return response.data;
+    } catch (error) {
+        console.error('Error in proxy service:', error.message);
+        if (error.response && error.response.data) {
+            throw new Error(error.response.data.message || 'Proxy request failed');
+        }
+        throw error;
+    }
+};
+

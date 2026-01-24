@@ -136,58 +136,6 @@ export function Settings({
                     </div>
                 </div>
 
-                {/* Data & Storage Section */}
-                <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider mb-4">Data & Storage</h3>
-                    <div className="space-y-4">
-                        <div className="space-y-2">
-                            <label className="text-xs font-medium text-slate-600 dark:text-slate-400 flex items-center gap-2">
-                                <FolderOpen className="w-3.5 h-3.5" />
-                                Local Collections Path
-                            </label>
-                            <div className="flex gap-2">
-                                <input
-                                    type="text"
-                                    value={localCollectionsPath}
-                                    onChange={(e) => setLocalCollectionsPath(e.target.value)}
-                                    placeholder="e.g. /Users/name/collections"
-                                    className="flex-1 px-4 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500/50 text-slate-900 dark:text-white"
-                                />
-
-                                <button
-                                    onClick={async () => {
-                                        try {
-                                            const { updateUser } = await import('../services/apiservice');
-                                            const userId = user?.id || user?.userId;
-                                            const authToken = user?.token;
-
-                                            if (!userId || !authToken) {
-                                                alert('User session or token invalid. Please log in again.');
-                                                console.error('Missing credentials:', { userId, authToken });
-                                                return;
-                                            }
-
-                                            console.log(`Calling updateUser with token: ${authToken.substring(0, 10)}...`);
-                                            await updateUser({
-                                                id: userId,
-                                                localStorageRef: localCollectionsPath
-                                            }, authToken);
-
-                                            alert('Local Collections Path saved successfully!');
-                                        } catch (error) {
-                                            console.error('Failed to save settings:', error);
-                                            alert(`Error saving settings: ${error.message}`);
-                                        }
-                                    }}
-                                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-xs font-black shadow-lg shadow-red-600/20 active:scale-95 transition-all shrink-0"
-                                >
-                                    SAVE
-                                </button>
-                            </div>
-                            <p className="text-[10px] text-slate-500 italic">Specify where your local collections are stored on your machine.</p>
-                        </div>
-                    </div>
-                </div>
 
                 {/* Appearance & Layout sections merged/existing */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -261,18 +209,20 @@ export function Settings({
 
                 <div className="pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
                     <p className="text-[10px] text-slate-400 font-medium tracking-tight">
-                        POSTMAN STUDIO • VERSION 1.0.0
+                        POSTMAN STUDIO • VERSION 2.0.0
                     </p>
                 </div>
             </div>
 
-            {tempImage && (
-                <ImageCropper
-                    image={tempImage}
-                    onCropComplete={handleCropComplete}
-                    onCancel={() => setTempImage(null)}
-                />
-            )}
+            {
+                tempImage && (
+                    <ImageCropper
+                        image={tempImage}
+                        onCropComplete={handleCropComplete}
+                        onCancel={() => setTempImage(null)}
+                    />
+                )
+            }
 
             <ResetPasswordModal
                 isOpen={isResetPasswordOpen}
@@ -280,6 +230,6 @@ export function Settings({
                 onSave={handleResetPassword}
                 username={user?.username}
             />
-        </div>
+        </div >
     );
 }

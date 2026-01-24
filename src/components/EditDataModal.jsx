@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical, Save, Folder, FileText, Search, Globe, Sparkles, Play, Lock } from 'lucide-react';
-import { createUpdateCollections, getAllAppCodes, deleteCollection, getCollectionDetails, getEnvDetails } from '../services/apiservice';
+import { createUpdateCollections, getAllAppCodes, deleteCollection, getCollectionDetails, getEnvDetails, proxyService } from '../services/apiservice';
 import { cn, replaceEnvVariables, getCursorCoordinates, DYNAMIC_VARIABLES } from '../lib/utils';
 import { VariableAutocomplete } from './VariableAutocomplete';
 import { AuthEditor } from './AuthEditor';
@@ -1138,7 +1138,9 @@ const STANDARD_HEADERS = [
 
 
 function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv }) {
+    const { user } = useAuth();
     const panelRef = useRef(null);
+    const controllerRef = useRef(null);
     const [editedReq, setEditedReq] = useState(() => {
         const req = { ...request };
         let b = req.body;
@@ -1541,6 +1543,8 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
     const handleVerify = async () => {
         setIsLoading(true);
         setResponse(null);
+        const controller = new AbortController();
+        controllerRef.current = controller;
         const startTime = Date.now();
 
         try {
@@ -1586,16 +1590,22 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
                 }
             }
 
-            // Create a clean axios instance to bypass any global interceptors for verification
-            const verifyInstance = axios.create();
-            const res = await verifyInstance({
-                method: editedReq.method,
+            // Use proxyService instead of direct axios call
+            const proxyResponse = await proxyService({
                 url: resolvedUrl,
+                method: editedReq.method,
                 headers: headersObj,
                 params: paramsObj,
-                data: requestData,
-                timeout: 30000
-            });
+                body: requestData || {}
+            }, user?.token, controller.signal);
+
+            // Wrap the response to match the expected structure
+            const res = {
+                status: proxyResponse.status || 200,
+                statusText: proxyResponse.statusText || 'OK',
+                data: proxyResponse.data !== undefined ? proxyResponse.data : proxyResponse,
+                headers: proxyResponse.headers || {}
+            };
 
             const endTime = Date.now();
             setResponse({
@@ -1631,6 +1641,24 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
             }
         } finally {
             setIsLoading(false);
+            controllerRef.current = null;
+        }
+    };
+
+    const handleCancelVerify = () => {
+        if (controllerRef.current) {
+            controllerRef.current.abort();
+            controllerRef.current = null;
+            setIsLoading(false);
+            setResponse({
+                status: 0,
+                statusText: 'Cancelled',
+                data: 'Request verification cancelled by user',
+                headers: {},
+                time: 0,
+                size: 0,
+                isError: true
+            });
         }
     };
 
@@ -1720,6 +1748,15 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
                             className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs bg-white dark:bg-slate-800 dark:text-white font-mono focus:ring-2 focus:ring-red-500/20 focus:border-red-500 outline-none transition-all shadow-sm"
                             placeholder="https://api.example.com/v1/resource"
                         />
+                        {isLoading && (
+                            <button
+                                type="button"
+                                onClick={(e) => { e.preventDefault(); handleCancelVerify(); }}
+                                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-black uppercase rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 border border-slate-200 dark:border-slate-700 shadow-sm shrink-0"
+                            >
+                                Cancel
+                            </button>
+                        )}
                         <button
                             type="button"
                             onClick={(e) => { e.preventDefault(); handleVerify(); }}
@@ -1730,11 +1767,16 @@ function RequestEditorPanel({ request, isCreating, onClose, onSave, activeEnv })
                             )}
                         >
                             {isLoading ? (
-                                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                <>
+                                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <span>Sending...</span>
+                                </>
                             ) : (
-                                <Play className="w-3.5 h-3.5 fill-current" />
+                                <>
+                                    <Play className="w-3.5 h-3.5 fill-current" />
+                                    <span>Verify</span>
+                                </>
                             )}
-                            {isLoading ? 'Wait...' : 'Verify'}
                         </button>
                     </div>
                 </div>
