@@ -55,12 +55,35 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+const NavigationBlocker = () => {
+  const { user } = useAuth();
+
+  React.useEffect(() => {
+    if (!user) return;
+
+    // Push initial state to prevent immediate back
+    window.history.pushState(null, null, window.location.href);
+
+    const handlePopState = (event) => {
+      // Re-push state when back/forward is clicked
+      window.history.pushState(null, null, window.location.href);
+      console.warn('Browser back/forward navigation is disabled in this workspace.');
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [user]);
+
+  return null;
+};
+
 function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
         <ThemeProvider>
           <Router>
+            <NavigationBlocker />
             <Routes>
               <Route path="/login" element={<Login />} />
 

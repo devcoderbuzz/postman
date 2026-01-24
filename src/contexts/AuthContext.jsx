@@ -78,15 +78,18 @@ export const AuthProvider = ({ children }) => {
                     assignedAppCodes: responseUser.assignedAppCodes || data.assignedAppCodes || [],
                     projectIds: responseUser.projectIds || data.projectIds || [],
                     preferredTheme: responseUser.preferredTheme || data.preferredTheme || null,
-                    localStorageRef: responseUser.localStorageRef || data.localStorageRef || null
+                    localStorageRef: responseUser.localStorageRef || data.localStorageRef || null,
+                    profileImage: responseUser.userProfileImage || responseUser.profileImage || data.userProfileImage || data.profileImage || null
                 };
 
                 console.log('Login successful. UserData:', userData);
                 setUser(userData);
                 sessionStorage.setItem('user', JSON.stringify(userData));
                 sessionStorage.setItem('authToken', userData.token);
-                if (data.profileImage) {
-                    localStorage.setItem('profilePic', data.profileImage);
+
+                const finalProfilePic = userData.profileImage;
+                if (finalProfilePic) {
+                    localStorage.setItem('profilePic', finalProfilePic);
                 }
                 return userData;
             }
@@ -100,8 +103,17 @@ export const AuthProvider = ({ children }) => {
 
 
 
+    const updateUserData = (newData) => {
+        setUser(prev => {
+            if (!prev) return null;
+            const updated = { ...prev, ...newData };
+            sessionStorage.setItem('user', JSON.stringify(updated));
+            return updated;
+        });
+    };
+
     return (
-        <AuthContext.Provider value={{ user, login, logout, loading }}>
+        <AuthContext.Provider value={{ user, login, logout, updateUserData, loading }}>
             {!loading && children}
         </AuthContext.Provider>
     );

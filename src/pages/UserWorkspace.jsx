@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
-import { getCollectionsByProjectId, getAllProjects, getEnvDetails, updateEnvDetails, getAllAppCodes, getCollectionDetails, createUpdateEnvVariable, deleteVariable, renameEnv, deleteEnvDetails } from '../services/apiservice';
+import { getCollectionsByProjectId, getAllProjects, getEnvDetails, updateEnvDetails, getAllAppCodes, getCollectionDetails, createUpdateEnvVariable, deleteVariable, renameEnv, deleteEnvDetails, proxyService } from '../services/apiservice';
 import { Layout } from '../components/Layout';
 import { RequestBar } from '../components/RequestBar';
 import { Tabs } from '../components/Tabs';
@@ -13,7 +13,7 @@ import { HistoryPanel } from '../components/HistoryPanel';
 import { EnvironmentManager } from '../components/EnvironmentManager';
 import { RequestTabs } from '../components/RequestTabs';
 import { Footer } from '../components/Footer';
-import { X, Save, Moon, Sun, Globe, Check, AlignLeft, Settings as SettingsIcon, Code2, ShieldCheck, Clock, Trash2, Plus, Search } from 'lucide-react';
+import { X, Save, Moon, Sun, Globe, Check, AlignLeft, Settings as SettingsIcon, Code2, ShieldCheck, Clock, Trash2, Plus, Search, Sparkles } from 'lucide-react';
 import { cn, replaceEnvVariables } from '../lib/utils';
 import { SaveRequestModal } from '../components/SaveRequestModal';
 import { Header } from '../components/Header';
@@ -47,7 +47,9 @@ function ConsoleSection({ title, children, defaultExpanded = false, className = 
     );
 }
 
-function JsonTree({ data }) {
+function JsonTree({ data, suffix = "" }) {
+    const [isCollapsed, setIsCollapsed] = useState(false);
+
     if (typeof data !== 'object' || data === null) {
         // Primitive values
         const isString = typeof data === 'string';
@@ -57,34 +59,76 @@ function JsonTree({ data }) {
                 isString ? "text-green-600 dark:text-[#a8ff60]" : "text-orange-600 dark:text-[#ce9178]"
             )}>
                 {isString ? `"${data}"` : String(data)}
+                {suffix}
+            </span>
+        );
+    }
+
+    const isArray = Array.isArray(data);
+    const openBrace = isArray ? '[' : '{';
+    const closeBrace = isArray ? ']' : '}';
+    const entries = isArray ? data : Object.entries(data);
+
+    if (entries.length === 0) {
+        return <span className="text-slate-900 dark:text-slate-300">{openBrace}{closeBrace}{suffix}</span>;
+    }
+
+    // Single line for arrays of primitives
+    if (isArray && data.every(item => typeof item !== 'object' || item === null)) {
+        return (
+            <span className="text-slate-900 dark:text-slate-300">
+                [
+                {data.map((item, index) => (
+                    <JsonTree key={index} data={item} suffix={index === data.length - 1 ? "" : ", "} />
+                ))}
+                ]{suffix}
             </span>
         );
     }
 
     return (
-        <div className="font-mono text-[11px] leading-relaxed">
-            {Object.entries(data).map(([key, value], index) => {
-                const isObject = typeof value === 'object' && value !== null;
-                return (
-                    <div key={key} className="flex">
-                        <span className="text-blue-600 dark:text-[#9cdcfe] mr-1">"{key}":</span>
-                        {isObject ? (
-                            <div className="flex-1">
-                                <span>{'{'}</span>
-                                <div className="pl-4 border-l border-slate-200 dark:border-slate-800">
-                                    <JsonTree data={value} />
+        <div className="font-mono text-[11px] leading-relaxed text-slate-900 dark:text-slate-300">
+            <span
+                className="cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800/50 rounded inline-flex items-center select-none"
+                onClick={() => setIsCollapsed(!isCollapsed)}
+            >
+                {isCollapsed ? (
+                    <ChevronRight className="w-3 h-3 mr-1 text-slate-400" />
+                ) : (
+                    <ChevronDown className="w-3 h-3 mr-1 text-slate-400" />
+                )}
+                {openBrace}
+                {isCollapsed && (
+                    <>
+                        <span className="text-slate-400 mx-1">...</span>
+                        {closeBrace}
+                        {suffix}
+                    </>
+                )}
+            </span>
+
+            {!isCollapsed && (
+                <>
+                    <div className="pl-4 border-l border-slate-200 dark:border-slate-800">
+                        {entries.map((item, index) => {
+                            const key = isArray ? null : item[0];
+                            const value = isArray ? item : item[1];
+                            const isLast = index === entries.length - 1;
+                            return (
+                                <div key={isArray ? index : key} className="flex">
+                                    {key !== null && (
+                                        <span className="text-blue-600 dark:text-[#9cdcfe] mr-1">"{key}":</span>
+                                    )}
+                                    <div className="flex-1">
+                                        <JsonTree data={value} suffix={isLast ? "" : ","} />
+                                    </div>
                                 </div>
-                                <span>{'}'}{index < Object.keys(data).length - 1 ? ',' : ''}</span>
-                            </div>
-                        ) : (
-                            <span>
-                                <JsonTree data={value} />
-                                {index < Object.keys(data).length - 1 ? ',' : ''}
-                            </span>
-                        )}
+                            );
+                        })}
                     </div>
-                );
-            })}
+                    <span>{closeBrace}{suffix}</span>
+                </>
+            )}
         </div>
     );
 }
@@ -95,7 +139,51 @@ function ConsoleItem({ item, isLatest }) {
     // Helper to parse if string
     const parseIfString = (data) => {
         if (typeof data === 'string') {
-            try { return JSON.parse(data); } catch (e) { return data; }
+            const trimmed = data.trim();
+            if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                try { return JSON.parse(trimmed); } catch (e) { }
+            }
+            if (trimmed.startsWith('<')) {
+                try {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(trimmed, "text/xml");
+                    if (xmlDoc.getElementsByTagName("parsererror").length > 0) {
+                        return data;
+                    }
+                    const parseNode = (node) => {
+                        if (node.nodeType === 3) return node.nodeValue.trim();
+                        const obj = {};
+                        if (node.attributes?.length > 0) {
+                            for (let i = 0; i < node.attributes.length; i++) {
+                                const attr = node.attributes[i];
+                                obj[`@${attr.name}`] = attr.value;
+                            }
+                        }
+                        if (node.childNodes?.length > 0) {
+                            let hasElements = false;
+                            for (let i = 0; i < node.childNodes.length; i++) {
+                                const child = node.childNodes[i];
+                                if (child.nodeType === 1) {
+                                    hasElements = true;
+                                    const name = child.nodeName;
+                                    const value = parseNode(child);
+                                    if (obj[name]) {
+                                        if (!Array.isArray(obj[name])) obj[name] = [obj[name]];
+                                        obj[name].push(value);
+                                    } else {
+                                        obj[name] = value;
+                                    }
+                                } else if (child.nodeType === 3 && child.nodeValue.trim()) {
+                                    if (!hasElements) return child.nodeValue.trim();
+                                    obj["#text"] = child.nodeValue.trim();
+                                }
+                            }
+                        }
+                        return Object.keys(obj).length === 0 ? "" : obj;
+                    };
+                    return { [xmlDoc.documentElement.nodeName]: parseNode(xmlDoc.documentElement) };
+                } catch (e) { }
+            }
         }
         return data;
     }
@@ -172,11 +260,7 @@ function ConsoleItem({ item, isLatest }) {
                             <ConsoleSection title="Request Body">
                                 {typeof requestBody === 'object' ? (
                                     <div className="ml-2">
-                                        <span>{'{'}</span>
-                                        <div className="pl-2 border-l border-slate-200 dark:border-slate-800 my-0.5">
-                                            <JsonTree data={requestBody} />
-                                        </div>
-                                        <span>{'}'}</span>
+                                        <JsonTree data={requestBody} />
                                     </div>
                                 ) : (
                                     <pre className="whitespace-pre-wrap text-blue-600 dark:text-[#ce9178]">{item.requestBody}</pre>
@@ -201,11 +285,7 @@ function ConsoleItem({ item, isLatest }) {
                             <ConsoleSection title="Response Body" defaultExpanded={true}>
                                 {typeof responseBody === 'object' ? (
                                     <div className="ml-2">
-                                        <span>{'{'}</span>
-                                        <div className="pl-2 border-l border-slate-200 dark:border-slate-800 my-0.5">
-                                            <JsonTree data={responseBody} />
-                                        </div>
-                                        <span>{'}'}</span>
+                                        <JsonTree data={responseBody} />
                                     </div>
                                 ) : (
                                     <pre className="whitespace-pre-wrap text-green-600 dark:text-[#ce9178]">{String(item.responseData)}</pre>
@@ -241,6 +321,9 @@ export function UserWorkspace() {
         isLoading: false
     }]);
     const [activeRequestId, setActiveRequestId] = useState('default');
+    const isSyncingRef = useRef(false);
+    const controllersRef = useRef({});
+
 
     // Derived active request
     const activeRequest = (requests.find(r => r.id === activeRequestId) || requests[0] || {});
@@ -251,6 +334,103 @@ export function UserWorkspace() {
             req.id === activeRequestId ? { ...req, ...updates } : req
         ));
     };
+
+    // Sync FROM Headers TO Auth for activeRequest
+    useEffect(() => {
+        if (!activeRequest || isSyncingRef.current) return;
+
+        const authHeader = activeRequest.headers?.find(h => h.key.toLowerCase() === 'authorization' && h.active);
+        const apiKeyHeader = activeRequest.authType === 'api-key' && activeRequest.authData?.key
+            ? activeRequest.headers?.find(h => h.key.toLowerCase() === activeRequest.authData.key.toLowerCase() && h.active)
+            : null;
+
+        if (authHeader) {
+            const val = authHeader.value;
+            if (val.toLowerCase().startsWith('bearer ')) {
+                const token = val.substring(7).trim();
+                if (activeRequest.authType !== 'bearer' || activeRequest.authData?.token !== token) {
+                    isSyncingRef.current = true;
+                    updateActiveRequest({
+                        authType: 'bearer',
+                        authData: { ...activeRequest.authData, token }
+                    });
+                    setTimeout(() => { isSyncingRef.current = false; }, 0);
+                }
+            } else if (val.toLowerCase().startsWith('basic ')) {
+                if (activeRequest.authType !== 'basic') {
+                    try {
+                        const decoded = atob(val.substring(6).trim());
+                        const [username, password] = decoded.split(':');
+                        isSyncingRef.current = true;
+                        updateActiveRequest({
+                            authType: 'basic',
+                            authData: { ...activeRequest.authData, username, password }
+                        });
+                        setTimeout(() => { isSyncingRef.current = false; }, 0);
+                    } catch (e) { }
+                }
+            }
+        } else if (apiKeyHeader) {
+            const val = apiKeyHeader.value;
+            if (activeRequest.authData?.value !== val) {
+                isSyncingRef.current = true;
+                updateActiveRequest({
+                    authData: { ...activeRequest.authData, value: val }
+                });
+                setTimeout(() => { isSyncingRef.current = false; }, 0);
+            }
+        }
+    }, [activeRequest.headers, activeRequest.id]);
+
+    // Sync FROM Auth TO Headers for activeRequest
+    useEffect(() => {
+        if (!activeRequest || isSyncingRef.current) return;
+
+        const { authType, authData } = activeRequest;
+        let authVal = '';
+        if (authType === 'bearer' && authData?.token) {
+            authVal = `Bearer ${authData.token}`;
+        } else if (authType === 'basic' && authData?.username && authData?.password) {
+            authVal = `Basic ${btoa(`${authData.username}:${authData.password}`)}`;
+        } else if (authType === 'api-key' && authData?.addTo === 'header' && authData?.key) {
+            authVal = authData.value || '';
+        }
+
+        if (!authVal && authType !== 'api-key' && authType !== 'none') return;
+
+        const authKey = authType === 'api-key' ? authData?.key : 'Authorization';
+        if (!authKey) return;
+
+        const newHeaders = [...(activeRequest.headers || [])];
+        const index = newHeaders.findIndex(h => h.key.toLowerCase() === authKey.toLowerCase());
+
+        if (authType === 'none') {
+            // Remove Authorization header if auth set to None
+            const authIndex = newHeaders.findIndex(h => h.key.toLowerCase() === 'authorization');
+            if (authIndex !== -1) {
+                newHeaders.splice(authIndex, 1);
+                isSyncingRef.current = true;
+                updateActiveRequest({ headers: newHeaders });
+                setTimeout(() => { isSyncingRef.current = false; }, 0);
+            }
+            return;
+        }
+
+        if (index !== -1) {
+            if (newHeaders[index].value !== authVal) {
+                newHeaders[index] = { ...newHeaders[index], value: authVal, active: true };
+                isSyncingRef.current = true;
+                updateActiveRequest({ headers: newHeaders });
+                setTimeout(() => { isSyncingRef.current = false; }, 0);
+            }
+        } else if (authVal || authType === 'api-key') {
+            newHeaders.push({ key: authKey, value: authVal || '', active: true });
+            isSyncingRef.current = true;
+            updateActiveRequest({ headers: newHeaders });
+            setTimeout(() => { isSyncingRef.current = false; }, 0);
+        }
+    }, [activeRequest.authType, activeRequest.authData, activeRequest.id]);
+
 
     const [activeCollectionId, setActiveCollectionId] = useState(null);
 
@@ -271,7 +451,10 @@ export function UserWorkspace() {
         if (user?.localStorageRef) {
             setLocalCollectionsPath(user.localStorageRef);
         }
-    }, [user?.localStorageRef]);
+        if (user?.profileImage) {
+            setProfilePic(user.profileImage);
+        }
+    }, [user?.localStorageRef, user?.profileImage]);
     const [editDataRefreshTrigger, setEditDataRefreshTrigger] = useState(0);
     const [envSearchTerm, setEnvSearchTerm] = useState('');
 
@@ -290,13 +473,21 @@ export function UserWorkspace() {
 
     useEffect(() => {
         if (profilePic) {
-            localStorage.setItem('profilePic', profilePic);
+            try {
+                localStorage.setItem('profilePic', profilePic);
+            } catch (e) {
+                console.error('Failed to save profile pic to local storage', e);
+            }
         }
     }, [profilePic]);
 
     useEffect(() => {
         if (localCollectionsPath) {
-            localStorage.setItem('localCollectionsPath', localCollectionsPath);
+            try {
+                localStorage.setItem('localCollectionsPath', localCollectionsPath);
+            } catch (e) {
+                console.error('Failed to save local collections path', e);
+            }
         }
     }, [localCollectionsPath]);
 
@@ -307,6 +498,8 @@ export function UserWorkspace() {
     const [isResizingRequest, setIsResizingRequest] = useState(false);
     const [consoleHeight, setConsoleHeight] = useState(200);
     const [isResizingConsole, setIsResizingConsole] = useState(false);
+    const [keyColumnWidth, setKeyColumnWidth] = useState(40);
+    const [isResizingEnvTable, setIsResizingEnvTable] = useState(false);
 
     // Project state
     const placeholderProjects = [{ id: 'default', name: 'Default Project' }];
@@ -375,8 +568,8 @@ export function UserWorkspace() {
                             url: req.url,
                             params: req.params || [],
                             headers: (() => {
-                                if (!req.headers) return [];
-                                let headersObj = req.headers;
+                                let headersObj = req.headers || req.header;
+                                if (!headersObj) return [];
 
                                 // If it's already an object, map it
                                 if (typeof headersObj === 'object' && headersObj !== null) {
@@ -462,8 +655,30 @@ export function UserWorkspace() {
     const [serverCollections, setServerCollections] = useState([]);
     const [localCollections, setLocalCollections] = useState([]);
     const [environments, setEnvironments] = useState([]);
+    const [commonEnvironment, setCommonEnvironment] = useState(null);
     const [activeEnv, setActiveEnv] = useState(null);
+    const [envVariableTab, setEnvVariableTab] = useState('specific'); // 'specific' or 'common'
     const [history, setHistory] = useState([]);
+
+    const memoizedActiveEnvironment = useMemo(() => {
+        const env = environments.find(e => e.id === activeEnv);
+        if (!commonEnvironment) return env || null;
+        if (!env) return commonEnvironment;
+
+        // Merge variables, but keep only one if keys are identical (env-specific wins)
+        const envVars = env.variables || [];
+        const commonVars = commonEnvironment.variables || [];
+
+        // Create a map to handle precedence
+        const varMap = {};
+        commonVars.forEach(v => { if (v.key) varMap[v.key] = v; });
+        envVars.forEach(v => { if (v.key) varMap[v.key] = v; });
+
+        return {
+            ...env,
+            variables: Object.values(varMap)
+        };
+    }, [activeEnv, environments, commonEnvironment]);
 
     // Load from localStorage
     useEffect(() => {
@@ -477,7 +692,9 @@ export function UserWorkspace() {
 
     // Save layout preference
     useEffect(() => {
-        localStorage.setItem('layout', layout);
+        try {
+            localStorage.setItem('layout', layout);
+        } catch (e) { }
     }, [layout]);
 
     // Apply theme to document - Now handled by ThemeContext
@@ -488,21 +705,58 @@ export function UserWorkspace() {
     }, [theme]);
     */
 
+    useEffect(() => {
+        const handleForbidden = (e) => {
+            const url = e.detail?.url || 'the server';
+            setErrorMessage(`Access Denied (403): You do not have permission to perform this action on ${url}.`);
+        };
+        window.addEventListener('auth-error-forbidden', handleForbidden);
+        return () => window.removeEventListener('auth-error-forbidden', handleForbidden);
+    }, []);
+
     // Save to localStorage
     useEffect(() => {
-        localStorage.setItem('collections', JSON.stringify(localCollections));
+        try {
+            localStorage.setItem('collections', JSON.stringify(localCollections));
+        } catch (e) {
+            console.error('Failed to save collections to local storage', e);
+            if (e.name === 'QuotaExceededError') {
+                setErrorMessage('Local storage quota exceeded. Cannot save more local collections.');
+            }
+        }
     }, [localCollections]);
 
     // Console / Footer State
     const [showConsole, setShowConsole] = useState(false);
     const latestRequest = history.length > 0 ? history[0] : null;
 
+    // Safe localStorage saving for console history
     useEffect(() => {
-        localStorage.setItem('consoleHistory', JSON.stringify(history));
+        try {
+            // Keep history limited to prevent quota issues
+            const limitedHistory = history.slice(0, 50);
+            localStorage.setItem('consoleHistory', JSON.stringify(limitedHistory));
+        } catch (e) {
+            console.error('LocalStorage quota exceeded for console history. Trimming further...', e);
+            // If it still fails, trim significantly and try again
+            const trimmedHistory = history.slice(0, 10);
+            try {
+                localStorage.setItem('consoleHistory', JSON.stringify(trimmedHistory));
+                setHistory(trimmedHistory);
+            } catch (inner) {
+                console.error('Failed to save even trimmed history. Clearing console history.', inner);
+                localStorage.removeItem('consoleHistory');
+                setHistory([]);
+            }
+        }
     }, [history]);
 
     useEffect(() => {
-        localStorage.setItem('environments', JSON.stringify(environments));
+        try {
+            localStorage.setItem('environments', JSON.stringify(environments));
+        } catch (e) {
+            console.error('Failed to save environments to local storage', e);
+        }
     }, [environments]);
 
     // Resize logic for Request/Response split
@@ -552,6 +806,30 @@ export function UserWorkspace() {
         }
     }, [isResizingConsole]);
 
+    // Resize logic for Environment Table
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            if (!isResizingEnvTable) return;
+            const container = document.getElementById('env-table-container');
+            if (!container) return;
+            const rect = container.getBoundingClientRect();
+            const offsetX = e.clientX - rect.left;
+            const percentage = (offsetX / rect.width) * 100;
+            if (percentage >= 10 && percentage <= 80) {
+                setKeyColumnWidth(percentage);
+            }
+        };
+        const handleMouseUp = () => setIsResizingEnvTable(false);
+        if (isResizingEnvTable) {
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+            return () => {
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+        }
+    }, [isResizingEnvTable]);
+
     const fetchEnvironments = async (appCode = activeAppCodeName, moduleName = activeModule, appCodesData = null) => {
         if (!user) return;
         try {
@@ -573,6 +851,7 @@ export function UserWorkspace() {
             const envData = await getEnvDetails(targetProjectId, user.token);
             if (!envData) {
                 setEnvironments([]);
+                setCommonEnvironment(null);
                 setActiveEnv(null);
                 return;
             }
@@ -614,22 +893,28 @@ export function UserWorkspace() {
                     })
                 }));
 
-                setEnvironments(formattedEnvs);
+                const allEnv = formattedEnvs.find(e => e.name?.toUpperCase() === 'ALL');
+                const restEnvs = formattedEnvs.filter(e => e.name?.toUpperCase() !== 'ALL');
 
-                if (formattedEnvs.length > 0) {
-                    if (!activeEnv || !formattedEnvs.find(e => e.id === activeEnv)) {
-                        setActiveEnv(formattedEnvs[0].id);
+                setCommonEnvironment(allEnv || null);
+                setEnvironments(restEnvs);
+
+                if (restEnvs.length > 0) {
+                    if (!activeEnv || !restEnvs.find(e => e.id === activeEnv)) {
+                        setActiveEnv(restEnvs[0].id);
                     }
                 } else {
                     setActiveEnv(null);
                 }
             } else {
                 setEnvironments([]);
+                setCommonEnvironment(null);
                 setActiveEnv(null);
             }
-        } catch (e) {
-            console.error('Failed to fetch environment details:', e);
+        } catch (error) {
+            console.error('Error fetching environments:', error);
             setEnvironments([]);
+            setCommonEnvironment(null);
             setActiveEnv(null);
         }
     };
@@ -803,22 +1088,33 @@ export function UserWorkspace() {
     };
 
     const handleSend = async () => {
-        updateActiveRequest({ isLoading: true, error: null, response: null });
         const request = activeRequest;
-        const startTime = Date.now();
-        let processedUrl = request.url;
+        if (!request) return;
 
+        updateActiveRequest({ isLoading: true, response: null, error: null });
+
+        let processedUrl = request.url;
         let headersObj = {};
         let paramsObj = {};
-        let config = {
+        let bodyData = request.body;
+
+        const currentEnv = memoizedActiveEnvironment;
+        const config = {
             method: request.method,
-            url: processedUrl,
+            url: request.url,
+            params: {},
             headers: {},
-            params: {}
+            data: null
         };
 
+        // Create AbortController for cancellation
+        const controller = new AbortController();
+        controllersRef.current[activeRequestId] = controller;
+
+        const startTime = Date.now();
+
         try {
-            const currentEnv = environments.find(env => env.id === activeEnv);
+
             processedUrl = replaceEnvVariables(request.url, currentEnv);
             paramsObj = request.params.reduce((acc, curr) => {
                 if (curr.key && curr.active) acc[curr.key] = replaceEnvVariables(curr.value, currentEnv);
@@ -863,37 +1159,35 @@ export function UserWorkspace() {
             config.params = paramsObj;
             config.headers = { ...headersObj };
 
-            console.log("SENDING TO PROXY:", {
+            console.log("SENDING VIA PROXY:", {
                 targetUrl: config.url,
                 method: config.method,
                 headers: config.headers,
-                data: config.data
+                data: config.data,
+                params: config.params
             });
 
-            const proxyRes = await axios({
-                method: 'POST',
-                url: 'http://localhost:3001/proxy',
-                data: {
-                    method: config.method,
-                    url: config.url,
-                    headers: config.headers,
-                    data: config.data,
-                    params: config.params
-                }
-            });
-            const res = proxyRes.data;
-            if (res.isError) {
-                throw {
-                    status: res.status,
-                    message: res.statusText || 'Proxy Error',
-                    response: {
-                        status: res.status,
-                        statusText: res.statusText,
-                        data: res.data,
-                        headers: res.headers
-                    }
-                };
-            }
+            // Use proxyService instead of direct axios call
+            const proxyResponse = await proxyService({
+                url: config.url,
+                method: config.method,
+                headers: config.headers,
+                body: config.data || {},
+                params: config.params
+            }, user?.token, controller.signal);
+
+            // The proxy service is expected to return an object with status, data, and headers from the target
+            // If it returns them directly, we wrap it to match axios response structure if needed
+            const res = {
+                status: proxyResponse.status || 200,
+                statusText: proxyResponse.statusText || 'OK',
+                data: proxyResponse.data !== undefined ? proxyResponse.data : proxyResponse,
+                headers: proxyResponse.headers || {}
+            };
+
+            // Remove controller after success
+            delete controllersRef.current[activeRequestId];
+
             const endTime = Date.now();
             const responseData = {
                 status: res.status,
@@ -962,6 +1256,17 @@ export function UserWorkspace() {
                 expanded: false
             };
             setHistory(prev => [historyEntry, ...prev].slice(0, 50));
+        } finally {
+            delete controllersRef.current[activeRequestId];
+        }
+    };
+
+    const handleCancel = () => {
+        const controller = controllersRef.current[activeRequestId];
+        if (controller) {
+            controller.abort();
+            delete controllersRef.current[activeRequestId];
+            updateActiveRequest({ isLoading: false, error: new Error('Request cancelled by user') });
         }
     };
 
@@ -1391,6 +1696,99 @@ export function UserWorkspace() {
         }
     };
 
+    const handleAddCommonVariable = () => {
+        if (!commonEnvironment) return;
+        setCommonEnvironment(prev => ({
+            ...prev,
+            variables: [...(prev.variables || []), {
+                id: null,
+                key: '',
+                value: '',
+                active: true,
+                originalKey: '',
+                originalValue: ''
+            }]
+        }));
+    };
+
+    const handleUpdateCommonVariable = (index, field, value) => {
+        setCommonEnvironment(prev => {
+            if (!prev) return null;
+            const newVariables = [...prev.variables];
+            newVariables[index] = { ...newVariables[index], [field]: value };
+            return { ...prev, variables: newVariables };
+        });
+    };
+
+    const handleSaveCommonVariable = async (index) => {
+        if (!commonEnvironment) return;
+        const targetVariable = commonEnvironment.variables[index];
+        if (!targetVariable) return;
+
+        let targetProjectId = null;
+        if (activeAppCodeName && activeModule && rawAppCodes.length > 0) {
+            const selectedApp = rawAppCodes.find(app =>
+                app.projectName === activeAppCodeName && app.moduleName === activeModule
+            );
+            if (selectedApp) targetProjectId = selectedApp.projectId || selectedApp.id;
+        }
+        if (!targetProjectId) return;
+
+        const payload = {
+            id: targetVariable.id || null,
+            project: { id: targetProjectId },
+            envName: commonEnvironment.name,
+            variableKey: targetVariable.key,
+            variableValue: targetVariable.value
+        };
+
+        try {
+            const responseData = await createUpdateEnvVariable(payload, user.token);
+            setCommonEnvironment(prev => {
+                const newVariables = [...prev.variables];
+                newVariables[index] = {
+                    ...newVariables[index],
+                    id: responseData?.id || newVariables[index].id,
+                    originalKey: targetVariable.key,
+                    originalValue: targetVariable.value
+                };
+                return { ...prev, variables: newVariables };
+            });
+            setShowEnvSaveSuccess(true);
+            setTimeout(() => setShowEnvSaveSuccess(false), 2000);
+        } catch (e) {
+            console.error('Failed to save common variable:', e);
+            setErrorMessage('Failed to save common variable.');
+        }
+    };
+
+    const handleDeleteCommonVariable = async (index) => {
+        if (!commonEnvironment) return;
+        const variableToDelete = commonEnvironment.variables[index];
+        if (!variableToDelete) return;
+
+        if (!window.confirm('Are you sure you want to delete this common variable?')) return;
+
+        if (variableToDelete.id) {
+            try {
+                await deleteVariable(variableToDelete.id, user.token);
+                setCommonEnvironment(prev => ({
+                    ...prev,
+                    variables: prev.variables.filter((_, i) => i !== index)
+                }));
+                setShowEnvSaveSuccess(true);
+                setTimeout(() => setShowEnvSaveSuccess(false), 2000);
+            } catch (e) {
+                console.error('Failed to delete common variable:', e);
+            }
+        } else {
+            setCommonEnvironment(prev => ({
+                ...prev,
+                variables: prev.variables.filter((_, i) => i !== index)
+            }));
+        }
+    };
+
     const handleRenameEnv = async (envId, newName, oldName) => {
         const currentEnv = environments.find(e => e.id === envId);
         if (!currentEnv) return;
@@ -1527,6 +1925,7 @@ export function UserWorkspace() {
                         <div className="w-80 border-r border-slate-200 dark:border-[var(--border-color)] p-6 overflow-auto bg-white dark:bg-[var(--bg-secondary)]">
                             <EnvironmentManager
                                 environments={environments}
+                                commonEnvironment={commonEnvironment}
                                 setEnvironments={setEnvironments}
                                 activeEnv={activeEnv}
                                 setActiveEnv={setActiveEnv}
@@ -1544,47 +1943,149 @@ export function UserWorkspace() {
                             />
                         </div>
                         <div className="flex-1 p-8 overflow-auto bg-slate-50 dark:bg-[var(--bg-primary)]">
-                            {activeEnv ? (
-                                <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <h2 className="text-xl font-bold text-slate-900 dark:text-[var(--text-primary)]">
-                                                {environments.find(e => e.id === activeEnv)?.name}
-                                            </h2>
-                                            <p className="text-sm text-slate-500 dark:text-[var(--text-secondary)]">Environment variables are used to store and reuse values in your requests.</p>
+                            <div className="max-w-full mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                                <div className="flex items-center h-12 mb-2">
+                                    <div className="flex-1">
+                                        {/* Left spacer to balance the search bar on the right */}
+                                    </div>
+                                    <div className="flex items-center gap-8">
+                                        <div
+                                            onClick={() => setEnvVariableTab('specific')}
+                                            className={cn(
+                                                "cursor-pointer pb-2 border-b-2 font-bold text-sm transition-all relative",
+                                                envVariableTab === 'specific'
+                                                    ? "border-red-500 text-slate-900 dark:text-white"
+                                                    : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                            )}
+                                        >
+                                            {activeEnv ? `${environments.find(e => e.id === activeEnv)?.name} Variables` : "Environment Variables"}
+                                            {envVariableTab === 'specific' && (
+                                                <div className="absolute -bottom-[2px] left-0 right-0 h-0.5 bg-red-500 rounded-full animate-in fade-in zoom-in duration-300" />
+                                            )}
+                                        </div>
+                                        <div
+                                            onClick={() => setEnvVariableTab('common')}
+                                            className={cn(
+                                                "cursor-pointer pb-2 border-b-2 font-bold text-sm transition-all flex items-center gap-2 relative",
+                                                envVariableTab === 'common'
+                                                    ? "border-red-500 text-slate-900 dark:text-white"
+                                                    : "border-transparent text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                            )}
+                                        >
+                                            <Sparkles className={cn("w-3.5 h-3.5", envVariableTab === 'common' ? "text-red-500" : "text-slate-400")} />
+                                            Common Variables
+                                            {envVariableTab === 'common' && (
+                                                <div className="absolute -bottom-[2px] left-0 right-0 h-0.5 bg-red-500 rounded-full animate-in fade-in zoom-in duration-300" />
+                                            )}
                                         </div>
                                     </div>
+                                    <div className="flex-1 flex justify-end">
+                                        <div className="relative w-72">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                            <input
+                                                type="text"
+                                                placeholder={`Search ${envVariableTab === 'common' ? 'common' : 'environment'} variables...`}
+                                                value={envSearchTerm}
+                                                onChange={(e) => setEnvSearchTerm(e.target.value)}
+                                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-10 py-2 text-sm outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500/50 transition-all shadow-sm"
+                                            />
+                                            {envSearchTerm && (
+                                                <button
+                                                    onClick={() => setEnvSearchTerm('')}
+                                                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-slate-600 transition-colors"
+                                                >
+                                                    <X className="w-3.5 h-3.5" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
 
-                                    <div className="bg-white dark:bg-[var(--bg-surface)] rounded-xl border border-slate-200 dark:border-[var(--border-color)] shadow-sm overflow-hidden">
-                                        <div className="p-4 border-b border-slate-100 dark:border-[var(--border-color)] bg-slate-50/50 dark:bg-white/5 flex items-center justify-between">
-                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider dark:text-[var(--text-secondary)]">Variables</span>
-                                            <div className="relative w-64">
-                                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                                                <input
-                                                    type="text"
-                                                    placeholder="Search variables..."
-                                                    value={envSearchTerm}
-                                                    onChange={(e) => setEnvSearchTerm(e.target.value)}
-                                                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-8 py-1.5 text-xs outline-none focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20 transition-all"
-                                                />
-                                                {envSearchTerm && (
+                                {envVariableTab === 'common' ? (
+                                    <div className="bg-white dark:bg-[var(--bg-surface)] rounded-2xl border border-slate-200 dark:border-[var(--border-color)] shadow-sm overflow-hidden border-t-4 border-t-red-500">
+                                        <div className="p-6">
+                                            <div className="flex flex-col border border-slate-200 dark:border-[var(--border-color)] rounded-xl overflow-hidden bg-white dark:bg-[var(--bg-surface)]">
+                                                <div className="flex border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-50/50 dark:bg-slate-900/50 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                                    <div className="p-3 border-r border-slate-200 dark:border-[var(--border-color)]" style={{ width: `${keyColumnWidth}%` }}>Key</div>
+                                                    <div className="flex-1 p-3 border-r border-slate-200 dark:border-[var(--border-color)]">Value</div>
+                                                    <div className="w-20 p-3 text-center">Actions</div>
+                                                </div>
+                                                {(commonEnvironment?.variables || [])
+                                                    .map((pair, originalIndex) => ({ ...pair, originalIndex }))
+                                                    .filter(pair =>
+                                                        (pair.key || '').toLowerCase().includes(envSearchTerm.toLowerCase()) ||
+                                                        (pair.value || '').toLowerCase().includes(envSearchTerm.toLowerCase())
+                                                    )
+                                                    .map((pair) => {
+                                                        const idx = pair.originalIndex;
+                                                        const isDeveloper = user?.role?.toLowerCase() === 'developer' || user?.role?.toLowerCase() === 'dev';
+                                                        const isModified = pair.key !== pair.originalKey || pair.value !== pair.originalValue;
+                                                        return (
+                                                            <div key={idx} className="flex border-b border-slate-200 dark:border-[var(--border-color)] last:border-0 group min-h-[44px] hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-colors">
+                                                                <textarea
+                                                                    rows={1}
+                                                                    className="bg-transparent p-3 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)] resize-none overflow-hidden"
+                                                                    style={{ width: `${keyColumnWidth}%` }}
+                                                                    value={pair.key}
+                                                                    onChange={(e) => handleUpdateCommonVariable(idx, 'key', e.target.value)}
+                                                                    readOnly={!isDeveloper}
+                                                                />
+                                                                <textarea
+                                                                    rows={1}
+                                                                    className="flex-1 bg-transparent p-3 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)] resize-none overflow-hidden"
+                                                                    value={pair.value}
+                                                                    onChange={(e) => handleUpdateCommonVariable(idx, 'value', e.target.value)}
+                                                                    readOnly={!isDeveloper}
+                                                                />
+                                                                {isDeveloper && (
+                                                                    <div className="w-20 flex items-center justify-center gap-1 bg-slate-50/30 dark:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                        <button
+                                                                            disabled={!isModified}
+                                                                            onClick={() => handleSaveCommonVariable(idx)}
+                                                                            className={cn("p-1.5 rounded-lg transition-all", isModified ? "text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30" : "text-slate-300 pointer-events-none")}
+                                                                            title={isModified ? "Save changes" : "No changes"}
+                                                                        >
+                                                                            <Save className="w-4 h-4" />
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleDeleteCommonVariable(idx)}
+                                                                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
+                                                                            title="Delete"
+                                                                        >
+                                                                            <Trash2 className="w-4 h-4" />
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                {(user?.role?.toLowerCase() === 'developer' || user?.role?.toLowerCase() === 'dev') && (
                                                     <button
-                                                        onClick={() => setEnvSearchTerm('')}
-                                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-slate-100 dark:hover:bg-red-500/10 rounded-full text-slate-400 hover:text-red-500 transition-colors"
+                                                        onClick={handleAddCommonVariable}
+                                                        className="flex items-center gap-2 p-3 text-xs font-bold text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all border-t border-slate-200 dark:border-[var(--border-color)]"
                                                     >
-                                                        <X className="w-3 h-3" />
+                                                        <Plus className="w-4 h-4" /> Add Common Variable
                                                     </button>
                                                 )}
                                             </div>
                                         </div>
-                                        <div className="p-4 space-y-4">
-                                            <div className="flex flex-col border border-slate-200 dark:border-[var(--border-color)] rounded-lg overflow-hidden bg-white dark:bg-[var(--bg-surface)]">
-                                                <div className="flex border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-50 dark:bg-[var(--bg-surface)] text-xs font-semibold text-slate-500 dark:text-slate-400">
-                                                    <div className="flex-1 p-2 border-r border-slate-200 dark:border-[var(--border-color)]">Key</div>
-                                                    <div className="flex-1 p-2 border-r border-slate-200 dark:border-[var(--border-color)]">Value</div>
-                                                    <div className="w-16 p-2 text-center text-[10px] uppercase">Actions</div>
+                                    </div>
+                                ) : activeEnv ? (
+                                    <div className="bg-white dark:bg-[var(--bg-surface)] rounded-2xl border border-slate-200 dark:border-[var(--border-color)] shadow-sm overflow-hidden border-t-4 border-t-red-500">
+                                        <div className="p-6">
+                                            <div className="flex flex-col border border-slate-200 dark:border-[var(--border-color)] rounded-xl overflow-hidden bg-white dark:bg-[var(--bg-surface)]">
+                                                <div className="flex border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-50/50 dark:bg-slate-900/50 text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                                    <div className="p-3 border-r border-slate-200 dark:border-[var(--border-color)] relative group" style={{ width: `${keyColumnWidth}%` }}>
+                                                        Key
+                                                        <div
+                                                            onMouseDown={(e) => { e.preventDefault(); setIsResizingEnvTable(true); }}
+                                                            className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-red-500/50 transition-colors z-10"
+                                                        />
+                                                    </div>
+                                                    <div className="flex-1 p-3 border-r border-slate-200 dark:border-[var(--border-color)]">Value</div>
+                                                    <div className="w-20 p-3 text-center">Actions</div>
                                                 </div>
-                                                {(environments.find(e => e.id === activeEnv)?.variables || [])
+                                                {((environments.find(e => e.id === activeEnv))?.variables || [])
                                                     .map((pair, originalIndex) => ({ ...pair, originalIndex }))
                                                     .filter(pair =>
                                                         (pair.key || '').toLowerCase().includes(envSearchTerm.toLowerCase()) ||
@@ -1595,42 +2096,53 @@ export function UserWorkspace() {
                                                         const isModified = pair.key !== pair.originalKey || pair.value !== pair.originalValue;
                                                         const isDeveloper = user?.role?.toLowerCase() === 'developer' || user?.role?.toLowerCase() === 'dev';
                                                         return (
-                                                            <div key={index} className="flex border-b border-slate-200 dark:border-[var(--border-color)] last:border-0 group">
-                                                                <input
-                                                                    className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
+                                                            <div key={index} className="flex border-b border-slate-200 dark:border-[var(--border-color)] last:border-0 group min-h-[44px] hover:bg-slate-50/50 dark:hover:bg-slate-900/20 transition-colors">
+                                                                <textarea
+                                                                    rows={1}
+                                                                    className="bg-transparent p-3 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)] resize-none overflow-hidden"
+                                                                    style={{ width: `${keyColumnWidth}%` }}
                                                                     placeholder="Key"
                                                                     value={pair.key}
-                                                                    onChange={(e) => handleUpdateEnvVariable(index, 'key', e.target.value)}
+                                                                    onChange={(e) => {
+                                                                        handleUpdateEnvVariable(index, 'key', e.target.value);
+                                                                    }}
                                                                     readOnly={!isDeveloper}
                                                                 />
-                                                                <input
-                                                                    className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
+                                                                <textarea
+                                                                    rows={1}
+                                                                    className="flex-1 bg-transparent p-3 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)] resize-none overflow-hidden"
                                                                     placeholder="Value"
                                                                     value={pair.value}
-                                                                    onChange={(e) => handleUpdateEnvVariable(index, 'value', e.target.value)}
+                                                                    onChange={(e) => {
+                                                                        handleUpdateEnvVariable(index, 'value', e.target.value);
+                                                                    }}
                                                                     readOnly={!isDeveloper}
                                                                 />
                                                                 {isDeveloper && (
-                                                                    <div className="w-16 flex items-center justify-center gap-1 bg-slate-50/50 dark:bg-white/5">
+                                                                    <div className="w-20 flex items-center justify-center gap-1 bg-slate-50/30 dark:bg-white/5 opacity-0 group-hover:opacity-100 transition-opacity">
                                                                         <button
                                                                             disabled={!isModified}
-                                                                            onClick={() => handleSaveEnvVariable(index)}
+                                                                            onClick={() => {
+                                                                                handleSaveEnvVariable(index);
+                                                                            }}
                                                                             className={cn(
-                                                                                "p-1 rounded transition-all",
+                                                                                "p-1.5 rounded-lg transition-all",
                                                                                 isModified
-                                                                                    ? "text-green-600 hover:text-green-500 hover:bg-green-50 dark:hover:bg-green-900/20"
-                                                                                    : "text-slate-300 dark:text-slate-700 cursor-not-allowed"
+                                                                                    ? "text-green-600 hover:bg-green-100 dark:hover:bg-green-900/30"
+                                                                                    : "text-slate-300 pointer-events-none"
                                                                             )}
                                                                             title={isModified ? "Save changes" : "No changes to save"}
                                                                         >
-                                                                            <Save className="w-3.5 h-3.5" />
+                                                                            <Save className="w-4 h-4" />
                                                                         </button>
                                                                         <button
-                                                                            onClick={() => handleDeleteEnvVariable(index)}
-                                                                            className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors"
+                                                                            onClick={() => {
+                                                                                handleDeleteEnvVariable(index);
+                                                                            }}
+                                                                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-100 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                                                                             title="Delete Variable"
                                                                         >
-                                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                                            <Trash2 className="w-4 h-4" />
                                                                         </button>
                                                                     </div>
                                                                 )}
@@ -1639,36 +2151,44 @@ export function UserWorkspace() {
                                                     })}
                                                 {(user?.role?.toLowerCase() === 'developer' || user?.role?.toLowerCase() === 'dev') && (
                                                     <button
-                                                        onClick={handleAddEnvVariable}
-                                                        className="flex items-center gap-2 p-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900/50 transition-colors"
+                                                        onClick={() => {
+                                                            handleAddEnvVariable();
+                                                        }}
+                                                        className="flex items-center gap-2 p-3 text-xs font-bold text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 transition-all border-t border-slate-200 dark:border-[var(--border-color)]"
                                                     >
-                                                        <Plus className="w-3 h-3" /> Add new variable
+                                                        <Plus className="w-4 h-4" /> Add Environment Variable
                                                     </button>
                                                 )}
                                             </div>
-
-                                            {showEnvSaveSuccess && (
-                                                <div className="flex justify-center">
-                                                    <div className="flex items-center gap-2 px-3 py-1.5 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full font-medium text-xs animate-in fade-in slide-in-from-bottom-2 duration-200">
-                                                        <Check className="w-3 h-3" />
-                                                        Changes saved successfully
-                                                    </div>
-                                                </div>
-                                            )}
                                         </div>
+
+                                        {showEnvSaveSuccess && (
+                                            <div className="flex justify-center pb-6">
+                                                <div className="flex items-center gap-2 px-4 py-2 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 rounded-full font-bold text-xs animate-in fade-in slide-in-from-bottom-2 duration-200 shadow-sm border border-green-100 dark:border-green-900/30">
+                                                    <Check className="w-3.5 h-3.5" />
+                                                    Changes saved successfully
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="h-full flex flex-col items-center justify-center text-slate-500 dark:text-[var(--text-secondary)] gap-4">
-                                    <div className="w-16 h-16 bg-slate-100 dark:bg-[var(--bg-secondary)] rounded-full flex items-center justify-center">
-                                        <Globe className="w-8 h-8 opacity-20 text-red-500" />
+                                ) : (
+                                    <div className="bg-white dark:bg-[var(--bg-surface)] rounded-2xl border border-slate-200 dark:border-[var(--border-color)] shadow-sm py-20 flex flex-col items-center justify-center text-center px-6">
+                                        <div className="w-20 h-20 bg-slate-100 dark:bg-slate-900 rounded-3xl flex items-center justify-center mb-6 shadow-inner">
+                                            <Globe className="w-10 h-10 text-slate-300 dark:text-slate-800" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-2">No Environment Selected</h3>
+                                        <p className="text-slate-500 dark:text-slate-400 max-w-sm mb-8">
+                                            Select an environment from the sidebar to manage its specific variables, or switch to the <b>Common Variables</b> tab.
+                                        </p>
+                                        <button
+                                            onClick={() => setEnvVariableTab('common')}
+                                            className="px-6 py-2.5 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold text-sm hover:scale-105 transition-all shadow-lg active:scale-95"
+                                        >
+                                            View Common Variables
+                                        </button>
                                     </div>
-                                    <div className="text-center">
-                                        <p className="font-semibold text-slate-900 dark:text-[var(--text-primary)]">No Environment Selected</p>
-                                        <p className="text-sm">Select an environment from the list to configure its variables.</p>
-                                    </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
                 ) : activeView === 'settings' ? (
@@ -1732,6 +2252,7 @@ export function UserWorkspace() {
                             url={activeRequest.url}
                             setUrl={(val) => updateActiveRequest({ url: val })}
                             onSend={handleSend}
+                            onCancel={handleCancel}
                             isLoading={activeRequest.isLoading}
                             environments={environments}
                             activeEnv={activeEnv}
@@ -1782,7 +2303,7 @@ export function UserWorkspace() {
                                 >
                                     <div className="flex-1 border-r border-slate-200 dark:border-[var(--border-color)] p-2.5 flex flex-col min-h-0 overflow-auto">
                                         <Tabs tabs={tabs} activeTab={activeTab} onTabChange={setActiveTab} />
-                                        <div className="flex-1 overflow-auto mt-2">
+                                        <div className={`flex-1 flex flex-col min-h-0 mt-2 ${activeTab === 'body' ? 'overflow-hidden' : 'overflow-auto'}`}>
                                             {activeTab === 'docs' && (
                                                 <div className="flex flex-col items-center justify-center h-64 text-slate-400 dark:text-slate-500">
                                                     <AlignLeft className="w-12 h-12 mb-4 opacity-20" />
@@ -1875,8 +2396,9 @@ export function UserWorkspace() {
                             </div>
                         </div>
                     </>
-                )}
-            </Layout>
+                )
+                }
+            </Layout >
 
             {
                 showConsole && (

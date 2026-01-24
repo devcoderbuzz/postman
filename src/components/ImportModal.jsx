@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 
-export function ImportModal({ isOpen, onClose, onImport }) {
+export function ImportModal({ isOpen, onClose, onImport, collections = [] }) {
     const [importType, setImportType] = useState('collection'); // 'collection' or 'curl'
     const [inputType, setInputType] = useState('text'); // 'text' or 'file'
     const [textInput, setTextInput] = useState('');
     const [fileInput, setFileInput] = useState(null);
+    const [selectedCollectionId, setSelectedCollectionId] = useState('');
 
     const handleFileChange = (e) => {
         if (e.target.files && e.target.files[0]) {
@@ -24,8 +25,7 @@ export function ImportModal({ isOpen, onClose, onImport }) {
         }
 
         if (dataToImport) {
-            onImport(importType, dataToImport);
-            onClose();
+            onImport(importType, dataToImport, selectedCollectionId);
         }
     };
 
@@ -66,6 +66,22 @@ export function ImportModal({ isOpen, onClose, onImport }) {
                         </label>
                     </div>
                 </div>
+
+                {importType === 'curl' && (
+                    <div className="mb-4">
+                        <label className="block text-xs font-semibold mb-2 text-slate-600 dark:text-slate-400">Target Collection</label>
+                        <select
+                            value={selectedCollectionId}
+                            onChange={(e) => setSelectedCollectionId(e.target.value)}
+                            className="w-full text-sm p-2 border border-slate-300 dark:border-slate-700 rounded bg-white dark:bg-slate-900 outline-none focus:border-red-500"
+                        >
+                            <option value="">Select a collection to save to...</option>
+                            {collections.map(c => (
+                                <option key={c.collectionId} value={c.collectionId}>{c.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
 
                 <div className="mb-4">
                     <div className="flex gap-2 mb-2 border-b border-slate-200 dark:border-slate-700">

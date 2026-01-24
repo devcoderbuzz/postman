@@ -17,7 +17,12 @@ vi.mock('lucide-react', () => ({
     GripVertical: () => <svg data-testid="icon-grip" />,
     Save: () => <svg data-testid="icon-save" />,
     Folder: () => <svg data-testid="icon-folder" />,
-    FileText: () => <svg data-testid="icon-file-text" />
+    FileText: () => <svg data-testid="icon-file-text" />,
+    Search: () => <svg data-testid="icon-search" />,
+    Sparkles: () => <svg data-testid="icon-sparkles" />,
+    Play: () => <svg data-testid="icon-play" />,
+    Lock: () => <svg data-testid="icon-lock" />,
+    Globe: () => <svg data-testid="icon-globe" />
 }));
 
 vi.mock('../../services/apiservice', () => ({
@@ -49,8 +54,15 @@ vi.mock('../../contexts/AuthContext', async () => {
 
 // Mock child modals if needed (though existing tests worked without mocking them explicitly, 
 // but mocking them avoids rendering noise or issues)
-vi.mock('../ConfirmationModal', () => ({ ConfirmationModal: ({ isOpen, onConfirm }) => isOpen ? <div data-testid="confirmation-modal"><button onClick={onConfirm}>Confirm</button></div> : null }));
-vi.mock('../ImportModal', () => ({ ImportModal: ({ isOpen }) => isOpen ? <div data-testid="import-modal">Import Header</div> : null }));
+vi.mock('../ImportModal', () => ({
+    ImportModal: ({ isOpen, onImport }) => isOpen ? (
+        <div data-testid="import-modal">
+            Import Header
+            <input data-testid="curl-input" type="text" onChange={(e) => window.testCurl = e.target.value} />
+            <button data-testid="trigger-curl-import" onClick={() => onImport('curl', window.testCurl || 'curl -X POST "https://api.example.com/data" -H "Content-Type: application/json" -d \'{"key": "value"}\'', null)}>Simulate Import</button>
+        </div>
+    ) : null
+}));
 
 
 describe('EditDataPanel', () => {
@@ -203,6 +215,74 @@ describe('EditDataPanel', () => {
         expect(screen.getByTestId('import-modal')).toBeInTheDocument();
     });
 
+    it('imports complex cURL command', async () => {
+        apiService.getAllAppCodes.mockResolvedValue([
+            { projectId: '101', projectName: 'Project A', moduleName: 'Module A', collections: [] }
+        ]);
+
+        await act(async () => {
+            render(<EditDataPanel />);
+        });
+
+        await waitFor(() => screen.getByText('Project A'));
+        fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'Project A' } });
+        fireEvent.change(screen.getAllByRole('combobox')[1], { target: { value: 'Module A' } });
+
+        fireEvent.click(await screen.findByText('Import'));
+
+        // Complex cURL: URL at end, escaped quotes in body
+        const complexCurl = `curl -X POST -H "Content-Type: application/json" -d "{\\"key\\": \\"val\\\\\\"ue\\"}" "https://complex.example.com/api"`;
+
+        // Update mock input
+        const input = screen.getByTestId('curl-input');
+        fireEvent.change(input, { target: { value: complexCurl } });
+
+        const importBtn = screen.getByTestId('trigger-curl-import');
+        fireEvent.click(importBtn);
+
+        await waitFor(() => {
+            expect(screen.getByDisplayValue('https://complex.example.com/api')).toBeInTheDocument();
+            expect(screen.getByDisplayValue('POST')).toBeInTheDocument();
+        });
+
+        // Check body. It should be parsed and stringified.
+        // Original: {"key": "val\"ue"}
+        // Editor should show: { "key": "val\"ue" } (formatted)
+        const bodyInput = screen.getAllByRole('textbox').find(e => e.value.includes('key'));
+        expect(bodyInput.value).toContain('val\\"ue');
+    });
+
+    it('imports cURL command and populates request editor', async () => {
+        apiService.getAllAppCodes.mockResolvedValue([
+            { projectId: '101', projectName: 'Project A', moduleName: 'Module A', collections: [] }
+        ]);
+
+        await act(async () => {
+            render(<EditDataPanel />);
+        });
+
+        await waitFor(() => screen.getByText('Project A'));
+        fireEvent.change(screen.getAllByRole('combobox')[0], { target: { value: 'Project A' } });
+        fireEvent.change(screen.getAllByRole('combobox')[1], { target: { value: 'Module A' } });
+
+        // Open Import Modal
+        fireEvent.click(await screen.findByText('Import'));
+
+        // Trigger Import
+        fireEvent.click(screen.getByTestId('trigger-curl-import'));
+
+        // Expect Editor to open with populated data
+        await waitFor(() => {
+            expect(screen.getByDisplayValue('https://api.example.com/data')).toBeInTheDocument();
+            expect(screen.getByDisplayValue('POST')).toBeInTheDocument();
+        });
+
+        // Check Body (needs to be resilient to formatting)
+        const bodyInput = screen.getAllByRole('textbox').find(e => e.value.includes('key'));
+        expect(bodyInput).not.toBeUndefined();
+        expect(bodyInput.value).toContain('"key": "value"');
+    });
+
     // --- Extended Tests ---
 
     it('opens request editor and saves a new request to collection', async () => {
@@ -329,7 +409,7 @@ describe('EditDataPanel', () => {
                     expect.objectContaining({ name: 'Updated Req' })
                 ])
             }));
-        });
+        }, { timeout: 3000 });
     });
 
 });

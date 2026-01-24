@@ -11,7 +11,7 @@ const METHODS = [
     { value: 'PATCH', color: 'text-purple-500' },
 ];
 
-export function RequestBar({ method, setMethod, url, setUrl, onSend, isLoading, environments, activeEnv, onEnvSelect }) {
+export function RequestBar({ method, setMethod, url, setUrl, onSend, onCancel, isLoading, environments, activeEnv, onEnvSelect }) {
     const currentMethod = METHODS.find(m => m.value === method) || METHODS[0];
     const [autocomplete, setAutocomplete] = useState({
         show: false,
@@ -143,13 +143,30 @@ export function RequestBar({ method, setMethod, url, setUrl, onSend, isLoading, 
                     </div>
                 )}
 
-                <button
-                    onClick={onSend}
-                    disabled={isLoading}
-                    className={`px-8 h-[42px] bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 transition-all active:scale-95 shadow-lg shadow-red-600/20 flex items-center gap-2 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
-                >
-                    {isLoading ? 'Sending...' : <><Send className="w-4 h-4" /> Send</>}
-                </button>
+                <div className="flex items-center gap-2">
+                    {isLoading && (
+                        <button
+                            onClick={onCancel}
+                            className="px-4 h-[42px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 border border-slate-200 dark:border-slate-700"
+                        >
+                            Cancel
+                        </button>
+                    )}
+                    <button
+                        onClick={onSend}
+                        disabled={isLoading}
+                        className={`px-8 h-[42px] bg-red-600 text-white text-sm font-bold rounded-lg hover:bg-red-700 transition-all active:scale-95 shadow-lg shadow-red-600/20 flex items-center gap-2 ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
+                    >
+                        {isLoading ? (
+                            <>
+                                <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                Sending...
+                            </>
+                        ) : (
+                            <><Send className="w-4 h-4" /> Send</>
+                        )}
+                    </button>
+                </div>
             </div>
 
             {autocomplete.show && (

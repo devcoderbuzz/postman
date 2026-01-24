@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Trash2, Plus } from 'lucide-react';
 import { cn, replaceEnvVariables } from '../lib/utils';
 import { VariableAutocomplete } from './VariableAutocomplete';
@@ -13,6 +13,31 @@ export function KeyValueEditor({ pairs, setPairs, environments, activeEnv }) {
         selectionStart: 0,
         activeIndex: 0
     });
+
+    const [keyWidth, setKeyWidth] = useState(40);
+    const [isResizing, setIsResizing] = useState(false);
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        const handleMouseMove = (e) => {
+            if (!isResizing || !containerRef.current) return;
+            const rect = containerRef.current.getBoundingClientRect();
+            const offsetX = e.clientX - rect.left;
+            const percentage = (offsetX / rect.width) * 100;
+            if (percentage >= 10 && percentage <= 80) {
+                setKeyWidth(percentage);
+            }
+        };
+        const handleMouseUp = () => setIsResizing(false);
+        if (isResizing) {
+            window.addEventListener('mousemove', handleMouseMove);
+            window.addEventListener('mouseup', handleMouseUp);
+        }
+        return () => {
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('mouseup', handleMouseUp);
+        };
+    }, [isResizing]);
 
     const activeEnvironment = environments?.find(e => e.id === activeEnv);
 
@@ -98,27 +123,52 @@ export function KeyValueEditor({ pairs, setPairs, environments, activeEnv }) {
     };
 
     return (
-        <div className="flex flex-col border border-slate-200 dark:border-[var(--border-color)] rounded-lg overflow-hidden bg-white dark:bg-[var(--bg-surface)]">
+        <div ref={containerRef} className="flex flex-col border border-slate-200 dark:border-[var(--border-color)] rounded-lg overflow-hidden bg-white dark:bg-[var(--bg-surface)]">
             <div className="flex border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-50 dark:bg-[var(--bg-surface)] text-xs font-semibold text-slate-500 dark:text-slate-400">
-                <div className="flex-1 p-2 border-r border-slate-200 dark:border-[var(--border-color)]">Key</div>
+                <div className="p-2 border-r border-slate-200 dark:border-[var(--border-color)] relative group" style={{ width: `${keyWidth}%` }}>
+                    Key
+                    <div
+                        onMouseDown={(e) => { e.preventDefault(); setIsResizing(true); }}
+                        className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize hover:bg-red-500/50 transition-colors z-10"
+                    />
+                </div>
                 <div className="flex-1 p-2 border-r border-slate-200 dark:border-[var(--border-color)]">Value</div>
                 <div className="w-10"></div>
             </div>
             {pairs.map((pair, index) => (
-                <div key={index} className="flex border-b border-slate-200 dark:border-[var(--border-color)] last:border-0 group items-start">
-                    <input
-                        className="flex-1 bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
+                <div key={index} className="flex border-b border-slate-200 dark:border-[var(--border-color)] last:border-0 group items-start min-h-[38px]">
+                    <textarea
+                        rows={1}
+                        className="bg-transparent p-2 text-sm outline-none border-r border-slate-200 dark:border-[var(--border-color)] placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)] resize-none overflow-hidden"
+                        style={{ width: `${keyWidth}%` }}
                         placeholder="Key"
                         value={pair.key}
-                        onChange={(e) => handleInputChange(index, 'key', e.target.value, e)}
+                        onChange={(e) => {
+                            handleInputChange(index, 'key', e.target.value, e);
+                            e.target.style.height = 'auto';
+                            e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
+                        onFocus={(e) => {
+                            e.target.style.height = 'auto';
+                            e.target.style.height = e.target.scrollHeight + 'px';
+                        }}
                         onKeyDown={handleKeyDown}
                     />
                     <div className="flex-1 flex flex-col min-w-0 border-r border-slate-200 dark:border-[var(--border-color)]">
-                        <input
-                            className="w-full bg-transparent p-2 text-sm outline-none placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)]"
+                        <textarea
+                            rows={1}
+                            className="w-full bg-transparent p-2 text-sm outline-none placeholder:text-slate-400 dark:placeholder:text-slate-700 font-mono text-slate-900 dark:text-[var(--text-primary)] resize-none overflow-hidden"
                             placeholder="Value"
                             value={pair.value}
-                            onChange={(e) => handleInputChange(index, 'value', e.target.value, e)}
+                            onChange={(e) => {
+                                handleInputChange(index, 'value', e.target.value, e);
+                                e.target.style.height = 'auto';
+                                e.target.style.height = e.target.scrollHeight + 'px';
+                            }}
+                            onFocus={(e) => {
+                                e.target.style.height = 'auto';
+                                e.target.style.height = e.target.scrollHeight + 'px';
+                            }}
                             onKeyDown={handleKeyDown}
                         />
                         {pair.value && pair.value.includes('{{') && (

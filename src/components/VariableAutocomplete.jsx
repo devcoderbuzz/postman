@@ -1,13 +1,15 @@
 import React, { useRef, useEffect } from 'react';
 import { Globe, FileText } from 'lucide-react';
 
-export function VariableAutocomplete({ variables, standardHeaders, filterText, type, onSelect, position, activeIndex, onCancel }) {
+export function VariableAutocomplete({ variables, dynamicVariables, standardHeaders, filterText, type, onSelect, position, activeIndex, onCancel }) {
     let items = [];
     let title = 'Suggestions';
     let icon = <Globe className="w-3 h-3 text-red-500" />;
 
     if (type === 'variable') {
-        items = (variables || []).filter(v => v.active !== false).map(v => ({ key: v.key, value: v.value, isVar: true }));
+        const envVars = (variables || []).filter(v => v.active !== false).map(v => ({ key: v.key, value: v.value, isVar: true }));
+        const dynVars = (dynamicVariables || []).map(d => ({ key: '$' + d, value: 'Dynamic Variable', isVar: true }));
+        items = [...envVars, ...dynVars];
         title = 'Environment Variables';
     } else if (type === 'header') {
         items = (standardHeaders || []).map(h => ({ key: h, value: 'Standard Header', isVar: false }));
@@ -49,7 +51,7 @@ export function VariableAutocomplete({ variables, standardHeaders, filterText, t
             style={{
                 top: position.top,
                 left: position.left,
-                width: 'max-content'
+                width: '300px'
             }}
         >
             <div className="p-2.5 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex items-center justify-between">
