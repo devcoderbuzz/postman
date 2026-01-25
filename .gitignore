@@ -8,6 +8,10 @@ pnpm-debug.log*
 lerna-debug.log*
 
 npm-cache/
+npm-cache/*
+npm-cache/_cacache/
+npm-cache/_cacache/*
+npm-cache/_update-notifier-last-checked
 node_modules/
 
 
@@ -21,3 +25,4 @@ node_modules/
 *.njsproj
 *.sln
 *.sw?
+npm-cache/*

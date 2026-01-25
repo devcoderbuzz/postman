@@ -33,6 +33,7 @@ vi.mock('../../services/apiservice', () => ({
     getAllAppCodes: vi.fn(),
     getCollectionDetails: vi.fn(),
     deleteCollection: vi.fn(),
+    getEnvDetails: vi.fn(),
 }));
 
 const mockUser = {

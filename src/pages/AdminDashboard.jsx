@@ -7,7 +7,7 @@ import { Header } from '../components/Header';
 import { getEnvDetails, updateEnvDetails } from '../services/apiservice';
 import { EnvironmentManager } from '../components/EnvironmentManager';
 import { KeyValueEditor } from '../components/KeyValueEditor';
-import { Settings as SettingsIcon, LogOut, Layout as LayoutIcon, User as UserIcon, Shield, Save, Check, Globe, X, ChevronDown, Trash2, Box, Search } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut, Layout as LayoutIcon, User as UserIcon, Shield, Save, Check, Globe, X, ChevronDown, Trash2, Box, Search, Sparkles } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { Layout } from '../components/Layout';
 
@@ -70,6 +70,7 @@ export function AdminDashboard() {
     const [appCodeSearchTerm, setAppCodeSearchTerm] = useState('');
     const [collectionSearchTerm, setCollectionSearchTerm] = useState('');
     const [envSearchTerm, setEnvSearchTerm] = useState('');
+    const [envVariableTab, setEnvVariableTab] = useState('specific'); // 'specific' or 'common'
 
     const fetchEnvironments = async () => {
         if (!user || !user.token) return;
@@ -86,7 +87,7 @@ export function AdminDashboard() {
         }
     };
 
-    const environments = useMemo(() => {
+    const allFormattedEnvironments = useMemo(() => {
         let raw = allRawEnvironments;
         if (!raw || !appCodes.length) return [];
 
@@ -98,26 +99,17 @@ export function AdminDashboard() {
 
         if (!selectedProjectInfo) return [];
 
-        // Use the ID resolved from appCodes (which now correctly picks up projectID from the server)
         const targetProjectId = selectedProjectInfo.projectId || selectedProjectInfo.id;
-
-        console.log("Admin Filtering Environments:", {
-            targetProjectId,
-            selectedAppCodeName,
-            selectedModuleName
-        });
 
         if (raw.data && !Array.isArray(raw)) raw = raw.data;
 
         let environmentsToProcess = [];
 
         if (Array.isArray(raw)) {
-            // Check if it's Project-Grouped (your provided format)
             const first = raw[0];
             const isProjectGrouped = !!(first && (first.environments || first.envs));
 
             if (isProjectGrouped) {
-                // Find the project object that matches our targetProjectId
                 const match = raw.find(p => {
                     const pid = p.projectID || p.projectId || p.id;
                     return String(pid) === String(targetProjectId);
@@ -126,12 +118,10 @@ export function AdminDashboard() {
                 if (match) {
                     environmentsToProcess = match.environments || match.envs || [];
                 } else {
-                    // Fallback: If no ID match, try matching by name as a safety net
                     const nameMatch = raw.find(p => (p.projectName || p.projectName) === selectedAppCodeName);
                     if (nameMatch) environmentsToProcess = nameMatch.environments || nameMatch.envs || [];
                 }
             } else {
-                // Flat list filtering
                 environmentsToProcess = raw.filter(e => {
                     const eid = e.projectID || e.projectId || e.id;
                     return String(eid) === String(targetProjectId);
@@ -150,6 +140,14 @@ export function AdminDashboard() {
             }))
         }));
     }, [allRawEnvironments, selectedAppCodeName, selectedModuleName, appCodes]);
+
+    const environments = useMemo(() => {
+        return allFormattedEnvironments.filter(e => e.name?.toUpperCase() !== 'ALL');
+    }, [allFormattedEnvironments]);
+
+    const commonEnvironment = useMemo(() => {
+        return allFormattedEnvironments.find(e => e.name?.toUpperCase() === 'ALL');
+    }, [allFormattedEnvironments]);
 
     // Update activeEnv when environments change
     useEffect(() => {
@@ -964,38 +962,102 @@ export function AdminDashboard() {
                             />
                         </div>
                         <div className="flex-1 p-8 overflow-auto bg-slate-50 dark:bg-[var(--bg-primary)]">
-                            {activeEnv ? (
-                                <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <h2 className="text-xl font-bold text-slate-900 dark:text-[var(--text-primary)]">
-                                                {environments.find(e => e.id === activeEnv)?.name}
-                                            </h2>
-                                            <p className="text-sm text-slate-500 dark:text-[var(--text-secondary)]">Review environment variables for this project. Admins have read-only access.</p>
+                            <div className="max-w-4xl mx-auto space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                                <div className="flex items-center h-12 mb-6 border-b border-slate-200 dark:border-slate-800">
+                                    <div className="flex-1">
+                                        {/* Left spacer to balance the search bar on the right */}
+                                    </div>
+                                    <div className="flex items-center gap-8">
+                                        <div
+                                            onClick={() => setEnvVariableTab('specific')}
+                                            className={cn(
+                                                "pb-2 cursor-pointer text-sm font-bold transition-all relative",
+                                                envVariableTab === 'specific'
+                                                    ? "text-red-500"
+                                                    : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                            )}
+                                        >
+                                            {activeEnv ? `${environments.find(e => e.id === activeEnv)?.name} Variables` : "Environment Variables"}
+                                            {envVariableTab === 'specific' && (
+                                                <div className="absolute -bottom-[2px] left-0 right-0 h-0.5 bg-red-500 rounded-full animate-in fade-in zoom-in duration-300" />
+                                            )}
+                                        </div>
+                                        <div
+                                            onClick={() => setEnvVariableTab('common')}
+                                            className={cn(
+                                                "pb-2 cursor-pointer text-sm font-bold flex items-center gap-2 transition-all relative",
+                                                envVariableTab === 'common'
+                                                    ? "text-red-500"
+                                                    : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                                            )}
+                                        >
+                                            <Sparkles className={cn("w-3.5 h-3.5", envVariableTab === 'common' ? "text-red-500" : "text-slate-400")} />
+                                            Common Variables
+                                            {envVariableTab === 'common' && (
+                                                <div className="absolute -bottom-[2px] left-0 right-0 h-0.5 bg-red-500 rounded-full animate-in fade-in zoom-in duration-300" />
+                                            )}
                                         </div>
                                     </div>
+                                    <div className="flex-1 flex justify-end">
+                                        <div className="relative w-64 h-full flex items-center">
+                                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                                            <input
+                                                type="text"
+                                                placeholder={`Search ${envVariableTab === 'common' ? 'common' : 'environment'} variables...`}
+                                                value={envSearchTerm}
+                                                onChange={(e) => setEnvSearchTerm(e.target.value)}
+                                                className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-8 py-1.5 text-[11px] outline-none focus:border-red-500/50 transition-all dark:text-white"
+                                            />
+                                            {envSearchTerm && (
+                                                <button
+                                                    onClick={() => setEnvSearchTerm('')}
+                                                    className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-red-500 transition-colors"
+                                                >
+                                                    <X className="w-3 h-3" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
 
-                                    <div className="bg-white dark:bg-[var(--bg-surface)] rounded-xl border border-slate-200 dark:border-[var(--border-color)] shadow-sm overflow-hidden">
-                                        <div className="p-4 border-b border-slate-100 dark:border-[var(--border-color)] bg-slate-50/50 dark:bg-white/5 flex items-center justify-between">
-                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider dark:text-[var(--text-secondary)]">Variables</span>
-                                            <div className="relative w-64">
-                                                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                                                <input
-                                                    type="text"
-                                                    placeholder="Search variables..."
-                                                    value={envSearchTerm}
-                                                    onChange={(e) => setEnvSearchTerm(e.target.value)}
-                                                    className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg pl-8 pr-8 py-1.5 text-xs outline-none focus:border-red-500/50 transition-all dark:text-white"
-                                                />
-                                                {envSearchTerm && (
-                                                    <button
-                                                        onClick={() => setEnvSearchTerm('')}
-                                                        className="absolute right-2 top-1/2 -translate-y-1/2 p-0.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400 hover:text-red-500 transition-colors"
-                                                    >
-                                                        <X className="w-3 h-3" />
-                                                    </button>
+                                {envVariableTab === 'common' ? (
+                                    <div className="bg-white dark:bg-[var(--bg-surface)] rounded-xl border border-slate-200 dark:border-[var(--border-color)] shadow-sm overflow-hidden border-t-4 border-t-red-500">
+                                        <div className="p-4 border-b border-slate-100 dark:border-[var(--border-color)] bg-slate-50/50 dark:bg-white/5">
+                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider dark:text-[var(--text-secondary)]">Common Variables (ALL)</span>
+                                        </div>
+                                        <div className="p-4 space-y-4">
+                                            <div className="flex flex-col border border-slate-200 dark:border-[var(--border-color)] rounded-lg overflow-hidden bg-white dark:bg-[var(--bg-surface)]">
+                                                <div className="flex border-b border-slate-200 dark:border-[var(--border-color)] bg-slate-50 dark:bg-[var(--bg-surface)] text-xs font-semibold text-slate-500 dark:text-slate-400">
+                                                    <div className="flex-1 p-2 border-r border-slate-200 dark:border-[var(--border-color)]">Key</div>
+                                                    <div className="flex-1 p-2">Value</div>
+                                                </div>
+                                                {(commonEnvironment?.variables || [])
+                                                    .filter(pair =>
+                                                        (pair.key || '').toLowerCase().includes(envSearchTerm.toLowerCase()) ||
+                                                        (pair.value || '').toLowerCase().includes(envSearchTerm.toLowerCase())
+                                                    )
+                                                    .map((pair, idx) => (
+                                                        <div key={idx} className="flex border-b border-slate-200 dark:border-[var(--border-color)] last:border-0 group">
+                                                            <div className="flex-1 p-2 text-sm border-r border-slate-200 dark:border-[var(--border-color)] font-mono text-slate-500 dark:text-slate-400 select-all">
+                                                                {pair.key || <span className="italic opacity-50">Empty key</span>}
+                                                            </div>
+                                                            <div className="flex-1 p-2 text-sm font-mono text-slate-900 dark:text-[var(--text-primary)] select-all">
+                                                                {pair.value || <span className="italic opacity-50">Empty value</span>}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                {((commonEnvironment?.variables || []).length === 0) && (
+                                                    <div className="p-8 text-center text-slate-400 italic text-sm">
+                                                        No common variables defined.
+                                                    </div>
                                                 )}
                                             </div>
+                                        </div>
+                                    </div>
+                                ) : activeEnv ? (
+                                    <div className="bg-white dark:bg-[var(--bg-surface)] rounded-xl border border-slate-200 dark:border-[var(--border-color)] shadow-sm overflow-hidden border-t-4 border-t-red-500">
+                                        <div className="p-4 border-b border-slate-100 dark:border-[var(--border-color)] bg-slate-50/50 dark:bg-white/5">
+                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider dark:text-[var(--text-secondary)]">Specific Variables</span>
                                         </div>
                                         <div className="p-4 space-y-4">
                                             <div className="flex flex-col border border-slate-200 dark:border-[var(--border-color)] rounded-lg overflow-hidden bg-white dark:bg-[var(--bg-surface)]">
@@ -1026,18 +1088,18 @@ export function AdminDashboard() {
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ) : (
-                                <div className="h-full flex flex-col items-center justify-center text-center space-y-4">
-                                    <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-400 text-red-500/20">
-                                        <Globe className="w-8 h-8" />
+                                ) : (
+                                    <div className="h-48 flex flex-col items-center justify-center text-center space-y-4">
+                                        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-2xl flex items-center justify-center text-slate-400 text-red-500/20">
+                                            <Globe className="w-8 h-8" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Environment Selected</h3>
+                                            <p className="text-sm text-slate-500 max-w-xs mx-auto">Select an environment from the sidebar to view its configuration.</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <h3 className="text-lg font-bold text-slate-900 dark:text-white">No Environment Selected</h3>
-                                        <p className="text-sm text-slate-500 max-w-xs mx-auto">Select an environment from the sidebar to view its configuration.</p>
-                                    </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
                     </div>
                 ) : (

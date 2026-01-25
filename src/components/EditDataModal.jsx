@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { ChevronRight, ChevronDown, Plus, Trash2, X, Edit2, MoreVertical, GripVertical, Save, Folder, FileText, Search, Globe, Sparkles, Play, Lock } from 'lucide-react';
@@ -56,6 +56,7 @@ export function EditDataPanel({ refreshTrigger }) {
     });
     const [panelEnvironments, setPanelEnvironments] = useState([]);
     const [selectedEnvId, setSelectedEnvId] = useState('');
+    const [panelCommonEnvironment, setPanelCommonEnvironment] = useState(null);
 
     useEffect(() => {
         const fetchCodes = async () => {
@@ -149,29 +150,57 @@ export function EditDataPanel({ refreshTrigger }) {
                                 active: true
                             }))
                         }));
-                        setPanelEnvironments(formatted);
-                        if (formatted.length > 0) {
-                            const firstEnv = formatted[0].id;
+
+                        const allEnv = formatted.find(e => e.name?.toUpperCase() === 'ALL');
+                        const restEnvs = formatted.filter(e => e.name?.toUpperCase() !== 'ALL');
+
+                        setPanelCommonEnvironment(allEnv || null);
+                        setPanelEnvironments(restEnvs);
+
+                        if (restEnvs.length > 0) {
+                            const firstEnv = restEnvs[0].id;
                             setSelectedEnvId(firstEnv);
                         } else {
                             setSelectedEnvId('');
                         }
                     } else {
                         setPanelEnvironments([]);
+                        setPanelCommonEnvironment(null);
                         setSelectedEnvId('');
                     }
                 } catch (e) {
                     console.error("Failed to fetch environments", e);
                     setPanelEnvironments([]);
+                    setPanelCommonEnvironment(null);
                     setSelectedEnvId('');
                 }
             } else {
                 setPanelEnvironments([]);
+                setPanelCommonEnvironment(null);
                 setSelectedEnvId('');
             }
         };
         fetchEnvs();
     }, [selectedAppCodeId, user]);
+
+    const memoizedActiveEnvironment = useMemo(() => {
+        const env = panelEnvironments.find(e => String(e.id) === String(selectedEnvId));
+        if (!panelCommonEnvironment) return env || null;
+        if (!env) return panelCommonEnvironment;
+
+        // Merge variables, environment-specific wins
+        const envVars = env.variables || [];
+        const commonVars = panelCommonEnvironment.variables || [];
+
+        const varMap = {};
+        commonVars.forEach(v => { if (v.key) varMap[v.key] = v; });
+        envVars.forEach(v => { if (v.key) varMap[v.key] = v; });
+
+        return {
+            ...env,
+            variables: Object.values(varMap)
+        };
+    }, [selectedEnvId, panelEnvironments, panelCommonEnvironment]);
 
     // Resizing logic
     useEffect(() => {
@@ -1027,7 +1056,7 @@ export function EditDataPanel({ refreshTrigger }) {
                             isCreating={isCreatingRequest}
                             onClose={() => { setEditingRequest(null); setIsCreatingRequest(false); setCreatingForCollection(null); }}
                             onSave={handleSaveRequest}
-                            activeEnv={panelEnvironments.find(e => e.id === selectedEnvId)}
+                            activeEnv={memoizedActiveEnvironment}
                         />
                     ) : (
                         <div className="flex-1 h-full flex items-center justify-center text-slate-400 dark:text-slate-600 bg-white dark:bg-slate-900">
